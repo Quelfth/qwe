@@ -1,0 +1,15 @@
+[package]
+name = "qwe"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+auto_enums = "0.8.7"
+clap = { version = "4.5.54", features = ["derive"] }
+crop = {version = "0.4.3", features = ["graphemes"]}
+crossterm = "0.29.0"
+culit = "0.6.2"
+extension-trait = "1.0.2"
+mutx.path = "../mutx"
+thiserror = "2.0.17"
+unicode-segmentation = "1.12.0"
