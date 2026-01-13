@@ -306,6 +306,7 @@ dependencies = [
 [[package]]
 name = "mutx"
 version = "0.1.0"
+source = "git+https://github.com/Quelfth/mutx#9a43675c80286239bedae88e9a6aab1395cf1f26"
 
 [[package]]
 name = "once_cell_polyfill"

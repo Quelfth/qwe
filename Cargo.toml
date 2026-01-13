@@ -10,6 +10,6 @@ crop = {version = "0.4.3", features = ["graphemes"]}
 crossterm = "0.29.0"
 culit = "0.6.2"
 extension-trait = "1.0.2"
-mutx.path = "../mutx"
+mutx.git = "https://github.com/Quelfth/mutx"
 thiserror = "2.0.17"
 unicode-segmentation = "1.12.0"
