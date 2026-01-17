@@ -10,7 +10,7 @@ use crossterm::{
 };
 use culit::culit;
 
-use crate::grapheme::Grapheme;
+use crate::{grapheme::Grapheme, style::FlatStyle};
 
 #[derive(Default)]
 pub struct Screen {
@@ -46,8 +46,7 @@ impl IndexMut<(u16, u16)> for Screen {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Cell {
     pub grapheme: Grapheme,
-    pub fg: Color,
-    pub bg: Color,
+    pub style: FlatStyle,
 }
 
 impl Default for Cell {
@@ -55,8 +54,11 @@ impl Default for Cell {
     fn default() -> Self {
         Self {
             grapheme: Default::default(),
-            fg: 0x604040rgb,
-            bg: 0x100000rgb,
+            style: FlatStyle {
+                fg: 0x604040rgb,
+                bg: 0x100000rgb,
+                ..Default::default()
+            },
         }
     }
 }
@@ -69,7 +71,7 @@ impl From<Cell> for StyledContent<Grapheme> {
 
 impl Cell {
     fn style(&self) -> ContentStyle {
-        ContentStyle::new().with(self.fg).on(self.bg)
+        self.style.into()
     }
 
     fn as_styled(&self) -> StyledContent<&str> {

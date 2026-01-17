@@ -2,10 +2,13 @@ use std::ops::RangeBounds;
 
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
-use crate::rope::{
-    RopeSlice,
-    iter::{Graphemes, Lines},
-    range_bounds_to_start_end,
+use crate::{
+    grapheme::Grapheme,
+    rope::{
+        RopeSlice,
+        iter::{Graphemes, Lines},
+        range_bounds_to_start_end,
+    },
 };
 
 impl<'a> RopeSlice<'a> {
@@ -73,6 +76,19 @@ impl<'a> RopeSlice<'a> {
 
     pub fn graphemes(&self) -> Graphemes<'a> {
         Graphemes(self.0.graphemes())
+    }
+
+    pub fn graphemes_with_bytes(&self) -> impl Iterator<Item = (usize, Grapheme)> {
+        let iter = self.graphemes();
+        gen {
+            let mut byte = 0;
+
+            for grapheme in iter {
+                let len = grapheme.len();
+                yield (byte, grapheme);
+                byte += len;
+            }
+        }
     }
 
     pub fn is_char_boundary(&self, byte_offset: usize) -> Option<bool> {

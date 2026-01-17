@@ -11,6 +11,7 @@ use crate::{
         cursors::{CursorState, insert::InsertCursors},
         keymap::Keymaps,
     },
+    lang::Language,
     pos::Pos,
 };
 
@@ -31,8 +32,16 @@ impl Editor {
     pub fn new(file: Option<PathedFile>) -> Self {
         match file {
             Some(PathedFile { path, file }) => Self {
+                doc: {
+                    let doc = Document::new(
+                        path.extension()
+                            .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+                        file,
+                    );
+                    // doc.print_tree();
+                    doc
+                },
                 filepath: Some(path),
-                doc: Document::new(file),
                 ..Self::default()
             },
             None => Self::default(),

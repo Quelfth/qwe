@@ -20,10 +20,13 @@ mod draw;
 mod editor;
 mod grapheme;
 mod ix;
+mod lang;
 mod pos;
 mod rope;
 mod setup;
+mod style;
 mod terminal_size;
+mod ts;
 
 #[derive(Parser)]
 struct Args {

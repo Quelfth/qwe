@@ -159,6 +159,34 @@ impl Rope {
         text: impl AsRef<str>,
     ) -> Option<()> {
         self.validate_byte_range(&byte_range)?;
-        Some(self.0.replace(byte_range, text))
+        self.0.replace(byte_range, text);
+        Some(())
+    }
+
+    pub fn chunk_from_byte(&self, byte: usize) -> Option<&str> {
+        Some(self.byte_slice(byte..)?.chunks().next().unwrap_or(""))
+    }
+
+    pub fn ts_callback<'a>(&'a self) -> impl Fn(usize, tree_sitter::Point) -> &'a str {
+        |byte, _| {
+            self.chunk_from_byte(byte)
+                .expect("tree sitter should be providing valid byte offsets")
+        }
+    }
+
+    pub fn ts_pos_of_byte(&self, byte: usize) -> Option<tree_sitter::Point> {
+        let line = self.line_of_byte(byte)?;
+        Some(tree_sitter::Point {
+            row: line,
+            column: byte - line,
+        })
+    }
+}
+
+impl<'a> tree_sitter::TextProvider<&'a str> for &'a Rope {
+    type I = Chunks<'a>;
+
+    fn text(&mut self, node: tree_sitter::Node) -> Self::I {
+        self.byte_slice(node.byte_range()).unwrap().chunks()
     }
 }

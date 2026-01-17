@@ -1,23 +1,47 @@
 use std::iter;
+use std::ops::Range;
 
 use thiserror::Error;
+use tree_sitter::{InputEdit, Tree};
 
+use crate::aprintln::aprintln;
+use crate::lang::Language;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::Pos;
+use crate::ts::parse_doc;
 
 #[derive(Default)]
 pub struct Document {
     pub scroll: usize,
     text: Rope,
+    language: Option<Language>,
+    tree: Option<Tree>,
 }
 
 impl Document {
-    pub fn new(text: impl AsRef<str>) -> Self {
+    pub fn new(lang: Option<Language>, text: impl AsRef<str>) -> Self {
+        let text: Rope = text.as_ref().into();
         Self {
+            tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
+            language: lang,
             scroll: 0,
-            text: text.as_ref().into(),
+            text,
         }
+    }
+
+    pub fn print_tree(&self) {
+        if let Some(tree) = &self.tree {
+            aprintln!("{}", tree.root_node().to_sexp());
+        }
+    }
+
+    pub fn tree(&self) -> Option<&Tree> {
+        self.tree.as_ref()
+    }
+
+    pub fn language(&self) -> Option<Language> {
+        self.language
     }
 }
 
@@ -265,12 +289,47 @@ impl Document {
             .byte_slice(delete_range.clone())
             .unwrap()
             .to_string();
+        self.tree_delete(delete_range.clone());
         self.text.delete(delete_range).unwrap();
         self.text.insert(byte_pos, &insert).unwrap();
+        self.tree_insert(byte_pos, insert.len());
+        if let Some(lang) = self.language {
+            self.tree = Some(parse_doc(&self.text, self.tree(), lang).unwrap());
+        }
         Change {
             byte_pos,
             delete: insert.len(),
             insert: deleted,
+        }
+    }
+
+    fn tree_delete(&mut self, range: Range<usize>) {
+        if let Some(tree) = &mut self.tree {
+            let start = self.text.ts_pos_of_byte(range.start).unwrap();
+            let end = self.text.ts_pos_of_byte(range.end).unwrap();
+            tree.edit(&InputEdit {
+                start_byte: range.start,
+                old_end_byte: range.end,
+                new_end_byte: range.start,
+                start_position: start,
+                old_end_position: end,
+                new_end_position: start,
+            })
+        }
+    }
+
+    fn tree_insert(&mut self, pos: usize, len: usize) {
+        if let Some(tree) = &mut self.tree {
+            let start = self.text.ts_pos_of_byte(pos).unwrap();
+            let end = self.text.ts_pos_of_byte(pos + len).unwrap();
+            tree.edit(&InputEdit {
+                start_byte: pos,
+                old_end_byte: pos,
+                new_end_byte: pos + len,
+                start_position: start,
+                old_end_position: start,
+                new_end_position: end,
+            })
         }
     }
 
