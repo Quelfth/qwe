@@ -1,0 +1,131 @@
+
+o.strop = f.dark;
+
+l.number = f.number;
+l.number.affix = f.number-affix;
+l.string = f.string;
+l.string.quote = f.quote;
+
+comment = f.comment;
+
+o = f.key-value;
+o.association = f.association;
+o.call.function = f.fn;
+o.comment = f.dark;
+o.declare.function = f.fn-decl;
+o.declare.module = f.private;
+o.declare.struct = f.struct;
+o.key-value = f.key-value;
+o.pattern.disjunct = f.enum;
+o.use = f.scope;
+o.value.variant = f.variant;
+o.wildcard = f.wildcard;
+
+i.function = b f.fn;
+i.namespace = i f.namespace;
+i.namespace.self = !i b f.namespace;
+i.type.struct = b f.struct;
+i.value.artifact = f.artifact;
+i.value.field = f.field;
+i.value.variant = f.variant;
+
+// Pallete ;
+
+.comment = #905050;
+
+.attribute = #e6e64f;
+.meta = #a2a237;
+
+.global-var = #ffbfdd;
+.assoc-var = #cdbfff;
+.field = #bfffea;
+.local-var = #fff1bf;
+.artifact = #ffb968;
+.parameter = #00ff8b;
+.self = #008bff;
+.variant = #c586e2;
+.constant = #c53d7e;
+
+.builtin-fn = #af5858;
+.fn = #9c9cd4;
+.method = #969696;
+.ext-method = #c0c0c0;
+
+.value-macro = #ff639f;
+.fn-macro = #ff7f60;
+.attribute-macro = #ffdf00;
+.helper-attribute = #8f6f00;
+.macro-definition = #dd4444;
+
+.invoke = #ff6060;
+
+.builtin-type = #ad3333;
+.class = #58c0d5;
+.struct = #98ce2d;
+.enum = #d57026;
+.trait = #5891cc;
+
+.type-alias = #d043bb;
+.type-parameter = #3ebba2;
+.type-artifact = #c4ae4b;
+.const-parameter = #2e9982;
+
+.crate = #6e5dff;
+.namespace = #7789ff;
+.include = #77aea3;
+.filepath = #77ae89;
+
+.string = #966eff;
+.escape = #ffaf6e;
+.number = #a600ef;
+.number-affix = #640c8b;
+.quote = #4600ff;
+
+.arithmetic = #d766d7;
+.comparison = #3cbb47;
+.logical = #3c6adf;
+.loop = #00bd7f;
+.branch = #00afff;
+.case = #3fdfff;
+.match = #005f7f;
+
+.access = #ffa82e;
+.pointer = #ff4e2e;
+.wildcard = #5a00ae;
+.scope = #77a3ff;
+.association = #802020;
+
+.tuple = #506969;
+.sequence = #ffd549;
+.group = #505069;
+.key-value = #488b83;
+
+.range = #d5ff49;
+
+.fn-decl = #696969;
+.terminator = #00ff00;
+.const = #990099;
+.async = #009900;
+.coroutine = #009999;
+.unsafe = #ff0000;
+.bounds = #c0e0e0;
+
+.type-op = #5f9f5f;
+
+.method-access = #505050;
+.dark = #604040;
+.public = #3b3bff;
+.middle-vis = #2929ad;
+.private = #212188;
+
+.syntax = #805080;
+.identifier = #c080c0;
+
+.lambda = #b000b0;
+
+.exception = #ff844e;
+.never-type = #cc3333;
+
+.error = #ff007f;
+.warning = #bfff01;
+.hint = #00b5ff;

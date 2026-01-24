@@ -1,6 +1,9 @@
 use std::iter;
 
-use crate::document::{CursorChange, Document};
+use crate::{
+    document::{CursorChange, Document},
+    pos::Pos,
+};
 
 use insert::InsertCursors;
 use line_select::LineCursors;
@@ -90,7 +93,7 @@ impl CursorState {
         match self {
             CursorState::Insert(_) => (),
             CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_up(rows, doc)),
-            CursorState::LineSelect(_) => todo!(),
+            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.extend_up(rows)),
         }
     }
 
@@ -98,7 +101,7 @@ impl CursorState {
         match self {
             CursorState::Insert(_) => (),
             CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_down(rows, doc)),
-            CursorState::LineSelect(_) => todo!(),
+            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.extend_down(rows)),
         }
     }
     pub fn extend_left(&mut self, rows: usize) {
@@ -115,7 +118,7 @@ impl CursorState {
         match self {
             CursorState::Insert(_) => (),
             CursorState::Select(c) => c.iter_mut().for_each(|c| c.retract_up(rows)),
-            CursorState::LineSelect(_) => todo!(),
+            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.retract_up(rows)),
         }
     }
 
@@ -123,7 +126,7 @@ impl CursorState {
         match self {
             CursorState::Insert(_) => (),
             CursorState::Select(c) => c.iter_mut().for_each(|c| c.retract_down(rows)),
-            CursorState::LineSelect(_) => todo!(),
+            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.retract_down(rows)),
         }
     }
     pub fn retract_left(&mut self, rows: usize) {
@@ -134,6 +137,14 @@ impl CursorState {
     pub fn retract_right(&mut self, rows: usize) {
         if let CursorState::Select(c) = self {
             c.iter_mut().for_each(|c| c.retract_right(rows))
+        }
+    }
+
+    pub fn inspect_range(&self) -> (Pos, Pos) {
+        match self {
+            CursorState::Insert(c) => c.main.inspect_range(),
+            CursorState::Select(c) => c.main.inspect_range(),
+            CursorState::LineSelect(c) => todo!(),
         }
     }
 }

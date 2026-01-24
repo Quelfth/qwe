@@ -9,6 +9,7 @@ use crate::{
     draw::screen::Screen,
     editor::{
         cursors::{CursorState, insert::InsertCursors},
+        inspect::Inspector,
         keymap::Keymaps,
     },
     lang::Language,
@@ -17,6 +18,7 @@ use crate::{
 
 mod actions;
 pub mod cursors;
+mod inspect;
 mod keymap;
 
 #[derive(Default)]
@@ -26,21 +28,18 @@ pub struct Editor {
     cursors: CursorState,
     pub screen: Mutex<Screen>,
     keymap: Keymaps,
+    pub inspector: Option<Inspector>,
 }
 
 impl Editor {
     pub fn new(file: Option<PathedFile>) -> Self {
         match file {
             Some(PathedFile { path, file }) => Self {
-                doc: {
-                    let doc = Document::new(
-                        path.extension()
-                            .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
-                        file,
-                    );
-                    // doc.print_tree();
-                    doc
-                },
+                doc: Document::new(
+                    path.extension()
+                        .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+                    file,
+                ),
                 filepath: Some(path),
                 ..Self::default()
             },
@@ -57,6 +56,20 @@ impl Editor {
     }
 
     pub fn on_key_event(&mut self, event: KeyEvent) -> io::Result<()> {
+        if self.inspector.is_some() {
+            if let KeyEvent {
+                code: KeyCode::Esc,
+                kind: KeyEventKind::Press,
+                ..
+            } = event
+            {
+                self.exit_inspect();
+                self.draw()?;
+            }
+
+            return Ok(());
+        }
+
         match &self.cursors {
             CursorState::Insert(_) => {
                 if let Some(action) = self.keymap.insert.map_event(event) {

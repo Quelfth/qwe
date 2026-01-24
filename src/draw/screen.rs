@@ -6,7 +6,7 @@ use std::{
 use crossterm::{
     QueueableCommand,
     cursor::MoveTo,
-    style::{Color, ContentStyle, PrintStyledContent, StyledContent, Stylize},
+    style::{ContentStyle, PrintStyledContent, StyledContent},
 };
 use culit::culit;
 

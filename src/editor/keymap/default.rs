@@ -34,6 +34,9 @@ impl Default for Keymaps {
                 (Key::char('a'), Mapping::once(Editor::insert_after)),
                 (Key::char('I'), Mapping::once(Editor::insert_before_line)),
                 (Key::char('A'), Mapping::once(Editor::insert_after_line)),
+                //
+                (Key::char(';'), Mapping::once(Editor::line_select)),
+                //
                 (Key::char('h'), Mapping::rep(|e| e.move_x(-1))),
                 (Key::char('j'), Mapping::rep(|e| e.move_y(1))),
                 (Key::char('k'), Mapping::rep(|e| e.move_y(-1))),
@@ -46,8 +49,30 @@ impl Default for Keymaps {
                 (Key::alt('j'), Mapping::rep(|e| e.retract_down(1))),
                 (Key::alt('k'), Mapping::rep(|e| e.text_extend_up(1))),
                 (Key::alt('l'), Mapping::rep(|e| e.retract_right(1))),
+                //
+                (Key::ctrl('s'), Mapping::once(Editor::save_file)),
+                //
+                (Key::alt('^'), Mapping::once(Editor::inspect)),
             ])),
-            line_select: Keymap::from_iter([]),
+            line_select: Keymap::from_iter(universal().chain([
+                (Key::char('i'), Mapping::once(Editor::insert_before)),
+                (Key::char('a'), Mapping::once(Editor::insert_after)),
+                (Key::char('I'), Mapping::once(Editor::insert_before_line)),
+                (Key::char('A'), Mapping::once(Editor::insert_after_line)),
+                //
+                (Key::char(','), Mapping::once(Editor::select)),
+                //
+                (Key::char('j'), Mapping::rep(|e| e.move_y(1))),
+                (Key::char('k'), Mapping::rep(|e| e.move_y(-1))),
+                (Key::char('J'), Mapping::rep(|e| e.text_extend_down(1))),
+                (Key::char('K'), Mapping::rep(|e| e.retract_up(1))),
+                (Key::alt('j'), Mapping::rep(|e| e.retract_down(1))),
+                (Key::alt('k'), Mapping::rep(|e| e.text_extend_up(1))),
+                //
+                (Key::ctrl('s'), Mapping::once(Editor::save_file)),
+                //
+                (Key::alt('^'), Mapping::once(Editor::inspect)),
+            ])),
         }
     }
 }

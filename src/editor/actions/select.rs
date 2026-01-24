@@ -41,6 +41,13 @@ impl Editor {
             }
         }
     }
+    pub fn line_select(&mut self) {
+        match &self.cursors {
+            CursorState::Insert(c) => self.cursors = c.to_line_select().into(),
+            CursorState::Select(c) => self.cursors = c.to_line_select().into(),
+            CursorState::LineSelect(_) => (),
+        }
+    }
 
     pub fn move_x(&mut self, columns: isize) {
         self.cursors.move_x(columns)

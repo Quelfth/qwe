@@ -2,7 +2,10 @@ use std::{cmp::Ordering::*, iter};
 
 use crate::{
     document::{CursorChange, Document},
-    editor::cursors::{Cursor, CursorSet},
+    editor::cursors::{
+        Cursor, CursorSet,
+        line_select::{LineCursor, LineCursors},
+    },
     grapheme::Grapheme,
     pos::Pos,
 };
@@ -23,6 +26,10 @@ impl SelectCursors {
     }
     pub fn to_insert_after_line(&self, doc: &Document) -> InsertCursors {
         self.map_to(|c| SelectCursor::to_insert_after_line(c, doc))
+    }
+
+    pub fn to_line_select(&self) -> LineCursors {
+        self.map_to(|c| c.to_line_select())
     }
 
     pub fn move_x(&mut self, columns: isize) {
@@ -89,6 +96,13 @@ impl SelectCursor {
             line,
             column: doc.columns_in_line(line),
         })
+    }
+
+    pub fn to_line_select(&self) -> LineCursor {
+        LineCursor {
+            line: self.line,
+            height: self.other_lines.len() + 1,
+        }
     }
 
     pub fn on_line(&self, line: usize) -> Option<RangeCursorLine> {
@@ -219,6 +233,19 @@ impl SelectCursor {
 
     pub fn retract_left(&mut self, columns: usize) {
         self.last_line_mut().retract_left(columns);
+    }
+
+    pub fn inspect_range(&self) -> (Pos, Pos) {
+        (
+            Pos {
+                line: self.line,
+                column: self.first_line.start,
+            },
+            Pos {
+                line: self.line + self.other_lines.len(),
+                column: self.last_line().end,
+            },
+        )
     }
 }
 

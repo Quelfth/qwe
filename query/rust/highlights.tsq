@@ -1,0 +1,69 @@
+
+; Identifiers
+
+"r#" @o.strop
+
+; Literals
+
+[(digits)] @l.number
+(integer_literal ["0x" "0b" "0o"] @l.number.affix)
+(integer_literal (literal_suffix) @l.number.affix)
+(float_literal (literal_suffix) @l.number.affix)
+
+(float_literal ["." "+" "-"] @l.number)
+(float_literal "e" @l.number.affix)
+
+(string_content) @l.string
+(string_literal "\"" @l.string.quote)
+(raw_string_literal "\"" @l.string.quote)
+(string_literal (literal_suffix) @l.string.suffix)
+(raw_string_literal (literal_suffix) @l.string.suffix)
+
+(char_literal) @l.string
+(char_literal [(char_prefix) "\'"] @l.string.quote)
+(char_literal (literal_suffix) @l.string.suffix)
+
+[(line_comment) (block_comment)] @comment
+(line_comment "//" @o.comment.line)
+(block_comment ["/*" "*/"] @o.comment.block)
+(outer_doc_comment_marker "/" @o.comment.doc)
+(inner_doc_comment_marker "!" @o.comment.doc)
+
+; Tokens
+
+"::" @o.association
+
+; Modules
+
+"mod" @o.declare.module
+(mod_item name: (_) @i.namespace)
+(mod_item body: (_ ["{" "}"] @o.declare.module))
+(mod_item ";" @o.declare.module)
+
+; Use
+
+"use" @o.use
+(use_list ["{" "," "}"] @o.use)
+(use_declaration ";" @o.use)
+
+(use_list (self) @i.namespace.self)
+
+; Functions
+
+(function_item ["fn" "->" ";"] @o.declare.function)
+(function_item body: (_ ["{" "}"] @o.declare.function))
+(parameters ["(" "," ")"] @o.call.function)
+
+(function_item name: (_) @i.function)
+
+; Struct
+
+"struct" @o.declare.struct
+(struct_item (field_declaration_list ["{" "," "}"] @o.declare.struct))
+
+(struct_item name: (_) @i.type.struct)
+
+; Type
+
+(never_type "!" @o.type.never)
+

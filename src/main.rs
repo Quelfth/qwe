@@ -26,7 +26,9 @@ mod rope;
 mod setup;
 mod style;
 mod terminal_size;
+mod theme;
 mod ts;
+mod util;
 
 #[derive(Parser)]
 struct Args {

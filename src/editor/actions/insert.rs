@@ -3,9 +3,9 @@ use crate::editor::{Editor, cursors::CursorState};
 impl Editor {
     pub fn select(&mut self) {
         match &self.cursors {
-            CursorState::Insert(cursors) => self.cursors = cursors.to_select().into(),
+            CursorState::Insert(c) => self.cursors = c.to_select().into(),
             CursorState::Select(_) => (),
-            CursorState::LineSelect(_) => todo!(),
+            CursorState::LineSelect(c) => self.cursors = c.to_select(&self.doc).into(),
         }
     }
 

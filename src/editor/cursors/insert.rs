@@ -5,6 +5,7 @@ use crate::{
     document::CursorChange,
     editor::cursors::{
         Cursor, CursorSet,
+        line_select::{LineCursor, LineCursors},
         select::{RangeCursorLine, SelectCursor, SelectCursors},
     },
     pos::Pos,
@@ -15,6 +16,10 @@ pub type InsertCursors = CursorSet<InsertCursor>;
 impl InsertCursors {
     pub fn to_select(&self) -> SelectCursors {
         self.map_to(|c| c.to_select())
+    }
+
+    pub fn to_line_select(&self) -> LineCursors {
+        self.map_to(|c| c.to_line_select())
     }
 
     pub fn tab(mut self) -> Self {
@@ -60,6 +65,13 @@ impl InsertCursor {
         }
     }
 
+    fn to_line_select(self) -> LineCursor {
+        LineCursor {
+            line: self.pos.line,
+            height: 1,
+        }
+    }
+
     fn tab(&mut self) {
         self.pos.column = (self.pos.column / TAB_WIDTH + 1) * TAB_WIDTH
     }
@@ -78,6 +90,10 @@ impl InsertCursor {
             Ordering::Equal => (),
             Ordering::Greater => self.pos.line += rows as usize,
         }
+    }
+
+    pub fn inspect_range(&self) -> (Pos, Pos) {
+        todo!()
     }
 }
 

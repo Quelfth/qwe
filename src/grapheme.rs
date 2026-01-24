@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use crate::constants::TAB_WIDTH;
 
-use extension_trait::extension_trait;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone, PartialEq, Eq)]

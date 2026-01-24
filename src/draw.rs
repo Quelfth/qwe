@@ -1,19 +1,11 @@
 use std::{
     io::{self},
-    iter,
     ops::Sub,
 };
 
-use crossterm::style::Color;
-
 use crate::{
-    custom_literal::integer::rgb,
-    draw::{
-        cursor::CursorRange,
-        screen::{Cell, Screen},
-    },
+    draw::{cursor::CursorRange, screen::Screen},
     editor::Editor,
-    grapheme::GraphemeExt,
     terminal_size::terminal_size,
 };
 
@@ -103,6 +95,14 @@ impl Editor {
             .draw(&mut screen, Rect::new(0..width, 0..height), |i| {
                 self.cursors().line_ranges(i).collect()
             })?;
+
+        if let Some(inspector) = &self.inspector {
+            inspector
+                .tree()
+                .draw(&mut screen, Rect::new(width / 2..width, 0..height), |_| {
+                    Default::default()
+                })?;
+        }
 
         {
             let last_screen = &mut *self.screen.lock();

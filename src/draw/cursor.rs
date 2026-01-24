@@ -11,7 +11,7 @@ use super::Range;
 #[derive(Copy, Clone)]
 pub(super) struct CursorRange {
     pub(super) kind: CursorRangeKind,
-    pub(super) range: Range<usize>,
+    pub(super) range: Option<Range<usize>>,
 }
 
 impl CursorRange {
@@ -23,11 +23,11 @@ impl CursorRange {
         [
             (pos > 0).then(|| Self {
                 kind: left,
-                range: Range::one(pos - 1),
+                range: Some(Range::one(pos - 1)),
             }),
             Some(Self {
                 kind: right,
-                range: Range::one(pos),
+                range: Some(Range::one(pos)),
             }),
         ]
         .into_iter()
@@ -52,8 +52,15 @@ impl CursorRange {
             ),
             false => iter::once(Self {
                 kind: CursorRangeKind::Select,
-                range: Range { start, end },
+                range: Some(Range { start, end }),
             }),
+        }
+    }
+
+    fn line() -> Self {
+        Self {
+            kind: CursorRangeKind::Select,
+            range: None,
         }
     }
 }
@@ -95,7 +102,17 @@ impl CursorState {
                     Some(CursorRange::select(start, end))
                 })
                 .flatten(),
-            _ => iter::empty(),
+            CursorState::LineSelect(cursors) => (cursors
+                .iter()
+                .any(|c| c.line <= line && c.line + c.height > line))
+            .then(|| CursorRange::line())
+            .or_else(|| {
+                (cursors.iter().any(|c| c.line == line && c.height == 0)).then(|| CursorRange {
+                    kind: CursorRangeKind::SelectRight,
+                    range: None,
+                })
+            })
+            .into_iter(),
         }
     }
 }

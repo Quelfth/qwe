@@ -4,11 +4,8 @@ use crossterm::style::Color;
 use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
 use crate::{
-    aprintln::aprintln,
-    custom_literal::integer::rgb,
-    document::Document,
-    grapheme::GraphemeExt,
-    style::{FlatStyle, Style},
+    custom_literal::integer::rgb, document::Document, grapheme::GraphemeExt, style::Style,
+    theme::theme,
 };
 
 use super::{
@@ -23,6 +20,8 @@ impl Document {
         rect: Rect<u16>,
         cursors: impl Fn(usize) -> Vec<CursorRange>,
     ) -> io::Result<()> {
+        let y = rect.rows.start;
+        let x = rect.cols.start;
         let width = rect.width();
         let height = rect.height();
 
@@ -30,7 +29,7 @@ impl Document {
             |i| {
                 cursors
                     .iter()
-                    .find(|c| c.range.contains(i))
+                    .find(|c| c.range.is_none_or(|r| r.contains(i)))
                     .map(|c| c.kind)
                     .map(|k| k.color())
             }
@@ -62,10 +61,11 @@ impl Document {
 
                 for QueryCapture { node, index } in *captures {
                     let name = query.capture_names()[*index as usize];
-                    if name == "i" {
-                        highlights.push((Style::fg(rgb! {0xff0000}), node.byte_range()))
+                    let theme = theme();
+                    let hl = theme.highlight(&[name.split(".").collect::<Vec<_>>()]);
+                    if !hl.is_none() {
+                        highlights.push((hl, node.byte_range()))
                     }
-                    //aprintln!("{name}: {}", node.to_sexp());
                 }
             }
         }
@@ -81,7 +81,7 @@ impl Document {
                     (iter::repeat_n(" ", width).collect(), rgb!(0x100000))
                 };
                 for (j, grapheme) in (0..).zip(nr.graphemes()) {
-                    screen[(screen_line_nr, j)] = Cell {
+                    screen[(screen_line_nr + y, j + x)] = Cell {
                         grapheme,
                         style: (Style::fg(rgb!(0x604040)) + Style::bg(bg)).into(),
                     };
@@ -109,10 +109,10 @@ impl Document {
                         .filter(|(_, r)| r.contains(&(byte + line_byte)))
                         .map(|(s, _)| *s)
                         .fold(
-                            Style::fg(rgb! {0xffffff}) + Style::bg(rgb! {0x200000}),
+                            Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}),
                             |c, n| c + n,
                         );
-                    screen[(i, j)] = Cell {
+                    screen[(i + y, j + x)] = Cell {
                         grapheme,
                         style: (highlight_style
                             + cursor_color((j - gutter_width) as usize)
@@ -129,7 +129,7 @@ impl Document {
             if width > len {
                 for j in len..width {
                     if let Some(color) = cursor_color((j - gutter_width) as usize) {
-                        screen[(i, j)].style.bg = color;
+                        screen[(i + y, j + x)].style.bg = color;
                     }
                 }
             }
@@ -144,7 +144,7 @@ impl Document {
             write_line_nr(screen, gi, i);
             for j in gutter_width..width {
                 if let Some(color) = cursor_color((j - gutter_width) as usize) {
-                    screen[(i, j)].style.bg = color;
+                    screen[(i + y, j + x)].style.bg = color;
                 }
             }
 

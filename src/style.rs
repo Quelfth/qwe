@@ -54,7 +54,7 @@ impl From<FlatStyle> for ContentStyle {
     }
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, PartialEq)]
 pub struct Style {
     pub fg: Option<Color>,
     pub bg: Option<Color>,
@@ -62,6 +62,12 @@ pub struct Style {
     pub bold: Option<bool>,
     pub under: Option<Option<Under>>,
     pub uc: Option<Option<Color>>,
+}
+
+impl Style {
+    pub fn is_none(self) -> bool {
+        self == Self::default()
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -137,15 +143,31 @@ impl Style {
     }
 
     pub fn italic() -> Self {
+        Self::italic_bool(true)
+    }
+
+    pub fn not_italic() -> Self {
+        Self::italic_bool(false)
+    }
+
+    pub fn italic_bool(value: bool) -> Self {
         Self {
-            italic: Some(true),
+            italic: Some(value),
             ..Default::default()
         }
     }
 
     pub fn bold() -> Self {
+        Self::bold_bool(true)
+    }
+
+    pub fn not_bold() -> Self {
+        Self::bold_bool(false)
+    }
+
+    pub fn bold_bool(bool: bool) -> Self {
         Self {
-            bold: Some(true),
+            bold: Some(bool),
             ..Default::default()
         }
     }
@@ -171,5 +193,48 @@ impl From<Under> for Style {
             under: Some(Some(value)),
             ..Default::default()
         }
+    }
+}
+
+impl sulu::Style for Style {
+    fn none() -> Self {
+        Self::default()
+    }
+
+    fn color(name: &str, sulu::Color { r, g, b }: sulu::Color) -> Option<Self> {
+        let color = Color::Rgb { r, g, b };
+        match name {
+            "f" => Some(Self::fg(color)),
+            "b" => Some(Self::bg(color)),
+            "u" => Some(Self::uc(Some(color))),
+            _ => None,
+        }
+    }
+
+    fn bool(name: &str, value: bool) -> Option<Self> {
+        match name {
+            "i" => Some(Self::italic_bool(value)),
+            "b" => Some(Self::bold_bool(value)),
+            "u" if !value => Some(Self::no_under()),
+            _ => None,
+        }
+    }
+
+    fn value(name: &str, value: &str) -> Result<Self, sulu::StyleValueError> {
+        match name {
+            "u" => match value {
+                "line" => Ok(Under::Line.into()),
+                "double" => Ok(Under::Double.into()),
+                "curl" => Ok(Under::Curl.into()),
+                "dotted" => Ok(Under::Dotted.into()),
+                "dashed" => Ok(Under::Dashed.into()),
+                _ => Err(sulu::StyleValueError::Value),
+            },
+            _ => Err(sulu::StyleValueError::Name),
+        }
+    }
+
+    fn combine(self, top: &Self) -> Self {
+        self + *top
     }
 }

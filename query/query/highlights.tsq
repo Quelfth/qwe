@@ -1,0 +1,17 @@
+
+"_" @o.wildcard
+":" @o.key-value
+"@" @o.scope
+
+(string_content) @l.string
+(string "\"" @l.string.quote)
+
+(capture name: (_) @i.value.artifact)
+
+(named_node ["(" ")"] @o.value.variant)
+
+(named_node name: (_) @i.value.variant)
+
+(field_definition name: (_) @i.value.field)
+
+(list ["[" "]"] @o.pattern.disjunct)
