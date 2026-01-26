@@ -1,3 +1,4 @@
+use std::cmp::Ordering::*;
 use std::iter;
 use std::ops::Range;
 
@@ -5,16 +6,21 @@ use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
 use crate::aprintln::aprintln;
+use crate::document::history::History;
 use crate::lang::Language;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::Pos;
 use crate::ts::parse_doc;
 
+mod history;
+
 #[derive(Default)]
 pub struct Document {
     pub scroll: usize,
     text: Rope,
+    pub history: History,
+    pub future: History,
     language: Option<Language>,
     tree: Option<Tree>,
 }
@@ -26,6 +32,8 @@ impl Document {
             tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
             language: lang,
             scroll: 0,
+            history: Default::default(),
+            future: Default::default(),
             text,
         }
     }
@@ -43,9 +51,13 @@ impl Document {
     pub fn language(&self) -> Option<Language> {
         self.language
     }
+
+    pub fn gutter_width(&self) -> u16 {
+        (self.text.line_count() + 1).ilog10() as u16 + 1
+    }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Change {
     pub byte_pos: usize,
     pub delete: usize,
@@ -72,28 +84,42 @@ impl CursorChange {
             pos: change_pos,
             kind,
             lines,
-            columns: bytes,
+            columns,
         } = self;
         if pos < change_pos {
             return pos;
         }
 
         if kind == CursorChangeKind::Insert {
-            return Pos {
-                line: pos.line + lines,
-                column: if lines == 0 { pos.column } else { 0 } + bytes,
+            return if pos.line == change_pos.line {
+                Pos {
+                    line: pos.line + lines,
+                    column: if lines == 0 { pos.column } else { 0 } + columns,
+                }
+            } else {
+                Pos {
+                    line: pos.line + lines,
+                    ..pos
+                }
             };
         }
 
         let end_pos = Pos {
             line: change_pos.line + lines,
-            column: change_pos.column + bytes,
+            column: change_pos.column + columns,
         };
 
         if pos > end_pos {
-            Pos {
-                line: pos.line - lines,
-                column: pos.column - bytes,
+            if pos.line == end_pos.line {
+                Pos {
+                    line: pos.line - lines,
+                    column: pos.column - columns,
+                }
+            } else {
+                Pos {
+                    line: pos.line - lines,
+                    ..pos
+                }
             }
         } else {
             change_pos
@@ -173,13 +199,6 @@ impl Document {
         };
         line.graphemes().map(|g| g.columns()).sum()
     }
-
-    // pub fn pos_of_byte_pos(&self, byte_pos: usize) -> Option<Pos> {
-    //     let line = self.text.line_of_byte(byte_pos)?;
-    //     let line_byte = self.text.byte_of_line(line)?;
-    //     let column = byte_pos - line_byte;
-    //     Some(Pos { line, column })
-    // }
 
     pub fn backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
         let change = self.byte_pos_of_pos(pos).ok().and_then(|byte| {
@@ -333,48 +352,33 @@ impl Document {
         }
     }
 
-    // pub fn cursor_change(&self, change: &Change) -> Option<CursorChange> {
-    //     let Change {
-    //         byte_pos,
-    //         delete,
-    //         insert,
-    //     } = change;
-    //     let ins = insert;
-    //     let insert = insert.len();
-    //     match insert.cmp(delete) {
-    //         Ordering::Less => {
-    //             let byte_pos = byte_pos + insert;
-    //             let delete = delete - insert;
-    //             let pos = self.pos_of_byte_pos(byte_pos).unwrap();
-    //             let end_pos = self.pos_of_byte_pos(byte_pos + delete).unwrap();
-    //             let (lines, bytes) = if end_pos.line == pos.line {
-    //                 (0, delete)
-    //             } else {
-    //                 (
-    //                     end_pos.line - pos.line,
-    //                     byte_pos + delete - self.text.byte_of_line(end_pos.line).unwrap(),
-    //                 )
-    //             };
-    //             Some(CursorChange {
-    //                 pos,
-    //                 kind: CursorChangeKind::Delete,
-    //                 lines,
-    //                 columns: bytes,
-    //             })
-    //         }
-    //         Ordering::Equal => None,
-    //         Ordering::Greater => Some(CursorChange {
-    //             pos: self.pos_of_byte_pos(byte_pos + delete).unwrap(),
-    //             kind: CursorChangeKind::Insert,
-    //             lines: ins.chars().filter(|&c| c == '\n').count(),
-    //             columns: if !ins.ends_with('\n')
-    //                 && let Some(line) = ins.lines().next_back()
-    //             {
-    //                 line.len()
-    //             } else {
-    //                 0
-    //             },
-    //         }),
-    //     }
-    // }
+    pub fn undo(&mut self) -> Vec<CursorChange> {
+        let mut changes = Vec::<CursorChange>::new();
+
+        for change in self.history.pop().collect::<Vec<_>>().into_iter() {
+            if let Some(change) = self.text.cursor_change(&change) {
+                changes.push(change);
+            }
+            let reverse = self.change(change);
+            self.future.push(reverse);
+        }
+        self.future.checkpoint();
+
+        changes
+    }
+
+    pub fn redo(&mut self) -> Vec<CursorChange> {
+        let mut changes = Vec::<CursorChange>::new();
+
+        for change in self.future.pop().collect::<Vec<_>>().into_iter() {
+            if let Some(change) = self.text.cursor_change(&change) {
+                changes.push(change);
+            }
+            let reverse = self.change(change);
+            self.history.push(reverse);
+        }
+        self.history.checkpoint();
+
+        changes
+    }
 }

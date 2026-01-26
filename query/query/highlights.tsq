@@ -1,3 +1,4 @@
+(comment) @comment
 
 "_" @o.wildcard
 ":" @o.key-value

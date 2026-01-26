@@ -4,6 +4,7 @@ use crate::ts::QuerySource;
 pub enum Language {
     Rust,
     Query,
+    Sulu,
 }
 
 impl Language {
@@ -11,6 +12,7 @@ impl Language {
         Some(match ext {
             "rs" => Self::Rust,
             "tsq" => Self::Query,
+            "sulu" => Self::Sulu,
             _ => None::<!>?,
         })
     }
@@ -19,6 +21,7 @@ impl Language {
         match self {
             Language::Rust => tree_sitter_rust::LANGUAGE.into(),
             Language::Query => tree_sitter_tsquery::LANGUAGE.into(),
+            Language::Sulu => tree_sitter_sulu::LANGUAGE.into(),
         }
     }
 
@@ -27,6 +30,7 @@ impl Language {
             source: match self {
                 Language::Rust => include_str!("../query/rust/highlights.tsq"),
                 Language::Query => include_str!("../query/query/highlights.tsq"),
+                Language::Sulu => include_str!("../query/sulu/highlights.tsq"),
             },
             lang: self,
         }

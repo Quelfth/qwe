@@ -1,6 +1,4 @@
 
-o.strop = f.dark;
-
 l.number = f.number;
 l.number.affix = f.number-affix;
 l.string = f.string;
@@ -9,27 +7,43 @@ l.string.quote = f.quote;
 comment = f.comment;
 
 o = f.key-value;
+o.access = f.access;
 o.association = f.association;
-o.call.function = f.fn;
+o.branch.case = f.case;
+o.branch.match = f.match;
+o.call.function. = f.fn;
+o.call.function.method = f.method;
 o.comment = f.dark;
 o.declare.function = f.fn-decl;
 o.declare.module = f.private;
 o.declare.struct = f.struct;
+o.group = f.group;
+o.implement = f.bounds;
 o.key-value = f.key-value;
+o.logical = f.logical;
 o.pattern.disjunct = f.enum;
+o.scope = f.scope;
+o.strop = f.dark;
+o.type = f.type-op;
 o.use = f.scope;
 o.value.variant = f.variant;
+o.visibility.public = f.public;
+o.visibility.private = f.private;
 o.wildcard = f.wildcard;
 
-i.function = b f.fn;
+i.function. = b f.fn;
+i.function.method = !b f.method;
 i.namespace = i f.namespace;
 i.namespace.self = !i b f.namespace;
 i.type.struct = b f.struct;
 i.value.artifact = f.artifact;
 i.value.field = f.field;
+i.value.global = f.global-var;
+i.value.receiver = f.self;
+i.value.parameter = f.parameter;
 i.value.variant = f.variant;
 
-// Pallete ;
+/ Pallete ;
 
 .comment = #905050;
 

@@ -12,7 +12,7 @@ impl Editor {
     pub fn backspace(&mut self) {
         match &self.cursors {
             CursorState::Insert(cursor) => {
-                self.change_insert(&cursor.clone(), |doc, pos| doc.backspace_change(pos))
+                self.do_insert(&cursor.clone(), |doc, pos| doc.backspace_change(pos))
             }
             CursorState::Select(_) => todo!(),
             CursorState::LineSelect(_) => todo!(),
@@ -21,7 +21,7 @@ impl Editor {
 
     pub fn insert(&mut self, str: &str) {
         match &self.cursors {
-            CursorState::Insert(cursors) => self.change_insert(&cursors.clone(), |doc, pos| {
+            CursorState::Insert(cursors) => self.do_insert(&cursors.clone(), |doc, pos| {
                 doc.insert_change(pos, str.to_owned())
             }),
             CursorState::Select(_) => todo!(),
@@ -29,10 +29,10 @@ impl Editor {
         }
     }
 
-    pub fn r#return(&mut self) {
+    pub fn insert_return(&mut self) {
         match &self.cursors {
             CursorState::Insert(cursors) => {
-                self.change_insert(&cursors.clone(), |doc, pos| doc.return_change(pos))
+                self.do_insert(&cursors.clone(), |doc, pos| doc.return_change(pos))
             }
 
             CursorState::Select(_) => todo!(),

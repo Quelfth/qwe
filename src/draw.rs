@@ -11,6 +11,7 @@ use crate::{
 
 mod cursor;
 pub mod document;
+pub mod jump_labels;
 pub mod screen;
 
 #[derive(Copy, Clone)]
@@ -94,14 +95,22 @@ impl Editor {
         self.doc()
             .draw(&mut screen, Rect::new(0..width, 0..height), |i| {
                 self.cursors().line_ranges(i).collect()
-            })?;
+            });
+
+        if let Some(jump_labels) = &self.jump_labels {
+            jump_labels.draw(
+                &mut screen,
+                Rect::new(self.doc().gutter_width()..width, 0..height),
+                self.doc().scroll,
+            )
+        }
 
         if let Some(inspector) = &self.inspector {
             inspector
                 .tree()
                 .draw(&mut screen, Rect::new(width / 2..width, 0..height), |_| {
                     Default::default()
-                })?;
+                });
         }
 
         {

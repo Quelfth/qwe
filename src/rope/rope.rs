@@ -4,10 +4,14 @@ use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
     aprintln::{aprint, aprintln},
+    document::{Change, CursorChange, CursorChangeKind},
+    pos::Pos,
     rope::iter::{Graphemes, Lines},
 };
 
 use super::{Rope, RopeSlice, range_bounds_to_start_end};
+
+use std::cmp::Ordering::*;
 
 impl Rope {
     #[must_use]
@@ -180,6 +184,64 @@ impl Rope {
             row: line,
             column: byte - line,
         })
+    }
+
+    pub fn pos_of_byte_pos(&self, byte_pos: usize) -> Option<Pos> {
+        let line = self.line_of_byte(byte_pos)?;
+        let line_byte = self.byte_of_line(line)?;
+        let byte_in_line = byte_pos - line_byte;
+        let column = self
+            .line(line)?
+            .byte_slice(..byte_in_line)?
+            .graphemes()
+            .map(|g| g.columns())
+            .sum();
+        Some(Pos { line, column })
+    }
+
+    pub fn cursor_change(&self, change: &Change) -> Option<CursorChange> {
+        let Change {
+            byte_pos,
+            delete,
+            insert,
+        } = change;
+        let ins = insert;
+        let insert = insert.len();
+        match insert.cmp(delete) {
+            Less => {
+                let byte_pos = byte_pos + insert;
+                let delete = delete - insert;
+                let pos = self.pos_of_byte_pos(byte_pos).unwrap();
+                let end_pos = self.pos_of_byte_pos(byte_pos + delete).unwrap();
+                let (lines, bytes) = if end_pos.line == pos.line {
+                    (0, delete)
+                } else {
+                    (
+                        end_pos.line - pos.line,
+                        byte_pos + delete - self.byte_of_line(end_pos.line).unwrap(),
+                    )
+                };
+                Some(CursorChange {
+                    pos,
+                    kind: CursorChangeKind::Delete,
+                    lines,
+                    columns: bytes,
+                })
+            }
+            Equal => None,
+            Greater => Some(CursorChange {
+                pos: self.pos_of_byte_pos(byte_pos + delete).unwrap(),
+                kind: CursorChangeKind::Insert,
+                lines: ins.chars().filter(|&c| c == '\n').count(),
+                columns: if !ins.ends_with('\n')
+                    && let Some(line) = ins.lines().next_back()
+                {
+                    line.len()
+                } else {
+                    0
+                },
+            }),
+        }
     }
 }
 

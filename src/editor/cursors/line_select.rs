@@ -46,16 +46,16 @@ impl LineCursor {
     }
     fn to_insert_after(&self, doc: &Document) -> InsertCursor {
         let Self { line, height } = *self;
-        let line = line + height.min(1) - 1;
+        let line = line + height.max(1) - 1;
         InsertCursor::forward(Pos {
             line,
-            column: doc.indent_on_line(line),
+            column: doc.columns_in_line(line),
         })
     }
 
     pub fn to_select(&self, doc: &Document) -> SelectCursor {
         let Self { line, height } = *self;
-        let height = height.min(1);
+        let height = height.max(1);
         let end_line = line + height;
 
         let start = (line..end_line)

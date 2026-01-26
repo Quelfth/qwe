@@ -1,9 +1,11 @@
 use std::fs;
 
 use crate::{
+    aprintln::aprintln,
     document::Document,
-    editor::{Editor, inspect::Inspector},
+    editor::{Editor, finder::Finder, inspect::Inspector, jump_labels::JumpLabels},
     lang::Language,
+    terminal_size::{self, terminal_size},
     util::pretty_node,
 };
 
@@ -44,5 +46,30 @@ impl Editor {
 
     pub fn exit_inspect(&mut self) {
         self.inspector = None;
+    }
+
+    pub fn undo(&mut self) {
+        for change in self.doc.undo() {
+            self.cursors.apply_change(change);
+        }
+    }
+
+    pub fn redo(&mut self) {
+        for change in self.doc.redo() {
+            self.cursors.apply_change(change);
+        }
+    }
+
+    pub fn debug_undo(&mut self) {
+        aprintln!("{:#?}", self.doc.history);
+    }
+
+    pub fn jump(&mut self) {
+        let (_, height) = terminal_size();
+        self.jump_labels = Some(JumpLabels::generate(&self.doc, height as usize))
+    }
+
+    pub fn find(&mut self) {
+        self.finder = Some(Finder::new(self.doc().text().to_string(), 0));
     }
 }

@@ -1,0 +1,19 @@
+
+";" @o.group
+"=" @o.key-value
+"!" @o.logical
+
+"/" @o.comment
+(comment) @comment
+
+(terminated_path_predicate "." @o.scope)
+
+"#" @l.number.affix
+(color_hex) @l.number
+
+(palette_name "." @o.value)
+(path_predicate (identifier) @i.namespace)
+
+(palette_name (identifier) @i.value.global)
+
+(style_flag (identifier) @i.value.field)

@@ -2,6 +2,7 @@ use crate::editor::{Editor, cursors::CursorState};
 
 impl Editor {
     pub fn insert_before(&mut self) {
+        self.mark_undo_checkpoint();
         match &self.cursors {
             CursorState::Insert(_) => (),
             CursorState::Select(cursors) => self.cursors = cursors.to_insert_before().into(),
@@ -11,6 +12,7 @@ impl Editor {
         }
     }
     pub fn insert_after(&mut self) {
+        self.doc.history.checkpoint();
         match &self.cursors {
             CursorState::Insert(_) => (),
             CursorState::Select(cursors) => self.cursors = cursors.to_insert_after().into(),
@@ -20,6 +22,7 @@ impl Editor {
         }
     }
     pub fn insert_before_line(&mut self) {
+        self.doc.history.checkpoint();
         match &self.cursors {
             CursorState::Insert(_) => (),
             CursorState::Select(cursors) => {
@@ -31,6 +34,7 @@ impl Editor {
         }
     }
     pub fn insert_after_line(&mut self) {
+        self.doc.history.checkpoint();
         match &self.cursors {
             CursorState::Insert(_) => (),
             CursorState::Select(cursors) => {
@@ -64,12 +68,6 @@ impl Editor {
         self.cursors.text_extend_down(rows, &self.doc);
     }
 
-    pub fn block_extend_up(&mut self, rows: usize) {
-        self.cursors.block_extend_up(rows);
-    }
-    pub fn block_extend_down(&mut self, rows: usize) {
-        self.cursors.block_extend_down(rows);
-    }
     pub fn extend_left(&mut self, rows: usize) {
         self.cursors.extend_left(rows);
     }
@@ -87,5 +85,9 @@ impl Editor {
     }
     pub fn retract_right(&mut self, rows: usize) {
         self.cursors.retract_right(rows);
+    }
+
+    pub fn drop_other_selections(&mut self) {
+        self.cursors.drop_others();
     }
 }

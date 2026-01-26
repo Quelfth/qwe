@@ -1,10 +1,13 @@
-use std::{io, iter};
+use std::{cmp::Ordering::*, io, iter};
 
 use crossterm::style::Color;
 use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
 use crate::{
-    custom_literal::integer::rgb, document::Document, grapheme::GraphemeExt, style::Style,
+    custom_literal::integer::rgb,
+    document::Document,
+    grapheme::{Grapheme, GraphemeExt},
+    style::Style,
     theme::theme,
 };
 
@@ -19,7 +22,7 @@ impl Document {
         screen: &mut Screen,
         rect: Rect<u16>,
         cursors: impl Fn(usize) -> Vec<CursorRange>,
-    ) -> io::Result<()> {
+    ) {
         let y = rect.rows.start;
         let x = rect.cols.start;
         let width = rect.width();
@@ -35,7 +38,7 @@ impl Document {
             }
         }
 
-        let mut highlights = Vec::new();
+        let mut highlight_scopes = Vec::new();
 
         if let (Some(lang), Some(tree)) = (self.language(), self.tree()) {
             let mut cursor = QueryCursor::new();
@@ -52,20 +55,18 @@ impl Document {
                 },
             );
 
-            while let Some(r#match) = matches.next() {
-                let QueryMatch {
-                    pattern_index: _,
-                    captures,
-                    ..
-                } = r#match;
-
+            while let Some(QueryMatch {
+                pattern_index: _,
+                captures,
+                ..
+            }) = matches.next()
+            {
                 for QueryCapture { node, index } in *captures {
                     let name = query.capture_names()[*index as usize];
-                    let theme = theme();
-                    let hl = theme.highlight(&[name.split(".").collect::<Vec<_>>()]);
-                    if !hl.is_none() {
-                        highlights.push((hl, node.byte_range()))
-                    }
+                    highlight_scopes.push((
+                        name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>(),
+                        node.byte_range(),
+                    ));
                 }
             }
         }
@@ -90,8 +91,10 @@ impl Document {
         };
         let scroll = self.scroll;
 
+        let mut shadow_len = 0u16;
         let mut i = 0;
         for line in self.lines_to(height as _) {
+            shadow_len = shadow_len.saturating_sub(1);
             let gi = i as usize + scroll;
             let line_byte = self.text().byte_of_line(gi).unwrap();
             let cursors = cursors(gi);
@@ -104,17 +107,16 @@ impl Document {
                     if j >= width - gutter_width {
                         break;
                     }
-                    let highlight_style = highlights
+                    let hl_scopes = highlight_scopes
                         .iter()
                         .filter(|(_, r)| r.contains(&(byte + line_byte)))
-                        .map(|(s, _)| *s)
-                        .fold(
-                            Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}),
-                            |c, n| c + n,
-                        );
+                        .map(|(s, _)| s.iter().map(|s| &**s).collect::<Vec<_>>())
+                        .collect::<Vec<_>>();
+                    let hl_style = (Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}))
+                        + theme().highlight(&hl_scopes);
                     screen[(i + y, j + x)] = Cell {
                         grapheme,
-                        style: (highlight_style
+                        style: (hl_style
                             + cursor_color((j - gutter_width) as usize)
                                 .map(Style::bg)
                                 .unwrap_or_default())
@@ -128,11 +130,23 @@ impl Document {
 
             if width > len {
                 for j in len..width {
+                    let cell = &mut screen[(i + y, j + x)];
                     if let Some(color) = cursor_color((j - gutter_width) as usize) {
-                        screen[(i + y, j + x)].style.bg = color;
+                        cell.style.bg = color;
+                    } else {
+                        match j.cmp(&shadow_len) {
+                            Less => cell.style.bg = rgb! {0x160000},
+                            Equal => {
+                                cell.style.fg = rgb! {0x160000};
+                                cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
+                            }
+                            Greater => (),
+                        }
                     }
                 }
             }
+
+            shadow_len = shadow_len.max(len);
 
             i += 1;
         }
@@ -150,7 +164,5 @@ impl Document {
 
             i += 1;
         }
-
-        Ok(())
     }
 }

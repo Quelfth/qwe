@@ -19,10 +19,41 @@ pub enum CursorState {
     LineSelect(LineCursors),
 }
 
+impl CursorState {
+    pub fn drop_others(&mut self) {
+        match self {
+            CursorState::Insert(c) => c.drop_others(),
+            CursorState::Select(c) => c.drop_others(),
+            CursorState::LineSelect(c) => c.drop_others(),
+        }
+    }
+}
+
 #[derive(Clone, Default)]
 pub struct CursorSet<Cursor> {
     main: Cursor,
     others: Vec<Cursor>,
+}
+
+impl<T> CursorSet<T> {
+    pub fn one(cursor: T) -> Self {
+        Self {
+            main: cursor,
+            others: Vec::new(),
+        }
+    }
+
+    pub fn from_iter(iter: impl IntoIterator<Item = T>) -> Option<Self> {
+        let mut iter = iter.into_iter();
+        Some(Self {
+            main: iter.next()?,
+            others: iter.collect(),
+        })
+    }
+
+    pub fn drop_others(&mut self) {
+        self.others.clear();
+    }
 }
 
 impl Default for CursorState {
@@ -74,21 +105,6 @@ impl CursorState {
         }
     }
 
-    pub fn block_extend_up(&mut self, rows: usize) {
-        match self {
-            CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.block_extend_up(rows)),
-            CursorState::LineSelect(_) => todo!(),
-        }
-    }
-
-    pub fn block_extend_down(&mut self, rows: usize) {
-        match self {
-            CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.block_extend_down(rows)),
-            CursorState::LineSelect(_) => todo!(),
-        }
-    }
     pub fn text_extend_up(&mut self, rows: usize, doc: &Document) {
         match self {
             CursorState::Insert(_) => (),

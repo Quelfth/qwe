@@ -31,6 +31,8 @@
 
 ; Tokens
 
+(self) @i.value.receiver
+"pub" @o.visibility.public
 "::" @o.association
 
 ; Modules
@@ -55,6 +57,11 @@
 (parameters ["(" "," ")"] @o.call.function)
 
 (function_item name: (_) @i.function)
+(parameter ":" @o.type)
+
+(declaration_list (function_item (parameters ["(" "," ")" ] @o.call.function.method)))
+
+(declaration_list (function_item name: (_) @i.function.method))
 
 ; Struct
 
@@ -62,6 +69,24 @@
 (struct_item (field_declaration_list ["{" "," "}"] @o.declare.struct))
 
 (struct_item name: (_) @i.type.struct)
+(field_declaration name: (_) @i.value.field)
+(field_declaration ":" @o.type)
+
+; Impl
+
+"impl" @o.implement
+(impl_item (declaration_list ["{" "}"] @o.implement))
+
+; Expressions
+
+
+(reference_expression "&" @o.access.reference)
+
+"match" @o.branch.match
+(match_block ["{" "}"] @o.branch.match)
+(match_arm "=>" @o.branch.case)
+(match_arm "," @o.branch.match)
+(match_arm value: (block ["{" "}"] @o.branch.case))
 
 ; Type
 

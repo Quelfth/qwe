@@ -1,4 +1,4 @@
-use std::{cmp::Ordering::*, iter};
+use std::{cmp::Ordering::*, iter, ops::Range};
 
 use crate::{
     document::{CursorChange, Document},
@@ -46,9 +46,7 @@ impl SelectCursors {
 }
 
 impl Cursor for SelectCursor {
-    fn apply_change(&mut self, change: CursorChange) {
-        todo!()
-    }
+    fn apply_change(&mut self, change: CursorChange) {}
 }
 
 #[derive(Clone, Default)]
@@ -65,6 +63,38 @@ pub struct RangeCursorLine {
 }
 
 impl SelectCursor {
+    pub fn one_pos(pos: Pos) -> Self {
+        Self {
+            line: pos.line,
+            first_line: RangeCursorLine {
+                start: pos.column,
+                end: pos.column,
+            },
+            other_lines: Vec::new(),
+        }
+    }
+
+    pub fn range(range: Range<usize>, doc: &Document) -> Self {
+        let Range { start, end } = range;
+        let Pos { line, column } = doc.text().pos_of_byte_pos(start).unwrap();
+        let Pos {
+            line: eline,
+            column: ecolumn,
+        } = doc.text().pos_of_byte_pos(end).unwrap();
+        if line != eline {
+            todo!()
+        }
+
+        Self {
+            line,
+            first_line: RangeCursorLine {
+                start: column,
+                end: ecolumn,
+            },
+            other_lines: Vec::new(),
+        }
+    }
+
     pub(super) fn to_insert_before(&self) -> InsertCursor {
         let Self {
             line, first_line, ..
@@ -146,17 +176,6 @@ impl SelectCursor {
         }
     }
 
-    pub fn block_extend_up(&mut self, rows: usize) {
-        self.line = self.line.saturating_sub(rows);
-        self.other_lines
-            .splice(0..0, iter::repeat_n(self.first_line, rows));
-    }
-
-    pub fn block_extend_down(&mut self, rows: usize) {
-        let line = self.last_line();
-        self.other_lines.extend(iter::repeat_n(line, rows));
-    }
-
     pub fn text_extend_up(&mut self, rows: usize, doc: &Document) {
         if rows == 0 {
             return;
@@ -166,21 +185,27 @@ impl SelectCursor {
             .first()
             .map(|l| l.start)
             .unwrap_or(doc.indent_on_line(self.line));
-        self.block_extend_up(rows);
+
+        self.line = self.line.saturating_sub(rows);
+        self.other_lines
+            .splice(0..0, iter::repeat_n(self.first_line, rows));
         self.other_lines
             .iter_mut()
             .take(rows)
             .for_each(|l| l.left_align(left_margin));
-        (self.line..)
+        let first_line_ix = self.line;
+        let num_other_lines = self.other_lines.len();
+        (first_line_ix..)
             .zip(self.lines_mut())
-            .take(rows)
-            .for_each(|(i, l)| l.right_align(doc.columns_in_line(i)))
+            .take((rows + 1).min(num_other_lines))
+            .for_each(|(i, l)| l.right_align(doc.columns_in_line(i), i != first_line_ix))
     }
 
     pub fn text_extend_down(&mut self, rows: usize, doc: &Document) {
         if rows == 0 {
             return;
         }
+        let first_line_ix = self.line;
         let line = self.last_line();
         let line_lix = self.other_lines.len();
         let line_ix = self.last_line_ix();
@@ -189,7 +214,7 @@ impl SelectCursor {
         (line_ix..)
             .zip(self.lines_mut().skip(line_lix).take(rows))
             .for_each(|(i, l)| {
-                l.right_align(doc.columns_in_line(i));
+                l.right_align(doc.columns_in_line(i), i != first_line_ix);
             });
         if let Some(align) = left_align {
             self.other_lines
@@ -206,6 +231,10 @@ impl SelectCursor {
     }
 
     pub fn retract_down(&mut self, rows: usize) {
+        let rows = rows.min(self.other_lines.len());
+        if rows == 0 {
+            return;
+        }
         let start = self.first_line.start;
         self.line += 1;
         if self.other_lines.len() <= rows {
@@ -250,22 +279,12 @@ impl SelectCursor {
 }
 
 impl RangeCursorLine {
-    fn right_align_to_line(&mut self, line: impl IntoIterator<Item = Grapheme>) {
-        self.right_align(line.into_iter().map(|g| g.columns()).sum())
-    }
-
-    fn right_align(&mut self, end: usize) {
+    fn right_align(&mut self, mut end: usize, force: bool) {
+        if !force {
+            end = self.start.max(end);
+        }
         self.end = end;
         self.start = self.start.min(self.end);
-    }
-
-    fn left_align_to_line(&mut self, line: impl IntoIterator<Item = Grapheme>) {
-        self.left_align(
-            line.into_iter()
-                .filter(|g| g.is_whitespace())
-                .map(|g| g.columns())
-                .sum(),
-        )
     }
 
     fn left_align(&mut self, start: usize) {
