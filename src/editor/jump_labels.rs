@@ -1,20 +1,87 @@
 use std::collections::HashMap;
 
 use auto_enums::auto_enum;
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
-use crate::{document::Document, pos::Pos};
+use crate::{
+    custom_literal::integer::rgb, document::Document, draw::screen::Canvas, editor::gadget::Gadget,
+    grapheme::GraphemeExt, pos::Pos, style::FlatStyle,
+};
+
+use super::{Editor, gadget::ScreenRegion};
 
 pub struct JumpLabels {
+    scroll: usize,
     longest: usize,
     try_rev: bool,
     typed: String,
     labels: HashMap<String, Pos>,
 }
 
+impl Gadget for JumpLabels {
+    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+        macro_rules! xx {
+            ($($tokens: tt)*) => {
+                Some(Box::new($($tokens)*))
+            };
+        }
+        match event {
+            KeyEvent {
+                code: KeyCode::Char(char),
+                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => {
+                if char == ' ' {
+                    return xx!(Editor::close_gadget);
+                }
+                self.r#type(char);
+
+                match self.check() {
+                    Ok(jump) => xx!(move |e| {
+                        e.jump_to(jump);
+                        e.close_gadget();
+                    }),
+                    Err(CheckFail::NotYet) => xx!(Editor::noop),
+                    Err(CheckFail::TooLong) => xx!(Editor::close_gadget),
+                }
+            }
+            _ => None,
+        }
+    }
+
+    fn screen_region(&self) -> ScreenRegion {
+        ScreenRegion::DocOverlay
+    }
+
+    fn draw(&self, mut canvas: Canvas<'_>) {
+        for (pos, label) in self.labels() {
+            if pos.line < self.scroll || pos.line > self.scroll + canvas.height() as usize {
+                continue;
+            }
+            for (i, g) in (0..).zip(label.graphemes()) {
+                let c = pos.column as u16 + i;
+                if c >= canvas.width() {
+                    break;
+                }
+                let cell = &mut canvas[((pos.line - self.scroll) as u16, c)];
+                cell.grapheme = g;
+                cell.style = FlatStyle {
+                    fg: rgb! {0xffffff},
+                    bg: cell.style.bg,
+                    bold: true,
+                    ..Default::default()
+                }
+            }
+        }
+    }
+}
+
 impl JumpLabels {
-    fn new(labels: impl IntoIterator<Item = (Pos, String)>, try_rev: bool) -> Self {
+    fn new(labels: impl IntoIterator<Item = (Pos, String)>, try_rev: bool, scroll: usize) -> Self {
         let mut longest = 0;
         Self {
+            scroll,
             typed: String::new(),
             labels: labels
                 .into_iter()
@@ -57,7 +124,7 @@ impl JumpLabels {
             _ => panic!(),
         };
 
-        JumpLabels::new(poss.into_iter().zip(label_gen), try_rev)
+        JumpLabels::new(poss.into_iter().zip(label_gen), try_rev, doc.scroll)
     }
 
     pub fn r#type(&mut self, char: char) {

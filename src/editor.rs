@@ -8,12 +8,14 @@ use crate::{
     document::{Change, CursorChange, Document},
     draw::screen::Screen,
     editor::{
+        clipboard::Clip,
         cursors::{
             CursorState,
             insert::InsertCursors,
             select::{SelectCursor, SelectCursors},
         },
         finder::Finder,
+        gadget::Gadget,
         inspect::Inspector,
         jump_labels::{CheckFail, JumpLabels},
         keymap::Keymaps,
@@ -23,9 +25,10 @@ use crate::{
 };
 
 mod actions;
+mod clipboard;
 pub mod cursors;
 mod finder;
-mod gadget;
+pub mod gadget;
 mod inspect;
 pub mod jump_labels;
 mod keymap;
@@ -37,9 +40,8 @@ pub struct Editor {
     cursors: CursorState,
     pub screen: Mutex<Screen>,
     keymap: Keymaps,
-    pub inspector: Option<Inspector>,
-    pub jump_labels: Option<JumpLabels>,
-    pub finder: Option<Finder>,
+    pub gadget: Option<Box<dyn Gadget>>,
+    pub clipboard: Option<Clip>,
 }
 
 impl Editor {
@@ -67,101 +69,21 @@ impl Editor {
     }
 
     pub fn on_key_event(&mut self, event: KeyEvent) -> io::Result<()> {
-        if self.inspector.is_some() {
-            if let KeyEvent {
-                code: KeyCode::Esc,
-                kind: KeyEventKind::Press,
-                ..
-            } = event
-            {
-                self.exit_inspect();
-                self.draw()?;
-            }
-
-            return Ok(());
-        }
-
-        if let Some(finder) = &mut self.finder {
+        if let Some(gadget) = &mut self.gadget {
             match event {
-                KeyEvent {
-                    code: KeyCode::Char(char),
-                    modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                    kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                    ..
-                } => {
-                    finder.r#type(char);
-                    self.draw()?;
-                }
-
-                KeyEvent {
-                    code: KeyCode::Backspace,
-                    kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                    ..
-                } => {
-                    finder.backspace();
-                    self.draw()?;
-                }
-
-                KeyEvent {
-                    code: KeyCode::Enter,
-                    kind: KeyEventKind::Press,
-                    ..
-                } => {
-                    if let Some(find) = finder.find() {
-                        self.finder = None;
-                        _ = self.select_ranges(find);
-                    }
-                    self.draw()?;
-                }
-
                 KeyEvent {
                     code: KeyCode::Esc,
                     kind: KeyEventKind::Press,
                     ..
                 } => {
-                    self.finder = None;
-                    self.draw()?;
+                    self.gadget = None;
                 }
-                _ => (),
-            }
-            return Ok(());
-        }
-
-        if let Some(labels) = &mut self.jump_labels {
-            match event {
-                KeyEvent {
-                    code: KeyCode::Char(char),
-                    modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                    kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                    ..
-                } => {
-                    if char == ' ' {
-                        self.jump_labels = None;
+                event => {
+                    if let Some(effect) = gadget.on_key(event) {
+                        effect(self);
                         self.draw()?;
-                        return Ok(());
                     }
-                    labels.r#type(char);
-
-                    match labels.check() {
-                        Ok(jump) => {
-                            self.jump_to(jump);
-                            self.jump_labels = None;
-                        }
-                        Err(CheckFail::NotYet) => (),
-                        Err(CheckFail::TooLong) => self.jump_labels = None,
-                    }
-                    self.draw()?;
                 }
-
-                KeyEvent {
-                    code: KeyCode::Esc,
-                    kind: KeyEventKind::Press,
-                    ..
-                } => {
-                    self.jump_labels = None;
-                    self.draw()?;
-                }
-                _ => (),
             }
             return Ok(());
         }
@@ -241,4 +163,14 @@ impl Editor {
             Err(())
         }
     }
+
+    fn open_gadget(&mut self, gadget: impl Gadget + 'static) {
+        self.gadget = Some(Box::new(gadget))
+    }
+
+    fn close_gadget(&mut self) {
+        self.gadget = None
+    }
+
+    fn noop(&mut self) {}
 }

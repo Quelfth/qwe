@@ -6,6 +6,7 @@ use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 use crate::{
     custom_literal::integer::rgb,
     document::Document,
+    draw::screen::Canvas,
     grapheme::{Grapheme, GraphemeExt},
     style::Style,
     theme::theme,
@@ -17,16 +18,8 @@ use super::{
 };
 
 impl Document {
-    pub(super) fn draw(
-        &self,
-        screen: &mut Screen,
-        rect: Rect<u16>,
-        cursors: impl Fn(usize) -> Vec<CursorRange>,
-    ) {
-        let y = rect.rows.start;
-        let x = rect.cols.start;
-        let width = rect.width();
-        let height = rect.height();
+    pub fn draw(&self, mut canvas: Canvas<'_>, cursors: impl Fn(usize) -> Vec<CursorRange>) {
+        let (width, height) = canvas.size();
 
         fn cursor_color(cursors: &[CursorRange]) -> impl Fn(usize) -> Option<Color> {
             |i| {
@@ -75,14 +68,14 @@ impl Document {
         let gutter_width = numbered_lines.ilog10() as u16 + 1;
         let write_line_nr = {
             let width = gutter_width.into();
-            move |screen: &mut Screen, line_nr: usize, screen_line_nr: u16| {
+            move |canvas: &mut Canvas<'_>, line_nr: usize, screen_line_nr: u16| {
                 let (nr, bg) = if line_nr < numbered_lines {
                     (format!("{:>1$}", line_nr + 1, width), rgb!(0x301010))
                 } else {
                     (iter::repeat_n(" ", width).collect(), rgb!(0x100000))
                 };
                 for (j, grapheme) in (0..).zip(nr.graphemes()) {
-                    screen[(screen_line_nr + y, j + x)] = Cell {
+                    canvas[(screen_line_nr, j)] = Cell {
                         grapheme,
                         style: (Style::fg(rgb!(0x604040)) + Style::bg(bg)).into(),
                     };
@@ -101,7 +94,7 @@ impl Document {
             let cursor_color = cursor_color(&cursors);
 
             let len = {
-                write_line_nr(screen, gi, i);
+                write_line_nr(&mut canvas, gi, i);
                 let mut j = gutter_width;
                 for (byte, grapheme) in line.graphemes_with_bytes() {
                     if j >= width - gutter_width {
@@ -114,7 +107,7 @@ impl Document {
                         .collect::<Vec<_>>();
                     let hl_style = (Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}))
                         + theme().highlight(&hl_scopes);
-                    screen[(i + y, j + x)] = Cell {
+                    canvas[(i, j)] = Cell {
                         grapheme,
                         style: (hl_style
                             + cursor_color((j - gutter_width) as usize)
@@ -130,7 +123,7 @@ impl Document {
 
             if width > len {
                 for j in len..width {
-                    let cell = &mut screen[(i + y, j + x)];
+                    let cell = &mut canvas[(i, j)];
                     if let Some(color) = cursor_color((j - gutter_width) as usize) {
                         cell.style.bg = color;
                     } else {
@@ -155,10 +148,10 @@ impl Document {
             let gi = i as usize + scroll;
             let cursors = cursors(gi);
             let cursor_color = cursor_color(&cursors);
-            write_line_nr(screen, gi, i);
+            write_line_nr(&mut canvas, gi, i);
             for j in gutter_width..width {
                 if let Some(color) = cursor_color((j - gutter_width) as usize) {
-                    screen[(i + y, j + x)].style.bg = color;
+                    canvas[(i, j)].style.bg = color;
                 }
             }
 

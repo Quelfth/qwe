@@ -7,6 +7,7 @@ use tree_sitter::{InputEdit, Tree};
 
 use crate::aprintln::aprintln;
 use crate::document::history::History;
+use crate::draw::Rect;
 use crate::lang::Language;
 use crate::rope::{Rope, RopeSlice};
 
@@ -54,6 +55,11 @@ impl Document {
 
     pub fn gutter_width(&self) -> u16 {
         (self.text.line_count() + 1).ilog10() as u16 + 1
+    }
+
+    pub fn overlay_rect(&self, mut rect: Rect<u16>) -> Rect<u16> {
+        rect.cols.start += self.gutter_width();
+        rect
     }
 }
 

@@ -34,7 +34,7 @@ impl Editor {
         let [Ok(start), Ok(end)] = [start, end].map(|p| self.doc.byte_pos_of_pos(p)) else {
             return;
         };
-        self.inspector = Some(Inspector::new(Document::new(
+        self.open_gadget(Inspector::new(Document::new(
             Some(Language::Query),
             pretty_node(
                 tree.root_node()
@@ -42,10 +42,6 @@ impl Editor {
                     .unwrap(),
             ),
         )))
-    }
-
-    pub fn exit_inspect(&mut self) {
-        self.inspector = None;
     }
 
     pub fn undo(&mut self) {
@@ -66,10 +62,23 @@ impl Editor {
 
     pub fn jump(&mut self) {
         let (_, height) = terminal_size();
-        self.jump_labels = Some(JumpLabels::generate(&self.doc, height as usize))
+        self.open_gadget(JumpLabels::generate(&self.doc, height as usize))
     }
 
     pub fn find(&mut self) {
-        self.finder = Some(Finder::new(self.doc().text().to_string(), 0));
+        self.open_gadget(Finder::new(self.doc().text().to_string(), 0));
+    }
+
+    pub fn delete(&mut self) {
+        todo!()
+    }
+
+    pub fn cut(&mut self) {
+        self.copy();
+        self.delete();
+    }
+
+    pub fn copy(&mut self) {
+        todo!()
     }
 }

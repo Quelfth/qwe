@@ -9,9 +9,9 @@ use crate::editor::cursors::{CursorState, select::RangeCursorLine};
 use super::Range;
 
 #[derive(Copy, Clone)]
-pub(super) struct CursorRange {
-    pub(super) kind: CursorRangeKind,
-    pub(super) range: Option<Range<usize>>,
+pub struct CursorRange {
+    pub kind: CursorRangeKind,
+    pub range: Option<Range<usize>>,
 }
 
 impl CursorRange {
@@ -66,7 +66,7 @@ impl CursorRange {
 }
 
 #[derive(Copy, Clone)]
-pub(super) enum CursorRangeKind {
+pub enum CursorRangeKind {
     InsertLeft,
     InsertRight,
     Select,

@@ -5,7 +5,7 @@ use std::{
 
 use crate::{
     draw::{cursor::CursorRange, screen::Screen},
-    editor::Editor,
+    editor::{Editor, gadget::ScreenRegion},
     terminal_size::terminal_size,
 };
 
@@ -15,9 +15,9 @@ pub mod jump_labels;
 pub mod screen;
 
 #[derive(Copy, Clone)]
-struct Range<T> {
-    start: T,
-    end: T,
+pub struct Range<T> {
+    pub start: T,
+    pub end: T,
 }
 
 impl<T> Range<T> {
@@ -59,9 +59,9 @@ impl Range<usize> {
 }
 
 #[derive(Copy, Clone)]
-struct Rect<T> {
-    rows: Range<T>,
-    cols: Range<T>,
+pub struct Rect<T> {
+    pub rows: Range<T>,
+    pub cols: Range<T>,
 }
 
 impl<T> Rect<T> {
@@ -92,25 +92,16 @@ impl Editor {
         let (width, height) = terminal_size();
         let mut screen = Screen::new(width, height);
 
-        self.doc()
-            .draw(&mut screen, Rect::new(0..width, 0..height), |i| {
-                self.cursors().line_ranges(i).collect()
-            });
+        let doc_rect = Rect::new(0..width, 0..height);
+        self.doc().draw(screen.canvas(doc_rect), |i| {
+            self.cursors().line_ranges(i).collect()
+        });
 
-        if let Some(jump_labels) = &self.jump_labels {
-            jump_labels.draw(
-                &mut screen,
-                Rect::new(self.doc().gutter_width()..width, 0..height),
-                self.doc().scroll,
-            )
-        }
-
-        if let Some(inspector) = &self.inspector {
-            inspector
-                .tree()
-                .draw(&mut screen, Rect::new(width / 2..width, 0..height), |_| {
-                    Default::default()
-                });
+        if let Some(gadget) = &self.gadget {
+            gadget.draw(screen.canvas(match gadget.screen_region() {
+                ScreenRegion::DocOverlay => self.doc().overlay_rect(doc_rect),
+                ScreenRegion::RightPanel => Rect::new(width / 2..width, 0..height),
+            }))
         }
 
         {

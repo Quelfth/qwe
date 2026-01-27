@@ -1,13 +1,68 @@
 use std::ops::Range;
 
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use regex::Regex;
 
-use crate::pos::Pos;
+use crate::{
+    editor::{Editor, gadget::Gadget},
+    pos::Pos,
+};
 
 pub struct Finder {
     haystack: String,
     offset: usize,
     regex: String,
+}
+
+impl Gadget for Finder {
+    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+        macro_rules! xx {
+            ($($tokens: tt)*) => {
+                Some(Box::new($($tokens)*))
+            };
+        }
+        match event {
+            KeyEvent {
+                code: KeyCode::Char(char),
+                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => {
+                self.r#type(char);
+                xx!(Editor::noop)
+            }
+
+            KeyEvent {
+                code: KeyCode::Backspace,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => {
+                self.backspace();
+                xx!(Editor::noop)
+            }
+
+            KeyEvent {
+                code: KeyCode::Enter,
+                kind: KeyEventKind::Press,
+                ..
+            } => self.find().map(|f| {
+                let x: Box<dyn FnOnce(&mut Editor)> = Box::new(|e: &mut Editor| {
+                    e.close_gadget();
+                    _ = e.select_ranges(f);
+                });
+                x
+            }),
+
+            KeyEvent {
+                code: KeyCode::Esc,
+                kind: KeyEventKind::Press,
+                ..
+            } => {
+                xx!(Editor::close_gadget)
+            }
+            _ => None,
+        }
+    }
 }
 
 impl Finder {

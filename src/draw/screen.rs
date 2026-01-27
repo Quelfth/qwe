@@ -10,7 +10,7 @@ use crossterm::{
 };
 use culit::culit;
 
-use crate::{grapheme::Grapheme, style::FlatStyle};
+use crate::{draw::Rect, grapheme::Grapheme, style::FlatStyle};
 
 #[derive(Default)]
 pub struct Screen {
@@ -111,5 +111,65 @@ impl Screen {
         }
 
         stdout.flush()
+    }
+}
+
+impl Screen {
+    pub fn canvas(&mut self, rect: Rect<u16>) -> Canvas<'_> {
+        Canvas { screen: self, rect }
+    }
+}
+
+pub struct Canvas<'a> {
+    screen: &'a mut Screen,
+    rect: Rect<u16>,
+}
+
+impl<'s> Canvas<'s> {
+    pub fn width(&self) -> u16 {
+        self.rect.width()
+    }
+
+    pub fn height(&self) -> u16 {
+        self.rect.height()
+    }
+
+    pub fn size(&self) -> (u16, u16) {
+        (self.width(), self.height())
+    }
+
+    pub fn rebor<'t: 's>(&'t mut self) -> Canvas<'t> {
+        Self {
+            screen: self.screen,
+            rect: self.rect,
+        }
+    }
+}
+
+impl IndexMut<(u16, u16)> for Canvas<'_> {
+    fn index_mut(&mut self, (i, j): (u16, u16)) -> &mut Self::Output {
+        let (width, height) = (self.rect.width(), self.rect.height());
+        if i > self.rect.height() {
+            panic!("row {i} is out of bounds for canvas of height {height}")
+        }
+        if j > self.rect.width() {
+            panic!("column {j} is out of bounds for canvas of width {width}")
+        }
+        &mut self.screen[(i + self.rect.rows.start, j + self.rect.cols.start)]
+    }
+}
+
+impl Index<(u16, u16)> for Canvas<'_> {
+    type Output = Cell;
+
+    fn index(&self, (i, j): (u16, u16)) -> &Self::Output {
+        let (width, height) = (self.rect.width(), self.rect.height());
+        if i > self.rect.height() {
+            panic!("row {i} is out of bounds for canvas of height {height}")
+        }
+        if j > self.rect.width() {
+            panic!("column {j} is out of bounds for canvas of width {width}")
+        }
+        &self.screen[(i + self.rect.rows.start, j + self.rect.cols.start)]
     }
 }
