@@ -5,7 +5,7 @@ use crate::{
     document::Document,
     editor::{Editor, finder::Finder, inspect::Inspector, jump_labels::JumpLabels},
     lang::Language,
-    terminal_size::{self, terminal_size},
+    terminal_size::terminal_size,
     util::pretty_node,
 };
 
@@ -30,7 +30,7 @@ impl Editor {
 
     pub fn inspect(&mut self) {
         let Some(tree) = &self.doc.tree() else { return };
-        let (start, end) = self.cursors.inspect_range();
+        let (start, end) = self.doc.inspect_range();
         let [Ok(start), Ok(end)] = [start, end].map(|p| self.doc.byte_pos_of_pos(p)) else {
             return;
         };
@@ -41,19 +41,16 @@ impl Editor {
                     .descendant_for_byte_range(start, end)
                     .unwrap(),
             ),
+            None,
         )))
     }
 
     pub fn undo(&mut self) {
-        for change in self.doc.undo() {
-            self.cursors.apply_change(change);
-        }
+        self.doc.undo()
     }
 
     pub fn redo(&mut self) {
-        for change in self.doc.redo() {
-            self.cursors.apply_change(change);
-        }
+        self.doc.redo()
     }
 
     pub fn debug_undo(&mut self) {
@@ -70,7 +67,7 @@ impl Editor {
     }
 
     pub fn delete(&mut self) {
-        todo!()
+        self.doc.do_delete();
     }
 
     pub fn cut(&mut self) {
@@ -79,6 +76,17 @@ impl Editor {
     }
 
     pub fn copy(&mut self) {
-        todo!()
+        self.clipboard.new_clip();
+        for text in self.doc.copy_text() {
+            self.clipboard.append(text);
+        }
+    }
+
+    pub fn paste(&mut self) {
+        if let Some(clip) = self.clipboard.top_clip() {
+            for clip in clip {
+                aprintln!("{clip}");
+            }
+        }
     }
 }

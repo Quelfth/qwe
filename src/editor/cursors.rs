@@ -1,10 +1,8 @@
-use std::iter;
+use std::{iter, ops::Range};
 
-use crate::{
-    document::{CursorChange, Document},
-    pos::Pos,
-};
+use crate::{document::CursorChange, pos::Pos, rope::Rope};
 
+use auto_enums::auto_enum;
 use insert::InsertCursors;
 use line_select::LineCursors;
 use select::SelectCursors;
@@ -105,18 +103,18 @@ impl CursorState {
         }
     }
 
-    pub fn text_extend_up(&mut self, rows: usize, doc: &Document) {
+    pub fn text_extend_up(&mut self, rows: usize, text: &Rope) {
         match self {
             CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_up(rows, doc)),
+            CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_up(rows, text)),
             CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.extend_up(rows)),
         }
     }
 
-    pub fn text_extend_down(&mut self, rows: usize, doc: &Document) {
+    pub fn text_extend_down(&mut self, rows: usize, text: &Rope) {
         match self {
             CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_down(rows, doc)),
+            CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_down(rows, text)),
             CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.extend_down(rows)),
         }
     }
@@ -160,7 +158,16 @@ impl CursorState {
         match self {
             CursorState::Insert(c) => c.main.inspect_range(),
             CursorState::Select(c) => c.main.inspect_range(),
-            CursorState::LineSelect(c) => todo!(),
+            CursorState::LineSelect(_) => todo!(),
+        }
+    }
+
+    #[auto_enum(Iterator)]
+    pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<usize>> {
+        match self {
+            CursorState::Insert(_) => iter::empty(),
+            CursorState::Select(c) => c.delete_ranges(text),
+            CursorState::LineSelect(c) => c.delete_ranges(text),
         }
     }
 }

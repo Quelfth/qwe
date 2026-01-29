@@ -6,9 +6,11 @@ macro_rules! aprintln {
     ($($t:tt)*) => {$crate::aprintln::__aprintln(format_args!{$($t)*})};
 }
 pub(crate) use aprintln;
+#[allow(unused)]
 macro_rules! aprint {
     ($($t:tt)*) => {$crate::aprintln::__aprint(format_args!{$($t)*})};
 }
+#[allow(unused)]
 pub(crate) use aprint;
 
 static PRINT_STREAM: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::from("".to_owned()));

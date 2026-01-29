@@ -1,4 +1,3 @@
-use std::cmp::Ordering::*;
 use std::iter;
 use std::ops::Range;
 
@@ -8,17 +7,22 @@ use tree_sitter::{InputEdit, Tree};
 use crate::aprintln::aprintln;
 use crate::document::history::History;
 use crate::draw::Rect;
+use crate::editor::cursors::CursorState;
+use crate::editor::cursors::insert::InsertCursors;
+use crate::editor::cursors::select::{SelectCursor, SelectCursors};
 use crate::lang::Language;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::Pos;
 use crate::ts::parse_doc;
 
+mod actions;
 mod history;
 
 #[derive(Default)]
 pub struct Document {
     pub scroll: usize,
+    pub cursors: Option<CursorState>,
     text: Rope,
     pub history: History,
     pub future: History,
@@ -27,7 +31,11 @@ pub struct Document {
 }
 
 impl Document {
-    pub fn new(lang: Option<Language>, text: impl AsRef<str>) -> Self {
+    pub fn new(
+        lang: Option<Language>,
+        text: impl AsRef<str>,
+        cursors: Option<CursorState>,
+    ) -> Self {
         let text: Rope = text.as_ref().into();
         Self {
             tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
@@ -35,10 +43,12 @@ impl Document {
             scroll: 0,
             history: Default::default(),
             future: Default::default(),
+            cursors,
             text,
         }
     }
 
+    #[allow(unused)]
     pub fn print_tree(&self) {
         if let Some(tree) = &self.tree {
             aprintln!("{}", tree.root_node().to_sexp());
@@ -61,13 +71,41 @@ impl Document {
         rect.cols.start += self.gutter_width();
         rect
     }
+
+    pub fn new_scrolled_cursors(&self) -> impl Fn() -> CursorState + use<> {
+        let line = self.scroll;
+        move || {
+            CursorState::Select(SelectCursors::one(SelectCursor::one_pos(Pos {
+                line,
+                column: 0,
+            })))
+        }
+    }
 }
+
+macro_rules! force_cursors {
+    ($doc: ident) => {{
+        let new = $doc.new_scrolled_cursors();
+        $doc.cursors.get_or_insert_with(new)
+    }};
+}
+pub(crate) use force_cursors;
 
 #[derive(Clone, Debug)]
 pub struct Change {
     pub byte_pos: usize,
     pub delete: usize,
     pub insert: String,
+}
+
+impl Change {
+    pub fn delete(byte_pos: usize, amount: usize) -> Self {
+        Self {
+            byte_pos,
+            delete: amount,
+            insert: "".to_string(),
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -132,6 +170,31 @@ impl CursorChange {
         }
     }
 
+    pub fn apply_to_line(self, line: usize) -> usize {
+        let Self {
+            pos: change_pos,
+            kind,
+            lines,
+            ..
+        } = self;
+        let change_line = change_pos.line + (change_pos.column != 0) as usize;
+        if line < change_line {
+            return line;
+        }
+
+        if kind == CursorChangeKind::Insert {
+            return line + lines;
+        }
+
+        let end_line = change_line + lines;
+
+        if line > end_line {
+            line - lines
+        } else {
+            change_line
+        }
+    }
+
     fn insert(pos: Pos, text: &str) -> Option<Self> {
         (!text.is_empty()).then(|| CursorChange {
             pos,
@@ -187,23 +250,6 @@ impl Document {
         } else {
             Ok(line + pos.column)
         }
-    }
-
-    pub fn indent_on_line(&self, line: usize) -> usize {
-        let Some(line) = self.text.line(line) else {
-            return 0;
-        };
-        line.graphemes()
-            .take_while(|g| g.is_whitespace())
-            .map(|g| g.columns())
-            .sum()
-    }
-
-    pub fn columns_in_line(&self, line: usize) -> usize {
-        let Some(line) = self.text.line(line) else {
-            return 0;
-        };
-        line.graphemes().map(|g| g.columns()).sum()
     }
 
     pub fn backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
@@ -358,9 +404,41 @@ impl Document {
         }
     }
 
-    pub fn undo(&mut self) -> Vec<CursorChange> {
+    pub fn do_insert(
+        &mut self,
+        change: impl Fn(&Document, Pos) -> (Option<Change>, Option<CursorChange>),
+    ) {
+        let mut changes = Vec::<CursorChange>::new();
+        let Some(cursors) = &self.cursors else { return };
+        match cursors {
+            CursorState::Insert(c) => {
+                for cursor in c.clone().iter() {
+                    let pos = changes.iter().fold(cursor.pos, |p, c| c.apply(p));
+                    let (change, cursor_change) = change(self, pos);
+                    if let Some(change) = cursor_change {
+                        changes.push(change);
+                    }
+                    if let Some(change) = change {
+                        let reverse = self.change(change.clone());
+                        self.history.push(reverse);
+                    }
+                }
+            }
+            CursorState::Select(c) => todo!(),
+            CursorState::LineSelect(c) => todo!(),
+        }
+
+        for change in changes {
+            if let Some(cursors) = &mut self.cursors {
+                cursors.apply_change(change);
+            }
+        }
+    }
+
+    pub fn undo(&mut self) {
         let mut changes = Vec::<CursorChange>::new();
 
+        self.future.checkpoint();
         for change in self.history.pop().collect::<Vec<_>>().into_iter() {
             if let Some(change) = self.text.cursor_change(&change) {
                 changes.push(change);
@@ -368,14 +446,18 @@ impl Document {
             let reverse = self.change(change);
             self.future.push(reverse);
         }
-        self.future.checkpoint();
 
-        changes
+        if let Some(cursors) = &mut self.cursors {
+            for change in changes {
+                cursors.apply_change(change);
+            }
+        }
     }
 
-    pub fn redo(&mut self) -> Vec<CursorChange> {
+    pub fn redo(&mut self) {
         let mut changes = Vec::<CursorChange>::new();
 
+        self.history.checkpoint();
         for change in self.future.pop().collect::<Vec<_>>().into_iter() {
             if let Some(change) = self.text.cursor_change(&change) {
                 changes.push(change);
@@ -383,8 +465,51 @@ impl Document {
             let reverse = self.change(change);
             self.history.push(reverse);
         }
-        self.history.checkpoint();
 
-        changes
+        if let Some(cursors) = &mut self.cursors {
+            for change in changes {
+                cursors.apply_change(change);
+            }
+        }
+    }
+
+    pub fn do_delete(&mut self) {
+        if let Some(cursors) = &self.cursors {
+            let mut ranges = cursors.delete_ranges(&self.text).collect::<Vec<_>>();
+            ranges.sort_unstable_by_key(|r| r.start);
+            for range in ranges.into_iter().rev() {
+                self.delete(range);
+            }
+        }
+    }
+
+    pub fn delete(&mut self, range: Range<usize>) {
+        if range.is_empty() {
+            return;
+        }
+        let change = Change::delete(range.start, range.len());
+        let cursor_change = self.text.cursor_change(&change);
+        let reverse = self.change(change);
+        self.history.push(reverse);
+
+        if let Some(cursors) = &mut self.cursors
+            && let Some(change) = cursor_change
+        {
+            cursors.apply_change(change);
+        }
+    }
+
+    pub fn inspect_range(&self) -> (Pos, Pos) {
+        let Some(cursors) = &self.cursors else {
+            return (
+                Pos::ZERO,
+                Pos {
+                    line: self.text.line_len(),
+                    column: self.text.columns_in_line(self.text.line_len()),
+                },
+            );
+        };
+
+        cursors.inspect_range()
     }
 }

@@ -1,10 +1,10 @@
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
-    aprintln::{aprint, aprintln},
     document::{Change, CursorChange, CursorChangeKind},
+    grapheme::Grapheme,
     pos::Pos,
     rope::iter::{Graphemes, Lines},
 };
@@ -85,6 +85,37 @@ impl Rope {
 
     pub fn graphemes(&self) -> Graphemes<'_> {
         Graphemes(self.0.graphemes())
+    }
+
+    pub fn graphemes_with_bytes(&self) -> impl Iterator<Item = (usize, Grapheme)> {
+        let iter = self.graphemes();
+        gen {
+            let mut byte = 0;
+
+            for grapheme in iter {
+                let len = grapheme.len();
+                yield (byte, grapheme);
+                byte += len;
+            }
+        }
+    }
+
+    pub fn columns_bytes(&self) -> impl Iterator<Item = (usize, usize)> {
+        let iter = self.graphemes();
+        gen {
+            let mut column = 0;
+            let mut byte = 0;
+
+            for grapheme in iter {
+                let columns = grapheme.columns();
+                let bytes = grapheme.len();
+                for _ in 0..columns {
+                    yield (column, byte);
+                    column += 1;
+                }
+                byte += bytes;
+            }
+        }
     }
 
     #[must_use]
@@ -242,6 +273,47 @@ impl Rope {
                 },
             }),
         }
+    }
+    pub fn indent_on_line(&self, line: usize) -> usize {
+        let Some(line) = self.line(line) else {
+            return 0;
+        };
+        line.graphemes()
+            .take_while(|g| g.is_whitespace())
+            .map(|g| g.columns())
+            .sum()
+    }
+    pub fn columns_in_line(&self, line: usize) -> usize {
+        let Some(line) = self.line(line) else {
+            return 0;
+        };
+        line.graphemes().map(|g| g.columns()).sum()
+    }
+
+    pub fn graphemes_to_bytes(&self, graphemes: usize) -> Option<usize> {
+        for (g, (b, _)) in self.graphemes_with_bytes().enumerate() {
+            if graphemes == g {
+                return Some(b);
+            }
+        }
+        None
+    }
+
+    pub fn column_range_to_byte_range(&self, column_range: Range<usize>) -> Range<usize> {
+        let mut start = None;
+        let mut end = None;
+        for (c, b) in self.columns_bytes() {
+            for (x, i) in [
+                (&mut start, column_range.start),
+                (&mut end, column_range.end),
+            ] {
+                if x.is_none() && i == c {
+                    *x = Some(b);
+                }
+            }
+        }
+
+        start.unwrap_or(self.byte_len())..end.unwrap_or(self.byte_len())
     }
 }
 

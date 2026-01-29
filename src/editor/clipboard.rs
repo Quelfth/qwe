@@ -21,7 +21,7 @@ impl Clipboard {
         self.board.push(Clip::default());
     }
 
-    pub fn next_clip(&mut self) -> &str {
+    pub fn next_clip_elt(&mut self) -> &str {
         let Some(clip) = self.board.last() else {
             return "";
         };
@@ -31,5 +31,13 @@ impl Clipboard {
         self.cursor %= clip.0.len();
 
         str
+    }
+
+    pub fn top_clip(&self) -> Option<impl Iterator<Item = &str>> {
+        let Some(clip) = self.board.last() else {
+            return None;
+        };
+
+        Some(clip.0.iter().map(|i| &**i))
     }
 }

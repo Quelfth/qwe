@@ -10,7 +10,7 @@ pub struct Key {
     alt: bool,
 }
 
-trait ToKey {
+pub trait ToKey {
     fn to_key_code(self) -> KeyCode;
 }
 

@@ -3,3 +3,7 @@ pub struct Pos {
     pub line: usize,
     pub column: usize,
 }
+
+impl Pos {
+    pub const ZERO: Self = Self { line: 0, column: 0 };
+}

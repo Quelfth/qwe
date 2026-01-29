@@ -72,17 +72,26 @@ pub enum CursorRangeKind {
     Select,
     SelectLeft,
     SelectRight,
+    LineBetween,
+}
+
+#[derive(Copy, Clone)]
+pub enum CursorStyle {
+    Color(Color),
+    Underline(Color),
 }
 
 impl CursorRangeKind {
     #[culit]
-    pub(super) fn color(self) -> Color {
+    pub(super) fn style(self) -> CursorStyle {
+        use CursorStyle::*;
         match self {
-            CursorRangeKind::InsertLeft => 0x003830rgb,
-            CursorRangeKind::InsertRight => 0x007060rgb,
-            CursorRangeKind::Select => 0x202070rgb,
-            CursorRangeKind::SelectLeft => 0x101050rgb,
-            CursorRangeKind::SelectRight => 0x404090rgb,
+            CursorRangeKind::InsertLeft => Color(0x003830rgb),
+            CursorRangeKind::InsertRight => Color(0x007060rgb),
+            CursorRangeKind::Select => Color(0x202070rgb),
+            CursorRangeKind::SelectLeft => Color(0x101050rgb),
+            CursorRangeKind::SelectRight => Color(0x404090rgb),
+            CursorRangeKind::LineBetween => Underline(0x404090rgb),
         }
     }
 }
@@ -105,12 +114,15 @@ impl CursorState {
             CursorState::LineSelect(cursors) => (cursors
                 .iter()
                 .any(|c| c.line <= line && c.line + c.height > line))
-            .then(|| CursorRange::line())
+            .then(CursorRange::line)
             .or_else(|| {
-                (cursors.iter().any(|c| c.line == line && c.height == 0)).then(|| CursorRange {
-                    kind: CursorRangeKind::SelectRight,
-                    range: None,
-                })
+                cursors
+                    .iter()
+                    .any(|c| c.line == line + 1 && c.height == 0)
+                    .then_some(CursorRange {
+                        kind: CursorRangeKind::LineBetween,
+                        range: None,
+                    })
             })
             .into_iter(),
         }

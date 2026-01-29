@@ -1,4 +1,4 @@
-use std::ops::RangeBounds;
+use std::ops::{Range, RangeBounds};
 
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
@@ -147,5 +147,40 @@ impl<'a> RopeSlice<'a> {
 
     pub fn raw_lines(&self) -> RawLines<'a> {
         self.0.raw_lines()
+    }
+
+    pub fn columns_bytes(&self) -> impl Iterator<Item = (usize, usize)> {
+        let iter = self.graphemes();
+        gen {
+            let mut column = 0;
+            let mut byte = 0;
+
+            for grapheme in iter {
+                let columns = grapheme.columns();
+                let bytes = grapheme.len();
+                for _ in 0..columns {
+                    yield (column, byte);
+                    column += 1;
+                }
+                byte += bytes;
+            }
+        }
+    }
+
+    pub fn column_range_to_byte_range(&self, column_range: Range<usize>) -> Range<usize> {
+        let mut start = None;
+        let mut end = None;
+        for (c, b) in self.columns_bytes() {
+            for (x, i) in [
+                (&mut start, column_range.start),
+                (&mut end, column_range.end),
+            ] {
+                if x.is_none() && i == c {
+                    *x = Some(b);
+                }
+            }
+        }
+
+        start.unwrap_or(self.byte_len())..end.unwrap_or(self.byte_len())
     }
 }

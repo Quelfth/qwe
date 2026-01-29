@@ -3,10 +3,7 @@ use std::ops::Range;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use regex::Regex;
 
-use crate::{
-    editor::{Editor, gadget::Gadget},
-    pos::Pos,
-};
+use crate::editor::{Editor, gadget::Gadget};
 
 pub struct Finder {
     haystack: String,

@@ -1,6 +1,8 @@
 #![feature(never_type)]
 #![feature(gen_blocks)]
 #![feature(try_blocks)]
+#![feature(super_let)]
+#![allow(clippy::module_inception)]
 
 use std::{fs, io, panic, path::PathBuf};
 

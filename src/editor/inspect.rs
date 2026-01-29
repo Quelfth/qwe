@@ -1,8 +1,4 @@
-use crossterm::event::KeyEvent;
-
 use crate::{document::Document, draw::screen::Canvas, editor::gadget::Gadget};
-
-use super::Editor;
 
 pub struct Inspector {
     tree: Document,

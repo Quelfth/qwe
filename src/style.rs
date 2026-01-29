@@ -10,6 +10,7 @@ pub struct FlatStyle {
     pub bold: bool,
     pub under: Option<Under>,
     pub uc: Option<Color>,
+    pub overline: bool,
 }
 
 impl Default for FlatStyle {
@@ -21,6 +22,7 @@ impl Default for FlatStyle {
             bold: Default::default(),
             under: Default::default(),
             uc: Default::default(),
+            overline: Default::default(),
         }
     }
 }
@@ -34,6 +36,7 @@ impl From<FlatStyle> for ContentStyle {
             bold,
             under,
             uc,
+            overline,
         }: FlatStyle,
     ) -> Self {
         let mut style = Self::new().with(fg).on(bg);
@@ -48,6 +51,9 @@ impl From<FlatStyle> for ContentStyle {
         }
         if let Some(uc) = uc {
             style.underline_color = Some(uc)
+        }
+        if overline {
+            style = style.attribute(Attribute::OverLined)
         }
 
         style
@@ -123,6 +129,7 @@ impl From<Style> for FlatStyle {
             bold: bold.unwrap_or(false),
             under: under.flatten(),
             uc: uc.flatten(),
+            overline: false,
         }
     }
 }

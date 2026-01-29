@@ -137,13 +137,6 @@ impl<'s> Canvas<'s> {
     pub fn size(&self) -> (u16, u16) {
         (self.width(), self.height())
     }
-
-    pub fn rebor<'t: 's>(&'t mut self) -> Canvas<'t> {
-        Self {
-            screen: self.screen,
-            rect: self.rect,
-        }
-    }
 }
 
 impl IndexMut<(u16, u16)> for Canvas<'_> {

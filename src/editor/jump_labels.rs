@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use auto_enums::auto_enum;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::{

@@ -1,33 +1,29 @@
-use std::{cmp::Ordering::*, io, iter};
+use std::{cmp::Ordering::*, iter};
 
-use crossterm::style::Color;
 use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
 use crate::{
     custom_literal::integer::rgb,
     document::Document,
-    draw::screen::Canvas,
+    draw::{cursor::CursorStyle, screen::Canvas},
     grapheme::{Grapheme, GraphemeExt},
-    style::Style,
+    style::{Style, Under},
     theme::theme,
 };
 
-use super::{
-    CursorRange, Rect,
-    screen::{Cell, Screen},
-};
+use super::{CursorRange, screen::Cell};
 
 impl Document {
     pub fn draw(&self, mut canvas: Canvas<'_>, cursors: impl Fn(usize) -> Vec<CursorRange>) {
         let (width, height) = canvas.size();
 
-        fn cursor_color(cursors: &[CursorRange]) -> impl Fn(usize) -> Option<Color> {
+        fn cursor_color(cursors: &[CursorRange]) -> impl Fn(usize) -> Option<CursorStyle> {
             |i| {
                 cursors
                     .iter()
                     .find(|c| c.range.is_none_or(|r| r.contains(i)))
                     .map(|c| c.kind)
-                    .map(|k| k.color())
+                    .map(|k| k.style())
             }
         }
 
@@ -109,10 +105,17 @@ impl Document {
                         + theme().highlight(&hl_scopes);
                     canvas[(i, j)] = Cell {
                         grapheme,
-                        style: (hl_style
-                            + cursor_color((j - gutter_width) as usize)
-                                .map(Style::bg)
-                                .unwrap_or_default())
+                        style: {
+                            hl_style
+                                + cursor_color((j - gutter_width) as usize)
+                                    .map(|c| match c {
+                                        CursorStyle::Color(color) => Style::bg(color),
+                                        CursorStyle::Underline(color) => {
+                                            Style::uc(Some(color)) + Under::Line.into()
+                                        }
+                                    })
+                                    .unwrap_or_default()
+                        }
                         .into(),
                     };
 
@@ -124,17 +127,26 @@ impl Document {
             if width > len {
                 for j in len..width {
                     let cell = &mut canvas[(i, j)];
-                    if let Some(color) = cursor_color((j - gutter_width) as usize) {
-                        cell.style.bg = color;
-                    } else {
-                        match j.cmp(&shadow_len) {
-                            Less => cell.style.bg = rgb! {0x160000},
-                            Equal => {
-                                cell.style.fg = rgb! {0x160000};
-                                cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
+                    if let Some(style) = cursor_color((j - gutter_width) as usize) {
+                        use CursorStyle::*;
+                        match style {
+                            Color(color) => {
+                                cell.style.bg = color;
+                                continue;
                             }
-                            Greater => (),
+                            Underline(color) => {
+                                cell.style.under = Some(Under::Line);
+                                cell.style.uc = Some(color);
+                            }
                         }
+                    }
+                    match j.cmp(&shadow_len) {
+                        Less => cell.style.bg = rgb! {0x160000},
+                        Equal => {
+                            cell.style.fg = rgb! {0x160000};
+                            cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
+                        }
+                        Greater => (),
                     }
                 }
             }
@@ -150,8 +162,16 @@ impl Document {
             let cursor_color = cursor_color(&cursors);
             write_line_nr(&mut canvas, gi, i);
             for j in gutter_width..width {
-                if let Some(color) = cursor_color((j - gutter_width) as usize) {
-                    canvas[(i, j)].style.bg = color;
+                if let Some(style) = cursor_color((j - gutter_width) as usize) {
+                    use CursorStyle::*;
+                    match style {
+                        Color(color) => canvas[(i, j)].style.bg = color,
+                        Underline(color) => {
+                            let cell = &mut canvas[(i, j)];
+                            cell.style.under = Some(Under::Line);
+                            cell.style.uc = Some(color);
+                        }
+                    }
                 }
             }
 

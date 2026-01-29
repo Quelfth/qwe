@@ -94,7 +94,11 @@ impl Editor {
 
         let doc_rect = Rect::new(0..width, 0..height);
         self.doc().draw(screen.canvas(doc_rect), |i| {
-            self.cursors().line_ranges(i).collect()
+            self.doc()
+                .cursors
+                .as_ref()
+                .map(|c| c.line_ranges(i).collect())
+                .unwrap_or_default()
         });
 
         if let Some(gadget) = &self.gadget {

@@ -1,10 +1,7 @@
-use std::fmt::{Display, Write};
+use std::{fmt::Write, ops::Range};
 
+use extension_trait::extension_trait;
 use tree_sitter::Node;
-
-pub fn default<T: Default>() -> T {
-    T::default()
-}
 
 pub fn pretty_node(node: Node<'_>) -> String {
     let mut string = String::new();
@@ -47,4 +44,13 @@ fn format_node(node: Node<'_>, indent: usize, field_name: Option<&str>, out: &mu
     }
 
     out.push_str(&format!("{})", indent_str));
+}
+
+#[extension_trait]
+pub impl<T> MapBounds for Range<T> {
+    type T = T;
+
+    fn map_bounds(self, map: impl Fn(Self::T) -> Self::T) -> Self {
+        map(self.start)..map(self.end)
+    }
 }

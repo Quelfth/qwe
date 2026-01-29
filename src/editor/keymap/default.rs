@@ -57,6 +57,10 @@ impl Default for Keymaps {
                 (Key::char('f'), Mapping::once(Editor::find)),
                 //
                 (Key::char('z'), Mapping::once(Editor::undo)),
+                (Key::char('Z'), Mapping::once(Editor::redo)),
+                (Key::char('x'), Mapping::once(Editor::cut)),
+                (Key::char('c'), Mapping::once(Editor::copy)),
+                (Key::char('v'), Mapping::once(Editor::paste)),
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
                 (Key::alt('^'), Mapping::once(Editor::inspect)),
@@ -83,6 +87,10 @@ impl Default for Keymaps {
                 (Key::alt('k'), Mapping::rep(|e| e.text_extend_up(1))),
                 //
                 (Key::char('z'), Mapping::once(Editor::undo)),
+                (Key::char('Z'), Mapping::once(Editor::redo)),
+                (Key::char('x'), Mapping::once(Editor::cut)),
+                (Key::char('c'), Mapping::once(Editor::copy)),
+                (Key::char('v'), Mapping::once(Editor::paste)),
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
                 (Key::alt('^'), Mapping::once(Editor::inspect)),

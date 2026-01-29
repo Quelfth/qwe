@@ -1,4 +1,4 @@
-use std::{cmp::Ordering::*, iter, ops::Range};
+use std::{cmp::Ordering::*, iter, mem, ops::Range};
 
 use crate::{
     document::{CursorChange, Document},
@@ -6,8 +6,9 @@ use crate::{
         Cursor, CursorSet,
         line_select::{LineCursor, LineCursors},
     },
-    grapheme::Grapheme,
     pos::Pos,
+    rope::Rope,
+    util::MapBounds,
 };
 
 use super::insert::*;
@@ -21,10 +22,10 @@ impl SelectCursors {
     pub fn to_insert_after(&self) -> InsertCursors {
         self.map_to(SelectCursor::to_insert_after)
     }
-    pub fn to_insert_before_line(&self, doc: &Document) -> InsertCursors {
+    pub fn to_insert_before_line(&self, doc: &Rope) -> InsertCursors {
         self.map_to(|c| SelectCursor::to_insert_before_line(c, doc))
     }
-    pub fn to_insert_after_line(&self, doc: &Document) -> InsertCursors {
+    pub fn to_insert_after_line(&self, doc: &Rope) -> InsertCursors {
         self.map_to(|c| SelectCursor::to_insert_after_line(c, doc))
     }
 
@@ -43,10 +44,14 @@ impl SelectCursors {
             cursor.move_y(rows);
         }
     }
+
+    pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<usize>> {
+        self.iter().flat_map(|c| c.delete_ranges(text))
+    }
 }
 
 impl Cursor for SelectCursor {
-    fn apply_change(&mut self, change: CursorChange) {}
+    fn apply_change(&mut self, #[allow(unused)] change: CursorChange) {}
 }
 
 #[derive(Clone, Default)]
@@ -112,7 +117,7 @@ impl SelectCursor {
         })
     }
 
-    pub(super) fn to_insert_before_line(&self, doc: &Document) -> InsertCursor {
+    pub(super) fn to_insert_before_line(&self, doc: &Rope) -> InsertCursor {
         let Self { line, .. } = *self;
         InsertCursor::forward(Pos {
             line,
@@ -120,7 +125,7 @@ impl SelectCursor {
         })
     }
 
-    pub(super) fn to_insert_after_line(&self, doc: &Document) -> InsertCursor {
+    pub(super) fn to_insert_after_line(&self, doc: &Rope) -> InsertCursor {
         let line = self.last_line_ix();
         InsertCursor::forward(Pos {
             line,
@@ -160,6 +165,14 @@ impl SelectCursor {
         self.line + self.other_lines.len()
     }
 
+    pub fn lines(&self) -> impl Iterator<Item = RangeCursorLine> {
+        iter::once(self.first_line).chain(self.other_lines.iter().copied())
+    }
+
+    pub fn lines_ix(&self) -> impl Iterator<Item = (usize, RangeCursorLine)> {
+        (self.line..).zip(self.lines())
+    }
+
     fn lines_mut(&mut self) -> impl Iterator<Item = &mut RangeCursorLine> {
         iter::once(&mut self.first_line).chain(&mut self.other_lines)
     }
@@ -176,7 +189,7 @@ impl SelectCursor {
         }
     }
 
-    pub fn text_extend_up(&mut self, rows: usize, doc: &Document) {
+    pub fn text_extend_up(&mut self, rows: usize, text: &Rope) {
         if rows == 0 {
             return;
         }
@@ -184,7 +197,7 @@ impl SelectCursor {
             .other_lines
             .first()
             .map(|l| l.start)
-            .unwrap_or(doc.indent_on_line(self.line));
+            .unwrap_or(text.indent_on_line(self.line));
 
         self.line = self.line.saturating_sub(rows);
         self.other_lines
@@ -198,10 +211,10 @@ impl SelectCursor {
         (first_line_ix..)
             .zip(self.lines_mut())
             .take((rows + 1).min(num_other_lines))
-            .for_each(|(i, l)| l.right_align(doc.columns_in_line(i), i != first_line_ix))
+            .for_each(|(i, l)| l.right_align(text.columns_in_line(i), i != first_line_ix))
     }
 
-    pub fn text_extend_down(&mut self, rows: usize, doc: &Document) {
+    pub fn text_extend_down(&mut self, rows: usize, text: &Rope) {
         if rows == 0 {
             return;
         }
@@ -209,12 +222,12 @@ impl SelectCursor {
         let line = self.last_line();
         let line_lix = self.other_lines.len();
         let line_ix = self.last_line_ix();
-        let left_align = (line_lix == 0).then(|| doc.indent_on_line(self.line));
+        let left_align = (line_lix == 0).then(|| text.indent_on_line(self.line));
         self.other_lines.extend(iter::repeat_n(line, rows));
         (line_ix..)
             .zip(self.lines_mut().skip(line_lix).take(rows))
             .for_each(|(i, l)| {
-                l.right_align(doc.columns_in_line(i), i != first_line_ix);
+                l.right_align(text.columns_in_line(i), i != first_line_ix);
             });
         if let Some(align) = left_align {
             self.other_lines
@@ -275,6 +288,36 @@ impl SelectCursor {
                 column: self.last_line().end,
             },
         )
+    }
+
+    pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<usize>> {
+        let mut so_far: Option<Range<usize>> = None;
+        gen move {
+            for (i, line) in self.lines_ix() {
+                let Some(next) = text.line(i) else { continue };
+                let next = next
+                    .column_range_to_byte_range(line.start..line.end)
+                    .map_bounds(|b| b + text.byte_of_line(i).unwrap());
+                let Some(so_far) = &mut so_far else {
+                    so_far = Some(next);
+                    continue;
+                };
+
+                if text
+                    .byte_slice(so_far.end..next.start)
+                    .unwrap()
+                    .graphemes()
+                    .all(|g| g.is_whitespace())
+                {
+                    so_far.end = next.end;
+                } else {
+                    yield mem::replace(so_far, next);
+                }
+            }
+            if let Some(so_far) = so_far {
+                yield so_far;
+            }
+        }
     }
 }
 
