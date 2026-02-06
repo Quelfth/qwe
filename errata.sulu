@@ -37,6 +37,7 @@ i.attribute = f.attribute;
 i.function. = b f.fn;
 i.function.method = !b f.method;
 i.namespace = i f.namespace;
+i.namespace.crate = i f.crate;
 i.namespace.self = !i b f.namespace;
 i.trait = i u:line f.trait;
 i.type.struct = b f.struct;

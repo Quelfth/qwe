@@ -32,8 +32,9 @@ impl Document {
                     }
                     LineSelect(cursor_set) => {
                         for cursor in cursor_set.iter() {
-                            let range = cursor.text_range(&self.text).unwrap();
-                            yield self.text.byte_slice(range).unwrap().to_string();
+                            if let Some(range) = cursor.text_range(&self.text) {
+                                yield self.text.byte_slice(range).unwrap().to_string();
+                            }
                         }
                     }
                 }

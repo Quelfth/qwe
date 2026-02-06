@@ -50,6 +50,9 @@
 
 (use_list (self) @i.namespace.self)
 
+((identifier_word) @i.namespace (#semantic? @i.namespace Namespace))
+((identifier_word) @i.namespace.crate (#semantic? @i.namespace.crate crate-root Namespace))
+
 ; Functions
 
 (function_item ["fn" "->" ";"] @o.declare.function)
@@ -94,5 +97,5 @@
 
 ((identifier_word) @i.type.struct (#semantic? @i.type.struct Struct))
 ((identifier_word) @i.type.enum (#semantic? @i.type.enum Enum))
-((identifier_word) @i.namespace (#semantic? @i.namespace Namespace))
 ((identifier_word) @i.trait (#semantic? @i.trait Interface))
+

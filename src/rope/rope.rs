@@ -3,6 +3,7 @@ use std::ops::{Range, RangeBounds};
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
+    aprintln::aprintln,
     document::{Change, CursorChange, CursorChangeKind},
     grapheme::{Grapheme, GraphemeExt},
     ix::{self, Byte, Column, Ix, Line, MappedRange, ixto},
@@ -235,8 +236,13 @@ impl Rope {
         let line = self.line_of_byte(byte_pos)?;
         let line_byte = self.byte_of_line(line)?;
         let byte_in_line = byte_pos - line_byte;
-        let column = self
-            .line(line)?
+        let Some(line_text) = self.line(line) else {
+            return Some(Pos {
+                line,
+                column: Ix::new(0),
+            });
+        };
+        let column = line_text
             .byte_slice(..byte_in_line)?
             .graphemes()
             .map(|g| g.columns())
