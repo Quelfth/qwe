@@ -1,6 +1,9 @@
 use std::{borrow::Cow, fmt::Display};
 
-use crate::constants::TAB_WIDTH;
+use crate::{
+    constants::TAB_WIDTH,
+    ix::{Byte, Column, Ix},
+};
 
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -26,8 +29,8 @@ impl Grapheme {
 
     pub const UPPER_LEFT_TRIANGLE: Self = Self(Cow::Borrowed("◤"));
 
-    pub fn len(&self) -> usize {
-        self.0.len()
+    pub fn len(&self) -> Ix<Byte> {
+        Ix::new(self.0.len())
     }
 
     pub fn as_str(&self) -> &str {
@@ -42,8 +45,8 @@ impl Grapheme {
         self.0.chars().all(|c| c.is_alphanumeric() || c == '_')
     }
 
-    pub fn columns(&self) -> usize {
-        if &*self.0 == "\t" { TAB_WIDTH } else { 1 }
+    pub fn columns(&self) -> Ix<Column> {
+        Ix::new(if &*self.0 == "\t" { TAB_WIDTH } else { 1 })
     }
 }
 

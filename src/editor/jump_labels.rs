@@ -3,14 +3,20 @@ use std::collections::HashMap;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
 use crate::{
-    custom_literal::integer::rgb, document::Document, draw::screen::Canvas, editor::gadget::Gadget,
-    grapheme::GraphemeExt, pos::Pos, style::FlatStyle,
+    custom_literal::integer::rgb,
+    document::Document,
+    draw::screen::Canvas,
+    editor::gadget::Gadget,
+    grapheme::GraphemeExt,
+    ix::{Ix, Line},
+    pos::Pos,
+    style::FlatStyle,
 };
 
 use super::{Editor, gadget::ScreenRegion};
 
 pub struct JumpLabels {
-    scroll: usize,
+    scroll: Ix<Line>,
     longest: usize,
     try_rev: bool,
     typed: String,
@@ -55,15 +61,16 @@ impl Gadget for JumpLabels {
 
     fn draw(&self, mut canvas: Canvas<'_>) {
         for (pos, label) in self.labels() {
-            if pos.line < self.scroll || pos.line > self.scroll + canvas.height() as usize {
+            if pos.line < self.scroll || pos.line > self.scroll + Ix::new(canvas.height() as usize)
+            {
                 continue;
             }
             for (i, g) in (0..).zip(label.graphemes()) {
-                let c = pos.column as u16 + i;
+                let c = pos.column.inner() as u16 + i;
                 if c >= canvas.width() {
                     break;
                 }
-                let cell = &mut canvas[((pos.line - self.scroll) as u16, c)];
+                let cell = &mut canvas[((pos.line - self.scroll).inner() as u16, c)];
                 cell.grapheme = g;
                 cell.style = FlatStyle {
                     fg: rgb! {0xffffff},
@@ -77,7 +84,11 @@ impl Gadget for JumpLabels {
 }
 
 impl JumpLabels {
-    fn new(labels: impl IntoIterator<Item = (Pos, String)>, try_rev: bool, scroll: usize) -> Self {
+    fn new(
+        labels: impl IntoIterator<Item = (Pos, String)>,
+        try_rev: bool,
+        scroll: Ix<Line>,
+    ) -> Self {
         let mut longest = 0;
         Self {
             scroll,
@@ -94,12 +105,12 @@ impl JumpLabels {
         }
     }
 
-    pub fn generate(doc: &Document, lines: usize) -> Self {
+    pub fn generate(doc: &Document, lines: Ix<Line>) -> Self {
         let first_line = doc.scroll;
         let poss: Vec<Pos> = gen {
             for (i, line) in (first_line..).zip(doc.lines_to(lines)) {
                 let mut graphemes = line.graphemes().peekable();
-                let mut j = 0;
+                let mut j = Ix::new(0);
                 while let Some(grapheme) = graphemes.next() {
                     if grapheme.is_ident() {
                         yield Pos { line: i, column: j };
@@ -107,11 +118,11 @@ impl JumpLabels {
                             && grapheme.is_ident()
                         {
                             graphemes.next();
-                            j += 1;
+                            j += Ix::new(1);
                         }
                     }
 
-                    j += 1;
+                    j += Ix::new(1);
                 }
             }
         }

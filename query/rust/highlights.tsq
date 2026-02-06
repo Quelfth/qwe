@@ -92,3 +92,7 @@
 
 (never_type "!" @o.type.never)
 
+((identifier_word) @i.type.struct (#semantic? @i.type.struct Struct))
+((identifier_word) @i.type.enum (#semantic? @i.type.enum Enum))
+((identifier_word) @i.namespace (#semantic? @i.namespace Namespace))
+((identifier_word) @i.trait (#semantic? @i.trait Interface))

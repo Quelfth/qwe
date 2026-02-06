@@ -1,0 +1,139 @@
+use std::sync::Arc;
+
+use lsp_types::{
+    InitializeResult, SemanticTokensLegend, SemanticTokensOptions,
+    SemanticTokensRegistrationOptions, SemanticTokensServerCapabilities,
+};
+
+use crate::{
+    document::semtoks::SemanticToken,
+    ix::{Byte, Ix, Line, Utf16},
+    rope::Rope,
+};
+
+#[derive(PartialEq, Eq, Default)]
+pub enum TextEncoding {
+    #[default]
+    Utf16,
+    Utf8,
+}
+
+pub struct LanguageServer {
+    _name: Option<String>,
+    encoding: TextEncoding,
+    semtok_legend: Option<Legend>,
+}
+
+struct Legend {
+    types: Vec<Arc<str>>,
+    mods: Vec<Arc<str>>,
+}
+
+impl From<SemanticTokensLegend> for Legend {
+    fn from(value: SemanticTokensLegend) -> Self {
+        Self {
+            types: value
+                .token_types
+                .into_iter()
+                .map(|t| t.as_str().into())
+                .collect(),
+            mods: value
+                .token_modifiers
+                .into_iter()
+                .map(|t| t.as_str().into())
+                .collect(),
+        }
+    }
+}
+
+impl LanguageServer {
+    pub fn new(init: InitializeResult) -> Self {
+        let InitializeResult {
+            capabilities,
+            server_info,
+        } = init;
+
+        let legend = if let Some(tokens) = capabilities.semantic_tokens_provider {
+            let (SemanticTokensServerCapabilities::SemanticTokensOptions(options)
+            | SemanticTokensServerCapabilities::SemanticTokensRegistrationOptions(
+                SemanticTokensRegistrationOptions {
+                    semantic_tokens_options: options,
+                    ..
+                },
+            )) = tokens;
+            let SemanticTokensOptions { legend, .. } = options;
+            Some(legend)
+        } else {
+            None
+        };
+
+        let encoding = if let Some(enc) = capabilities.position_encoding {
+            match enc.as_str() {
+                "utf-16" => TextEncoding::Utf16,
+                "utf-8" => TextEncoding::Utf8,
+                _ => TextEncoding::default(),
+            }
+        } else {
+            TextEncoding::default()
+        };
+
+        let name = server_info.map(|i| i.name);
+        Self {
+            _name: name,
+            encoding,
+            semtok_legend: legend.map(Into::into),
+        }
+    }
+}
+
+impl LanguageServer {
+    pub fn translate_semtoks(
+        &self,
+        tokens: Vec<lsp_types::SemanticToken>,
+        text: &Rope,
+    ) -> impl Iterator<Item = SemanticToken> {
+        if self.semtok_legend.is_none() {
+            panic!()
+        }
+        if self.encoding != TextEncoding::Utf16 {
+            todo!()
+        }
+        let mut line: Ix<Line> = Ix::new(0);
+        let mut pos: Ix<Byte> = Ix::new(0);
+        tokens.into_iter().map(
+            move |lsp_types::SemanticToken {
+                      delta_line,
+                      delta_start,
+                      length,
+                      token_type,
+                      token_modifiers_bitset,
+                  }| {
+                let delta_line: Ix<Line> = Ix::new(delta_line as _);
+                let delta_start: Ix<Utf16> = Ix::new(delta_start as _);
+                let len: Ix<Utf16> = Ix::new(length as _);
+                line += delta_line;
+                if delta_line > Ix::new(0) {
+                    pos = text.byte_of_line(line).unwrap();
+                }
+                let line = text.line(line).unwrap();
+                pos += line.byte_of_utf16(delta_start);
+                let len = text.byte_slice(pos..).unwrap().byte_of_utf16(len);
+                let range = pos..pos + len;
+
+                let legend = self.semtok_legend.as_ref().unwrap();
+
+                let r#type = legend.types[token_type as usize].clone();
+                let mods = (0..32)
+                    .filter(|i| (token_modifiers_bitset & 1 << i) != 0)
+                    .map(|i| legend.mods[i as usize].clone())
+                    .collect::<Vec<_>>();
+
+                SemanticToken {
+                    range,
+                    r#type,
+                    mods,
+                }
+            },
+        )
+    }
+}

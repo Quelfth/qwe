@@ -1,0 +1,110 @@
+warning: tree-sitter-sulu@0.1.0: In file included from src/parser.c:3:
+warning: tree-sitter-sulu@0.1.0: src/parser.c: In function 'ts_lex_keywords':
+warning: tree-sitter-sulu@0.1.0: src/tree_sitter/parser.h:189:3: warning: label 'next_state' defined but not used [-Wunused-label]
+warning: tree-sitter-sulu@0.1.0:   189 |   next_state:                   \
+warning: tree-sitter-sulu@0.1.0:       |   ^~~~~~~~~~
+warning: tree-sitter-sulu@0.1.0: src/parser.c:620:3: note: in expansion of macro 'START_LEXER'
+warning: tree-sitter-sulu@0.1.0:   620 |   START_LEXER();
+warning: tree-sitter-sulu@0.1.0:       |   ^~~~~~~~~~~
+warning: tree-sitter-sulu@0.1.0: src/tree_sitter/parser.h:187:11: warning: variable 'lookahead' set but not used [-Wunused-but-set-variable]
+warning: tree-sitter-sulu@0.1.0:   187 |   int32_t lookahead;            \
+warning: tree-sitter-sulu@0.1.0:       |           ^~~~~~~~~
+warning: tree-sitter-sulu@0.1.0: src/parser.c:620:3: note: in expansion of macro 'START_LEXER'
+warning: tree-sitter-sulu@0.1.0:   620 |   START_LEXER();
+warning: tree-sitter-sulu@0.1.0:       |   ^~~~~~~~~~~
+   Compiling qwe v0.1.0 (/home/quelfth/prj/qwe)
+warning: unused imports: `QueryCapture`, `QueryCursor`, and `QueryMatch`
+ --> src/draw/document.rs:3:19
+  |
+3 | use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
+  |                   ^^^^^^^^^^^^  ^^^^^^^^^^^  ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `IntoBounds` and `RangeBounds`
+ --> src/editor/actions.rs:3:11
+  |
+3 |     ops::{IntoBounds, RangeBounds},
+  |           ^^^^^^^^^^  ^^^^^^^^^^^
+
+warning: unused import: `TokenFormat`
+  --> src/lsp.rs:28:75
+   |
+28 |     ServerCapabilities, TextDocumentClientCapabilities, TextDocumentItem, TokenFormat, Url,
+   |                                                                           ^^^^^^^^^^^
+
+warning: unused import: `StreamingIterator`
+ --> src/draw/document.rs:3:58
+  |
+3 | use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
+  |                                                          ^^^^^^^^^^^^^^^^^
+
+warning: unused variable: `kind`
+  --> src/editor/cursors/select/incremental.rs:14:13
+   |
+14 |         let kind = FragmentKind::of(
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_kind`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `incremental_select` is never used
+ --> src/editor/cursors/select/incremental.rs:6:12
+  |
+5 | impl SelectCursor {
+  | ----------------- method in this implementation
+6 |     pub fn incremental_select(&mut self, text: &Rope) {
+  |            ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: enum `FragmentKind` is never used
+  --> src/editor/cursors/select/incremental.rs:25:10
+   |
+25 | pub enum FragmentKind {
+   |          ^^^^^^^^^^^^
+
+warning: associated function `of` is never used
+  --> src/editor/cursors/select/incremental.rs:51:12
+   |
+50 | impl FragmentKind {
+   | ----------------- associated function in this implementation
+51 |     pub fn of(string: impl IntoIterator<Item = char>, next_char: char) -> Option<Self> {
+   |            ^^
+
+warning: associated function `of` is never used
+  --> src/editor/cursors/select/incremental.rs:81:20
+   |
+80 |         impl CharClass {
+   |         -------------- associated function in this implementation
+81 |             pub fn of(char: char) -> Self {
+   |                    ^^
+
+warning: unused `Result` that must be used
+   --> src/main.rs:164:9
+    |
+164 |         editor.poll_channels();
+    |         ^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+    = note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default
+help: use `let _ = ...` to ignore the resulting value
+    |
+164 |         let _ = editor.poll_channels();
+    |         +++++++
+
+warning: `qwe` (bin "qwe") generated 10 warnings (run `cargo fix --bin "qwe" -p qwe` to apply 4 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.80s
+     Running `target/debug/qwe src/editor.rs`
+2026-02-05T18:43:54.39198917-08:00  WARN notify error: No path was found. about ["/home/quelfth/.config/rust-analyzer/rust-analyzer.toml"]
+2026-02-05T18:43:54.54941392-08:00  WARN notify error: No path was found. about ["/home/quelfth/.config/rust-analyzer/rust-analyzer.toml"]
+Error: client exited without proper shutdown sequence
+
+Stack backtrace:
+   0: <unknown>
+   1: <unknown>
+   2: <unknown>
+   3: <unknown>
+   4: <unknown>
+   5: <unknown>
+   6: <unknown>
+   7: <unknown>

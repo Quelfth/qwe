@@ -1,4 +1,4 @@
-use crate::editor::Editor;
+use crate::{editor::Editor, ix::Ix};
 
 impl Editor {
     pub fn insert_before(&mut self) {
@@ -16,39 +16,45 @@ impl Editor {
     pub fn line_select(&mut self) {
         self.doc.line_select()
     }
+    pub fn mirror_insert_in(&mut self) {
+        self.doc.insert_around_in();
+    }
+    pub fn mirror_insert_out(&mut self) {
+        self.doc.insert_around_out()
+    }
 
     pub fn move_x(&mut self, columns: isize) {
-        self.doc.move_x(columns);
+        self.doc.move_x(Ix::new(columns));
     }
 
     pub fn move_y(&mut self, rows: isize) {
-        self.doc.move_y(rows);
+        self.doc.move_y(Ix::new(rows));
     }
 
     pub fn text_extend_up(&mut self, rows: usize) {
-        self.doc.text_extend_up(rows);
+        self.doc.text_extend_up(Ix::new(rows));
     }
     pub fn text_extend_down(&mut self, rows: usize) {
-        self.doc.text_extend_down(rows);
+        self.doc.text_extend_down(Ix::new(rows));
     }
 
-    pub fn extend_left(&mut self, rows: usize) {
-        self.doc.extend_left(rows);
+    pub fn extend_left(&mut self, columns: usize) {
+        self.doc.extend_left(Ix::new(columns));
     }
-    pub fn extend_right(&mut self, rows: usize) {
-        self.doc.extend_right(rows);
+    pub fn extend_right(&mut self, columns: usize) {
+        self.doc.extend_right(Ix::new(columns));
     }
     pub fn retract_up(&mut self, rows: usize) {
-        self.doc.retract_up(rows);
+        self.doc.retract_up(Ix::new(rows));
     }
     pub fn retract_down(&mut self, rows: usize) {
-        self.doc.retract_down(rows);
+        self.doc.retract_down(Ix::new(rows));
     }
-    pub fn retract_left(&mut self, rows: usize) {
-        self.doc.retract_left(rows);
+    pub fn retract_left(&mut self, columns: usize) {
+        self.doc.retract_left(Ix::new(columns));
     }
-    pub fn retract_right(&mut self, rows: usize) {
-        self.doc.retract_right(rows)
+    pub fn retract_right(&mut self, columns: usize) {
+        self.doc.retract_right(Ix::new(columns))
     }
 
     pub fn drop_other_selections(&mut self) {

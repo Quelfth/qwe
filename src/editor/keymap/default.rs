@@ -30,12 +30,15 @@ impl Default for Keymaps {
                 (Key::code(Enter), Mapping::rep(Editor::insert_return)),
                 (Key::code(Tab), Mapping::rep(Editor::insert_tab)),
                 (Key::ctrl('z'), Mapping::once(Editor::undo)),
+                (Key::ctrl('v'), Mapping::once(Editor::paste)),
             ])),
             select: Keymap::from_iter(universal().chain([
                 (Key::char('i'), Mapping::once(Editor::insert_before)),
                 (Key::char('a'), Mapping::once(Editor::insert_after)),
                 (Key::char('I'), Mapping::once(Editor::insert_before_line)),
                 (Key::char('A'), Mapping::once(Editor::insert_after_line)),
+                (Key::char('['), Mapping::once(Editor::mirror_insert_in)),
+                (Key::char(']'), Mapping::once(Editor::mirror_insert_out)),
                 //
                 (Key::char(';'), Mapping::once(Editor::line_select)),
                 (Key::code(Esc), Mapping::once(Editor::drop_other_selections)),
@@ -64,6 +67,10 @@ impl Default for Keymaps {
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
                 (Key::alt('^'), Mapping::once(Editor::inspect)),
+                (
+                    Key::ctrl('r'),
+                    Mapping::once(Editor::refresh_semantic_tokens),
+                ),
             ])),
             line_select: Keymap::from_iter(universal().chain([
                 (

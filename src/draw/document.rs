@@ -5,19 +5,22 @@ use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 use crate::{
     custom_literal::integer::rgb,
     document::Document,
-    draw::{cursor::CursorStyle, screen::Canvas},
+    draw::{cursor::CursorStyle, document::highlight::Highlight, screen::Canvas},
     grapheme::{Grapheme, GraphemeExt},
+    ix::{Column, Ix, Line},
     style::{Style, Under},
     theme::theme,
 };
 
 use super::{CursorRange, screen::Cell};
 
+pub mod highlight;
+
 impl Document {
-    pub fn draw(&self, mut canvas: Canvas<'_>, cursors: impl Fn(usize) -> Vec<CursorRange>) {
+    pub fn draw(&self, mut canvas: Canvas<'_>, cursors: impl Fn(Ix<Line>) -> Vec<CursorRange>) {
         let (width, height) = canvas.size();
 
-        fn cursor_color(cursors: &[CursorRange]) -> impl Fn(usize) -> Option<CursorStyle> {
+        fn cursor_color(cursors: &[CursorRange]) -> impl Fn(Ix<Column>) -> Option<CursorStyle> {
             |i| {
                 cursors
                     .iter()
@@ -26,47 +29,18 @@ impl Document {
                     .map(|k| k.style())
             }
         }
+        let highlight_scopes = self.highlight();
 
-        let mut highlight_scopes = Vec::new();
-
-        if let (Some(lang), Some(tree)) = (self.language(), self.tree()) {
-            let mut cursor = QueryCursor::new();
-            let root = tree.root_node();
-
-            let query = lang.highlight_query_source().build().unwrap();
-
-            let mut matches = cursor.matches_with_options(
-                &query,
-                root,
-                self.text(),
-                tree_sitter::QueryCursorOptions {
-                    progress_callback: None,
-                },
-            );
-
-            while let Some(QueryMatch {
-                pattern_index: _,
-                captures,
-                ..
-            }) = matches.next()
-            {
-                for QueryCapture { node, index } in *captures {
-                    let name = query.capture_names()[*index as usize];
-                    highlight_scopes.push((
-                        name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>(),
-                        node.byte_range(),
-                    ));
-                }
-            }
-        }
-
-        let numbered_lines = self.text().line_count() + 1;
-        let gutter_width = numbered_lines.ilog10() as u16 + 1;
+        let numbered_lines = self.text().line_count() + Ix::new(1);
+        let gutter_width = numbered_lines.inner().ilog10() as u16 + 1;
         let write_line_nr = {
             let width = gutter_width.into();
-            move |canvas: &mut Canvas<'_>, line_nr: usize, screen_line_nr: u16| {
+            move |canvas: &mut Canvas<'_>, line_nr: Ix<Line>, screen_line_nr: u16| {
                 let (nr, bg) = if line_nr < numbered_lines {
-                    (format!("{:>1$}", line_nr + 1, width), rgb!(0x301010))
+                    (
+                        format!("{:>1$}", line_nr.inner() + 1, width),
+                        rgb!(0x301010),
+                    )
                 } else {
                     (iter::repeat_n(" ", width).collect(), rgb!(0x100000))
                 };
@@ -82,9 +56,9 @@ impl Document {
 
         let mut shadow_len = 0u16;
         let mut i = 0;
-        for line in self.lines_to(height as _) {
+        for line in self.lines_to(Ix::new(height as _)) {
             shadow_len = shadow_len.saturating_sub(1);
-            let gi = i as usize + scroll;
+            let gi = Ix::new(i as _) + scroll;
             let line_byte = self.text().byte_of_line(gi).unwrap();
             let cursors = cursors(gi);
             let cursor_color = cursor_color(&cursors);
@@ -98,8 +72,10 @@ impl Document {
                     }
                     let hl_scopes = highlight_scopes
                         .iter()
-                        .filter(|(_, r)| r.contains(&(byte + line_byte)))
-                        .map(|(s, _)| s.iter().map(|s| &**s).collect::<Vec<_>>())
+                        .filter(|Highlight { range, .. }| range.contains(&(byte + line_byte)))
+                        .map(|Highlight { scope, .. }| {
+                            scope.iter().map(|s| &**s).collect::<Vec<_>>()
+                        })
                         .collect::<Vec<_>>();
                     let hl_style = (Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}))
                         + theme().highlight(&hl_scopes);
@@ -107,7 +83,7 @@ impl Document {
                         grapheme,
                         style: {
                             hl_style
-                                + cursor_color((j - gutter_width) as usize)
+                                + cursor_color(Ix::new((j - gutter_width) as _))
                                     .map(|c| match c {
                                         CursorStyle::Color(color) => Style::bg(color),
                                         CursorStyle::Underline(color) => {
@@ -127,7 +103,7 @@ impl Document {
             if width > len {
                 for j in len..width {
                     let cell = &mut canvas[(i, j)];
-                    if let Some(style) = cursor_color((j - gutter_width) as usize) {
+                    if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize)) {
                         use CursorStyle::*;
                         match style {
                             Color(color) => {
@@ -157,12 +133,12 @@ impl Document {
         }
 
         while i < height {
-            let gi = i as usize + scroll;
+            let gi = Ix::new(i as usize) + scroll;
             let cursors = cursors(gi);
             let cursor_color = cursor_color(&cursors);
             write_line_nr(&mut canvas, gi, i);
             for j in gutter_width..width {
-                if let Some(style) = cursor_color((j - gutter_width) as usize) {
+                if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize)) {
                     use CursorStyle::*;
                     match style {
                         Color(color) => canvas[(i, j)].style.bg = color,

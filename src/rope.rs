@@ -1,3 +1,7 @@
+use std::ops::RangeBounds;
+
+use crate::ix::Ix;
+
 mod display;
 mod from;
 mod iter;
@@ -17,22 +21,22 @@ impl<'a> From<crop::RopeSlice<'a>> for RopeSlice<'a> {
 }
 
 #[inline]
-fn range_bounds_to_start_end<T, B>(range: B, lo: usize, hi: usize) -> (usize, usize)
-where
-    B: core::ops::RangeBounds<T>,
-    T: core::ops::Add<usize, Output = usize> + Into<usize> + Copy,
-{
+fn range_bounds_to_start_end<U>(
+    range: impl RangeBounds<Ix<U, usize>>,
+    lo: Ix<U, usize>,
+    hi: Ix<U, usize>,
+) -> (Ix<U, usize>, Ix<U, usize>) {
     use core::ops::Bound;
 
     let start = match range.start_bound() {
-        Bound::Included(&n) => n.into(),
-        Bound::Excluded(&n) => n + 1,
+        Bound::Included(&n) => n,
+        Bound::Excluded(&n) => n + Ix::new(1),
         Bound::Unbounded => lo,
     };
 
     let end = match range.end_bound() {
-        Bound::Included(&n) => n + 1,
-        Bound::Excluded(&n) => n.into(),
+        Bound::Included(&n) => n + Ix::new(1),
+        Bound::Excluded(&n) => n,
         Bound::Unbounded => hi,
     };
 

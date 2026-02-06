@@ -1,7 +1,9 @@
 use crate::{
-    document::Document,
-    editor::cursors::{CursorState, select::RangeCursorLine},
-    rope::RopeSlice,
+    document::{Document, force_cursors},
+    editor::cursors::{CursorIndex, CursorState, select::RangeCursorLine},
+    ix::Ix,
+    pos::Pos,
+    util::indent_string,
 };
 
 mod insert;
@@ -11,9 +13,11 @@ impl Document {
     pub fn copy_text(&self) -> impl Iterator<Item = String> {
         gen {
             if let Some(cursors) = &self.cursors {
+                use CursorState::*;
                 match cursors {
-                    CursorState::Insert(_) => (),
-                    CursorState::Select(c) => {
+                    MirrorInsert(_) => todo!(),
+                    Insert(_) => (),
+                    Select(c) => {
                         for cursor in c.iter() {
                             let mut s = String::new();
                             for (i, RangeCursorLine { start, end }) in cursor.lines_ix() {
@@ -26,7 +30,7 @@ impl Document {
                             yield s;
                         }
                     }
-                    CursorState::LineSelect(cursor_set) => {
+                    LineSelect(cursor_set) => {
                         for cursor in cursor_set.iter() {
                             let range = cursor.text_range(&self.text).unwrap();
                             yield self.text.byte_slice(range).unwrap().to_string();
@@ -35,5 +39,59 @@ impl Document {
                 }
             }
         }
+    }
+
+    pub fn paste_at_cursor(&mut self, text: String, cursor: CursorIndex) {
+        force_cursors!(self);
+        let cursors = &self.cursors.as_ref().unwrap();
+        use CursorState::*;
+
+        let pos = match cursors {
+            MirrorInsert(_) => todo!(),
+            Insert(c) => {
+                let Some(cursor) = c.get(cursor) else { return };
+                cursor.pos
+            }
+            Select(c) => {
+                let Some(cursor) = c.get(cursor) else { return };
+                cursor.end_pos()
+            }
+            LineSelect(c) => {
+                let Some(cursor) = c.get(cursor) else { return };
+                let line = cursor.end();
+                let indent = line
+                    .checked_sub(Ix::new(1))
+                    .map(|line| self.text.indent_on_line(line))
+                    .unwrap_or(Ix::new(0));
+                let pos = Pos {
+                    line,
+                    column: Ix::new(0),
+                };
+                let indent = indent_string(indent);
+                let text = text
+                    .lines()
+                    .map(|l| format!("{indent}{l}"))
+                    .collect::<String>()
+                    + "\n";
+                let change = self.insert_change(pos, text);
+                self.do_change(change);
+
+                return;
+            }
+        };
+        let indent = self.text.indent_on_line(pos.line);
+        let indent = indent_string(indent);
+        let mut lines = text.lines();
+        let text = gen {
+            if let Some(line) = lines.next() {
+                yield line.to_owned();
+            }
+            for line in lines {
+                yield format!("{indent}{line}");
+            }
+        }
+        .collect();
+        let change = self.insert_change(pos, text);
+        self.do_change(change)
     }
 }

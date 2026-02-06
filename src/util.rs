@@ -1,7 +1,16 @@
-use std::{fmt::Write, ops::Range};
+use std::{
+    borrow::Borrow,
+    fmt::Write,
+    ops::{IntoBounds, Range, RangeBounds},
+};
 
 use extension_trait::extension_trait;
 use tree_sitter::Node;
+
+use crate::{
+    grapheme::GraphemeExt,
+    ix::{Column, Ix},
+};
 
 pub fn pretty_node(node: Node<'_>) -> String {
     let mut string = String::new();
@@ -50,7 +59,47 @@ fn format_node(node: Node<'_>, indent: usize, field_name: Option<&str>, out: &mu
 pub impl<T> MapBounds for Range<T> {
     type T = T;
 
-    fn map_bounds(self, map: impl Fn(Self::T) -> Self::T) -> Self {
+    fn map_bounds<U>(self, map: impl Fn(Self::T) -> U) -> Range<U> {
         map(self.start)..map(self.end)
+    }
+}
+
+pub fn mirror_string(string: &str) -> String {
+    let mut graphemes = string.graphemes().collect::<Vec<_>>();
+    graphemes.reverse();
+
+    graphemes
+        .into_iter()
+        .map(|g| {
+            match g.as_str() {
+                "(" => ")",
+                ")" => "(",
+                "[" => "]",
+                "]" => "[",
+                "{" => "}",
+                "}" => "{",
+                "<" => ">",
+                ">" => "<",
+                other => other,
+            }
+            .to_owned()
+        })
+        .collect()
+}
+
+pub fn indent_string(columns: Ix<Column>) -> String {
+    unsafe { String::from_utf8_unchecked(vec![b' '; columns.inner()]) }
+}
+
+#[extension_trait]
+pub impl<T: Ord + Copy> RangeOverlap for Range<T> {
+    fn overlaps(&self, other: impl Borrow<Self>) -> bool {
+        let other = other.borrow();
+        match (self.is_empty(), other.is_empty()) {
+            (true, true) => self.start == other.start,
+            (true, false) => other.contains(&self.start),
+            (false, true) => self.contains(&other.start),
+            (false, false) => !self.clone().intersect(other.clone()).is_empty(),
+        }
     }
 }

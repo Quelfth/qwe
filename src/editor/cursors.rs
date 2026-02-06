@@ -1,6 +1,15 @@
-use std::{iter, ops::Range};
+use std::{
+    iter,
+    ops::{Index, IndexMut, Range},
+};
 
-use crate::{document::CursorChange, pos::Pos, rope::Rope};
+use crate::{
+    document::CursorChange,
+    editor::cursors::mirror_insert::MirrorInsertCursors,
+    ix::{Byte, Column, Ix, Line},
+    pos::{Pos, Region},
+    rope::Rope,
+};
 
 use auto_enums::auto_enum;
 use insert::InsertCursors;
@@ -9,9 +18,17 @@ use select::SelectCursors;
 
 pub mod insert;
 pub mod line_select;
+pub mod mirror_insert;
 pub mod select;
 
+#[derive(Copy, Clone)]
+pub enum CursorIndex {
+    Main,
+    Other(usize),
+}
+
 pub enum CursorState {
+    MirrorInsert(MirrorInsertCursors),
     Insert(InsertCursors),
     Select(SelectCursors),
     LineSelect(LineCursors),
@@ -19,11 +36,51 @@ pub enum CursorState {
 
 impl CursorState {
     pub fn drop_others(&mut self) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(c) => c.drop_others(),
-            CursorState::Select(c) => c.drop_others(),
-            CursorState::LineSelect(c) => c.drop_others(),
+            MirrorInsert(c) => c.drop_others(),
+            Insert(c) => c.drop_others(),
+            Select(c) => c.drop_others(),
+            LineSelect(c) => c.drop_others(),
         }
+    }
+
+    #[auto_enum(Iterator)]
+    pub fn indices(&self) -> impl Iterator<Item = CursorIndex> + use<> {
+        use CursorState::*;
+        match self {
+            MirrorInsert(c) => c.indices(),
+            Insert(c) => c.indices(),
+            Select(c) => c.indices(),
+            LineSelect(c) => c.indices(),
+        }
+    }
+
+    pub fn assume_mirror_insert(&self) -> &MirrorInsertCursors {
+        let Self::MirrorInsert(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
+    pub fn assume_insert(&self) -> &InsertCursors {
+        let Self::Insert(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
+    #[allow(unused)]
+    pub fn assume_select(&self) -> &SelectCursors {
+        let Self::Select(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
+    #[allow(unused)]
+    pub fn assume_line_select(&self) -> &LineCursors {
+        let Self::LineSelect(cursors) = self else {
+            panic!()
+        };
+        cursors
     }
 }
 
@@ -52,11 +109,21 @@ impl<T> CursorSet<T> {
     pub fn drop_others(&mut self) {
         self.others.clear();
     }
+
+    pub fn indices(&self) -> impl Iterator<Item = CursorIndex> + use<T> {
+        iter::once(CursorIndex::Main).chain((0..self.others.len()).map(CursorIndex::Other))
+    }
 }
 
 impl Default for CursorState {
     fn default() -> Self {
         Self::Select(Default::default())
+    }
+}
+
+impl From<MirrorInsertCursors> for CursorState {
+    fn from(value: MirrorInsertCursors) -> Self {
+        Self::MirrorInsert(value)
     }
 }
 
@@ -79,95 +146,113 @@ impl From<LineCursors> for CursorState {
 }
 
 impl CursorState {
-    pub fn apply_change(&mut self, change: CursorChange) {
+    pub fn apply_change(&mut self, change: CursorChange, text: &Rope) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(cursors) => cursors.apply_change(change),
-            CursorState::Select(cursors) => cursors.apply_change(change),
-            CursorState::LineSelect(cursors) => cursors.apply_change(change),
+            MirrorInsert(cursors) => cursors.apply_change(change, text),
+            Insert(cursors) => cursors.apply_change(change, text),
+            Select(cursors) => cursors.apply_change(change, text),
+            LineSelect(cursors) => cursors.apply_change(change, text),
         }
     }
 
-    pub fn move_x(&mut self, columns: isize) {
+    pub fn move_x(&mut self, columns: Ix<Column, isize>) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(cursors) => cursors.move_x(columns),
-            CursorState::Select(cursors) => cursors.move_x(columns),
-            CursorState::LineSelect(_) => (),
+            MirrorInsert(_) => todo!(),
+            Insert(cursors) => cursors.move_x(columns),
+            Select(cursors) => cursors.move_x(columns),
+            LineSelect(_) => (),
         }
     }
 
-    pub fn move_y(&mut self, rows: isize) {
+    pub fn move_y(&mut self, rows: Ix<Line, isize>) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(c) => c.move_y(rows),
-            CursorState::Select(c) => c.move_y(rows),
-            CursorState::LineSelect(c) => c.move_y(rows),
+            MirrorInsert(_) => todo!(),
+            Insert(c) => c.move_y(rows),
+            Select(c) => c.move_y(rows),
+            LineSelect(c) => c.move_y(rows),
         }
     }
 
-    pub fn text_extend_up(&mut self, rows: usize, text: &Rope) {
+    pub fn text_extend_up(&mut self, rows: Ix<Line>, text: &Rope) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_up(rows, text)),
-            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.extend_up(rows)),
+            MirrorInsert(_) => (),
+            Insert(_) => (),
+            Select(c) => c.iter_mut().for_each(|c| c.text_extend_up(rows, text)),
+            LineSelect(c) => c.iter_mut().for_each(|c| c.extend_up(rows)),
         }
     }
 
-    pub fn text_extend_down(&mut self, rows: usize, text: &Rope) {
+    pub fn text_extend_down(&mut self, rows: Ix<Line>, text: &Rope) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.text_extend_down(rows, text)),
-            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.extend_down(rows)),
+            MirrorInsert(_) => todo!(),
+            Insert(_) => (),
+            Select(c) => c.iter_mut().for_each(|c| c.text_extend_down(rows, text)),
+            LineSelect(c) => c.iter_mut().for_each(|c| c.extend_down(rows)),
         }
     }
-    pub fn extend_left(&mut self, rows: usize) {
+    pub fn extend_left(&mut self, columns: Ix<Column>) {
         if let CursorState::Select(c) = self {
-            c.iter_mut().for_each(|c| c.extend_left(rows))
+            c.iter_mut().for_each(|c| c.extend_left(columns))
         }
     }
-    pub fn extend_right(&mut self, rows: usize) {
+    pub fn extend_right(&mut self, columns: Ix<Column>) {
         if let CursorState::Select(c) = self {
-            c.iter_mut().for_each(|c| c.extend_right(rows))
+            c.iter_mut().for_each(|c| c.extend_right(columns))
         }
     }
-    pub fn retract_up(&mut self, rows: usize) {
+    pub fn retract_up(&mut self, rows: Ix<Line>) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.retract_up(rows)),
-            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.retract_up(rows)),
+            MirrorInsert(_) => (),
+            Insert(_) => (),
+            Select(c) => c.iter_mut().for_each(|c| c.retract_up(rows)),
+            LineSelect(c) => c.iter_mut().for_each(|c| c.retract_up(rows)),
         }
     }
 
-    pub fn retract_down(&mut self, rows: usize) {
+    pub fn retract_down(&mut self, rows: Ix<Line>) {
+        use CursorState::*;
         match self {
-            CursorState::Insert(_) => (),
-            CursorState::Select(c) => c.iter_mut().for_each(|c| c.retract_down(rows)),
-            CursorState::LineSelect(c) => c.iter_mut().for_each(|c| c.retract_down(rows)),
+            MirrorInsert(_) => (),
+            Insert(_) => (),
+            Select(c) => c.iter_mut().for_each(|c| c.retract_down(rows)),
+            LineSelect(c) => c.iter_mut().for_each(|c| c.retract_down(rows)),
         }
     }
-    pub fn retract_left(&mut self, rows: usize) {
+    pub fn retract_left(&mut self, rows: Ix<Column>) {
         if let CursorState::Select(c) = self {
             c.iter_mut().for_each(|c| c.retract_left(rows))
         }
     }
-    pub fn retract_right(&mut self, rows: usize) {
+    pub fn retract_right(&mut self, rows: Ix<Column>) {
         if let CursorState::Select(c) = self {
             c.iter_mut().for_each(|c| c.retract_right(rows))
         }
     }
 
-    pub fn inspect_range(&self) -> (Pos, Pos) {
+    pub fn inspect_range(&self) -> Region {
+        use CursorState::*;
         match self {
-            CursorState::Insert(c) => c.main.inspect_range(),
-            CursorState::Select(c) => c.main.inspect_range(),
-            CursorState::LineSelect(_) => todo!(),
+            MirrorInsert(_) => todo!(),
+            Insert(c) => c.main.inspect_range(),
+            Select(c) => c.main.inspect_range(),
+            LineSelect(c) => c.main.inspect_range(),
         }
     }
 
     #[auto_enum(Iterator)]
-    pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<usize>> {
+    pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<Ix<Byte>>> {
+        use CursorState::*;
         match self {
-            CursorState::Insert(_) => iter::empty(),
-            CursorState::Select(c) => c.delete_ranges(text),
-            CursorState::LineSelect(c) => c.delete_ranges(text),
+            MirrorInsert(_) => iter::empty(),
+            Insert(_) => iter::empty(),
+            Select(c) => c.delete_ranges(text),
+            LineSelect(c) => c.delete_ranges(text),
         }
     }
 }
@@ -187,16 +272,50 @@ impl<T> CursorSet<T> {
         }
     }
 
-    pub fn apply_change(&mut self, change: CursorChange)
+    pub fn apply_change(&mut self, change: CursorChange, text: &Rope)
     where
         T: Cursor,
     {
         for cursor in self.iter_mut() {
-            cursor.apply_change(change)
+            cursor.apply_change(change, &text)
+        }
+    }
+
+    pub fn get(&self, i: CursorIndex) -> Option<&T> {
+        match i {
+            CursorIndex::Main => Some(&self.main),
+            CursorIndex::Other(i) => self.others.get(i),
+        }
+    }
+    #[allow(unused)]
+    pub fn get_mut(&mut self, i: CursorIndex) -> Option<&mut T> {
+        match i {
+            CursorIndex::Main => Some(&mut self.main),
+            CursorIndex::Other(i) => self.others.get_mut(i),
+        }
+    }
+}
+
+impl<T> IndexMut<CursorIndex> for CursorSet<T> {
+    fn index_mut(&mut self, index: CursorIndex) -> &mut Self::Output {
+        match index {
+            CursorIndex::Main => &mut self.main,
+            CursorIndex::Other(i) => &mut self.others[i],
+        }
+    }
+}
+
+impl<T> Index<CursorIndex> for CursorSet<T> {
+    type Output = T;
+
+    fn index(&self, index: CursorIndex) -> &Self::Output {
+        match index {
+            CursorIndex::Main => &self.main,
+            CursorIndex::Other(i) => &self.others[i],
         }
     }
 }
 
 pub trait Cursor {
-    fn apply_change(&mut self, change: CursorChange);
+    fn apply_change(&mut self, change: CursorChange, text: &Rope);
 }

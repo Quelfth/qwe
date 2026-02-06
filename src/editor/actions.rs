@@ -1,12 +1,19 @@
-use std::fs;
+use std::{
+    fs, iter,
+    ops::{IntoBounds, RangeBounds},
+};
+
+use convert_case::{Case, Casing};
 
 use crate::{
     aprintln::aprintln,
     document::Document,
     editor::{Editor, finder::Finder, inspect::Inspector, jump_labels::JumpLabels},
+    ix::Ix,
     lang::Language,
+    lsp::channel::EditorToLspMessage,
     terminal_size::terminal_size,
-    util::pretty_node,
+    util::{RangeOverlap, pretty_node},
 };
 
 mod insert;
@@ -15,11 +22,11 @@ mod select;
 
 impl Editor {
     pub fn scroll_up(&mut self, lines: usize) {
-        self.doc.scroll = self.doc.scroll.saturating_sub(lines);
+        self.doc.scroll = self.doc.scroll.saturating_sub(Ix::new(lines));
     }
 
     pub fn scroll_down(&mut self, lines: usize) {
-        self.doc.scroll += lines;
+        self.doc.scroll += Ix::new(lines);
     }
 
     pub fn save_file(&mut self) {
@@ -34,15 +41,36 @@ impl Editor {
         let [Ok(start), Ok(end)] = [start, end].map(|p| self.doc.byte_pos_of_pos(p)) else {
             return;
         };
-        self.open_gadget(Inspector::new(Document::new(
-            Some(Language::Query),
-            pretty_node(
-                tree.root_node()
-                    .descendant_for_byte_range(start, end)
-                    .unwrap(),
+        self.open_gadget(Inspector::new(
+            Document::new(
+                None,
+                self.doc
+                    .semtoks
+                    .iter()
+                    .filter(|s| s.range.overlaps(start..end))
+                    .map(|s| {
+                        iter::once(s.r#type.to_case(Case::Pascal))
+                            .chain(
+                                s.mods
+                                    .iter()
+                                    .map(|m| " ".to_owned() + &m.to_case(Case::Kebab)),
+                            )
+                            .collect::<String>()
+                            + "\n"
+                    })
+                    .collect::<String>(),
+                None,
             ),
-            None,
-        )))
+            Document::new(
+                Some(Language::Query),
+                pretty_node(
+                    tree.root_node()
+                        .descendant_for_byte_range(start.inner(), end.inner())
+                        .unwrap(),
+                ),
+                None,
+            ),
+        ))
     }
 
     pub fn undo(&mut self) {
@@ -59,11 +87,11 @@ impl Editor {
 
     pub fn jump(&mut self) {
         let (_, height) = terminal_size();
-        self.open_gadget(JumpLabels::generate(&self.doc, height as usize))
+        self.open_gadget(JumpLabels::generate(&self.doc, Ix::new(height as usize)))
     }
 
     pub fn find(&mut self) {
-        self.open_gadget(Finder::new(self.doc().text().to_string(), 0));
+        self.open_gadget(Finder::new(self.doc.find_haystacks()));
     }
 
     pub fn delete(&mut self) {
@@ -83,10 +111,19 @@ impl Editor {
     }
 
     pub fn paste(&mut self) {
-        if let Some(clip) = self.clipboard.top_clip() {
-            for clip in clip {
-                aprintln!("{clip}");
+        self.doc.history.checkpoint();
+        if let Some(cursors) = &self.doc.cursors {
+            for cursor in cursors.indices() {
+                let text = self.clipboard.next_clip_elt();
+                self.doc.paste_at_cursor(text.to_owned(), cursor);
             }
+        }
+    }
+
+    pub fn refresh_semantic_tokens(&mut self) {
+        if let Some(send) = &self.lsp_send {
+            send.send(EditorToLspMessage::RefreshSemanticTokens)
+                .unwrap();
         }
     }
 }

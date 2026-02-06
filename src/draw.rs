@@ -6,6 +6,7 @@ use std::{
 use crate::{
     draw::{cursor::CursorRange, screen::Screen},
     editor::{Editor, gadget::ScreenRegion},
+    ix::Ix,
     terminal_size::terminal_size,
 };
 
@@ -49,11 +50,20 @@ impl<T> From<std::ops::Range<T>> for Range<T> {
     }
 }
 
-impl Range<usize> {
-    fn one(pos: usize) -> Self {
+// impl Range<usize> {
+//     fn one(pos: usize) -> Self {
+//         Self {
+//             start: pos,
+//             end: pos + 1,
+//         }
+//     }
+// }
+
+impl<U> Range<Ix<U>> {
+    fn one(pos: Ix<U>) -> Self {
         Self {
             start: pos,
-            end: pos + 1,
+            end: pos + Ix::new(1),
         }
     }
 }

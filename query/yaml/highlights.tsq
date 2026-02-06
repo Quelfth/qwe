@@ -1,0 +1,11 @@
+(comment) @comment
+
+":" @o.key-value
+
+(string_scalar) @l.string
+(integer_scalar) @l.number
+(boolean_scalar) @i.value.boolean
+
+(block_mapping_pair key: (flow_node (plain_scalar (string_scalar) @i.value.field)))
+
+(flow_sequence ["[" "]"] @o.construct.sequence)

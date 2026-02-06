@@ -3,11 +3,18 @@ use std::ops::Range;
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use regex::Regex;
 
-use crate::editor::{Editor, gadget::Gadget};
+use crate::{
+    editor::{Editor, gadget::Gadget},
+    ix::{Byte, Ix},
+};
+
+pub struct Haystack {
+    pub text: String,
+    pub offset: usize,
+}
 
 pub struct Finder {
-    haystack: String,
-    offset: usize,
+    haystacks: Vec<Haystack>,
     regex: String,
 }
 
@@ -63,10 +70,9 @@ impl Gadget for Finder {
 }
 
 impl Finder {
-    pub fn new(haystack: String, offset: usize) -> Self {
+    pub fn new(haystacks: Vec<Haystack>) -> Self {
         Self {
-            haystack,
-            offset,
+            haystacks,
             regex: String::new(),
         }
     }
@@ -79,14 +85,17 @@ impl Finder {
         self.regex.pop();
     }
 
-    pub fn find(&self) -> Option<Vec<Range<usize>>> {
+    pub fn find(&self) -> Option<Vec<Range<Ix<Byte>>>> {
         let re = Regex::new(&self.regex).ok()?;
 
         Some(
-            re.find_iter(&self.haystack)
-                .map(|m| {
-                    let Range { start, end } = m.range();
-                    start + self.offset..end + self.offset
+            self.haystacks
+                .iter()
+                .flat_map(|Haystack { text, offset }| {
+                    re.find_iter(&text).map(move |m| {
+                        let Range { start, end } = m.range();
+                        Ix::new(start + offset)..Ix::new(end + offset)
+                    })
                 })
                 .collect(),
         )

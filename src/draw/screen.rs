@@ -10,7 +10,11 @@ use crossterm::{
 };
 use culit::culit;
 
-use crate::{draw::Rect, grapheme::Grapheme, style::FlatStyle};
+use crate::{
+    draw::{Range, Rect},
+    grapheme::Grapheme,
+    style::FlatStyle,
+};
 
 #[derive(Default)]
 pub struct Screen {
@@ -136,6 +140,40 @@ impl<'s> Canvas<'s> {
 
     pub fn size(&self) -> (u16, u16) {
         (self.width(), self.height())
+    }
+
+    pub fn take_top(&mut self, amount: u16) -> Canvas<'_> {
+        let Canvas {
+            screen,
+            rect: Rect { rows, cols },
+        } = self;
+        Canvas {
+            screen,
+            rect: Rect {
+                rows: Range {
+                    start: rows.start,
+                    end: (rows.start + amount).min(rows.end),
+                },
+                cols: *cols,
+            },
+        }
+    }
+
+    pub fn shrink_top(&mut self, by: u16) -> Canvas<'_> {
+        let Canvas {
+            screen,
+            rect: Rect { rows, cols },
+        } = self;
+        Canvas {
+            screen,
+            rect: Rect {
+                rows: Range {
+                    start: (rows.start + by).min(rows.end),
+                    end: rows.end,
+                },
+                cols: *cols,
+            },
+        }
     }
 }
 

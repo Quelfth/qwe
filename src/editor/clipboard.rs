@@ -33,10 +33,9 @@ impl Clipboard {
         str
     }
 
+    #[allow(unused)]
     pub fn top_clip(&self) -> Option<impl Iterator<Item = &str>> {
-        let Some(clip) = self.board.last() else {
-            return None;
-        };
+        let clip = self.board.last()?;
 
         Some(clip.0.iter().map(|i| &**i))
     }

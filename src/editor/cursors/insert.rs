@@ -2,13 +2,15 @@ use std::cmp::Ordering;
 
 use crate::{
     constants::TAB_WIDTH,
-    document::CursorChange,
+    document::{CursorChange, CursorChangeBias},
     editor::cursors::{
         Cursor, CursorSet,
         line_select::{LineCursor, LineCursors},
         select::{RangeCursorLine, SelectCursor, SelectCursors},
     },
-    pos::Pos,
+    ix::{Column, Ix, Line},
+    pos::{Pos, Region},
+    rope::Rope,
 };
 
 pub type InsertCursors = CursorSet<InsertCursor>;
@@ -27,27 +29,23 @@ impl InsertCursors {
         self
     }
 
-    pub fn move_x(&mut self, columns: isize) {
+    pub fn move_x(&mut self, columns: Ix<Column, isize>) {
         self.iter_mut().for_each(|c| c.move_x(columns))
     }
 
-    pub fn move_y(&mut self, rows: isize) {
+    pub fn move_y(&mut self, rows: Ix<Line, isize>) {
         self.iter_mut().for_each(|c| c.move_y(rows))
     }
 }
 
 #[derive(Copy, Clone)]
 pub struct InsertCursor {
-    pub direction: InsertDirection,
     pub pos: Pos,
 }
 
 impl InsertCursor {
     pub fn forward(pos: Pos) -> Self {
-        Self {
-            direction: InsertDirection::Forward,
-            pos,
-        }
+        Self { pos }
     }
 
     fn to_select(self) -> SelectCursor {
@@ -68,44 +66,39 @@ impl InsertCursor {
     fn to_line_select(self) -> LineCursor {
         LineCursor {
             line: self.pos.line,
-            height: 1,
+            height: Ix::new(1),
         }
     }
 
     fn tab(&mut self) {
-        self.pos.column = (self.pos.column / TAB_WIDTH + 1) * TAB_WIDTH
+        self.pos.column = Ix::new((self.pos.column.inner() / TAB_WIDTH + 1) * TAB_WIDTH)
     }
 
-    fn move_x(&mut self, columns: isize) {
-        match columns.cmp(&0) {
-            Ordering::Less => self.pos.column = self.pos.column.saturating_sub((-columns) as usize),
+    fn move_x(&mut self, columns: Ix<Column, isize>) {
+        match columns.cmp(&Ix::new(0)) {
+            Ordering::Less => {
+                self.pos.column = self.pos.column.saturating_sub((-columns).to_usize())
+            }
             Ordering::Equal => (),
-            Ordering::Greater => self.pos.column += columns as usize,
+            Ordering::Greater => self.pos.column += columns.to_usize(),
         }
     }
 
-    fn move_y(&mut self, rows: isize) {
-        match rows.cmp(&0) {
-            Ordering::Less => self.pos.line = self.pos.line.saturating_sub((-rows) as usize),
+    fn move_y(&mut self, rows: Ix<Line, isize>) {
+        match rows.cmp(&Ix::new(0)) {
+            Ordering::Less => self.pos.line = self.pos.line.saturating_sub((-rows).to_usize()),
             Ordering::Equal => (),
-            Ordering::Greater => self.pos.line += rows as usize,
+            Ordering::Greater => self.pos.line += rows.to_usize(),
         }
     }
 
-    pub fn inspect_range(&self) -> (Pos, Pos) {
+    pub fn inspect_range(&self) -> Region {
         todo!()
     }
 }
 
 impl Cursor for InsertCursor {
-    fn apply_change(&mut self, change: CursorChange) {
-        self.pos = change.apply(self.pos);
+    fn apply_change(&mut self, change: CursorChange, _: &Rope) {
+        self.pos = change.apply(self.pos, CursorChangeBias::Right);
     }
-}
-
-#[derive(Copy, Clone, Default)]
-pub enum InsertDirection {
-    #[default]
-    Forward,
-    Reverse,
 }

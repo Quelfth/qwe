@@ -1,0 +1,10 @@
+
+(universal_selector "*" @o.wildcard)
+
+(block ["{" "}"] @o.group)
+(declaration [":" ";"] @o.key-value)
+
+(property_name) @i.value.field
+[(color_value) (integer_value) (float_value)] @l.number
+(color_value "#" @l.number.affix)
+(unit) @l.number.affix

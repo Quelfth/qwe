@@ -1,4 +1,13 @@
-use std::{io, ops::Range, path::PathBuf};
+use std::{
+    collections::HashMap,
+    io,
+    ops::Range,
+    path::Path,
+    sync::{
+        Arc,
+        mpsc::{Receiver, Sender},
+    },
+};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use mutx::Mutex;
@@ -8,7 +17,7 @@ use crate::{
     document::Document,
     draw::screen::Screen,
     editor::{
-        clipboard::{Clip, Clipboard},
+        clipboard::Clipboard,
         cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
@@ -16,44 +25,71 @@ use crate::{
         gadget::Gadget,
         keymap::Keymaps,
     },
+    ix::{Byte, Ix},
     lang::Language,
+    language_server::LanguageServer,
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     pos::Pos,
 };
 
 mod actions;
 mod clipboard;
 pub mod cursors;
-mod finder;
+pub mod finder;
 pub mod gadget;
 mod inspect;
 pub mod jump_labels;
 mod keymap;
+mod poll_channels;
 
 #[derive(Default)]
 pub struct Editor {
-    filepath: Option<PathBuf>,
+    filepath: Option<Arc<Path>>,
     doc: Document,
     pub screen: Mutex<Screen>,
     keymap: Keymaps,
     pub gadget: Option<Box<dyn Gadget>>,
     pub clipboard: Clipboard,
+    pub lsp_recv: Option<Receiver<LspToEditorMessage>>,
+    pub lsp_send: Option<Sender<EditorToLspMessage>>,
+    pub language_servers: HashMap<Language, Vec<LanguageServer>>,
 }
 
 impl Editor {
-    pub fn new(file: Option<PathedFile>) -> Self {
-        match file {
-            Some(PathedFile { path, file }) => Self {
-                doc: Document::new(
-                    path.extension()
-                        .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
-                    file,
-                    Some(Default::default()),
-                ),
-                filepath: Some(path),
-                ..Self::default()
-            },
-            None => Self::default(),
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn open_new_doc(&mut self, doc: PathedFile) {
+        let PathedFile { path, file } = doc;
+        self.doc = Document::new(
+            path.extension()
+                .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+            file,
+            Some(Default::default()),
+        );
+        self.filepath = Some(path.clone());
+
+        if let Some(lsp_send) = &self.lsp_send
+            && let Some(lang) = self.doc.language()
+        {
+            lsp_send
+                .send(EditorToLspMessage::OpenDoc {
+                    lang,
+                    path,
+                    text: self.doc().text().to_string(),
+                })
+                .unwrap();
         }
+    }
+
+    pub fn set_lsp_channels(
+        &mut self,
+        send: Sender<EditorToLspMessage>,
+        recv: Receiver<LspToEditorMessage>,
+    ) {
+        self.lsp_recv = Some(recv);
+        self.lsp_send = Some(send);
     }
 
     pub fn doc(&self) -> &Document {
@@ -82,8 +118,9 @@ impl Editor {
         }
 
         if let Some(cursors) = &self.doc.cursors {
+            use CursorState::*;
             match cursors {
-                CursorState::Insert(_) => {
+                MirrorInsert(_) | Insert(_) => {
                     if let Some(action) = self.keymap.insert.map_event(event) {
                         action(self);
                         self.draw()?;
@@ -98,13 +135,13 @@ impl Editor {
                         self.draw()?;
                     }
                 }
-                CursorState::Select(_) => {
+                Select(_) => {
                     if let Some(action) = self.keymap.select.map_event(event) {
                         action(self);
                         self.draw()?;
                     }
                 }
-                CursorState::LineSelect(_) => {
+                LineSelect(_) => {
                     if let Some(action) = self.keymap.line_select.map_event(event) {
                         action(self);
                         self.draw()?;
@@ -122,11 +159,14 @@ impl Editor {
         )))
     }
 
-    fn select_ranges(&mut self, ranges: impl IntoIterator<Item = Range<usize>>) -> Result<(), ()> {
+    fn select_ranges(
+        &mut self,
+        ranges: impl IntoIterator<Item = Range<Ix<Byte>>>,
+    ) -> Result<(), ()> {
         if let Some(cursors) = SelectCursors::from_iter(
             ranges
                 .into_iter()
-                .map(|r| SelectCursor::range(r, self.doc())),
+                .map(|r| SelectCursor::byte_range(r, self.doc().text())),
         ) {
             self.doc.cursors = Some(CursorState::Select(cursors));
             Ok(())

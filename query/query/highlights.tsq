@@ -16,3 +16,9 @@
 (field_definition name: (_) @i.value.field)
 
 (list ["[" "]"] @o.pattern.disjunct)
+
+(grouping ["(" ")"] @o.group)
+
+(predicate ["(" "#" ")"] @o.attribute)
+(predicate name: (identifier) @i.attribute)
+(predicate type: (_) @i.attribute)

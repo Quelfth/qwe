@@ -6,28 +6,34 @@ use tree_sitter::{InputEdit, Tree};
 
 use crate::aprintln::aprintln;
 use crate::document::history::History;
+use crate::document::semtoks::SemanticToken;
 use crate::draw::Rect;
 use crate::editor::cursors::CursorState;
-use crate::editor::cursors::insert::InsertCursors;
+use crate::editor::cursors::mirror_insert::InsertDirection;
 use crate::editor::cursors::select::{SelectCursor, SelectCursors};
+use crate::grapheme::GraphemeExt;
+use crate::ix::{Byte, Column, Ix, Line};
 use crate::lang::Language;
 use crate::rope::{Rope, RopeSlice};
 
-use crate::pos::Pos;
+use crate::pos::{Pos, Region};
 use crate::ts::parse_doc;
 
 mod actions;
+mod find;
 mod history;
+pub mod semtoks;
 
 #[derive(Default)]
 pub struct Document {
-    pub scroll: usize,
+    pub scroll: Ix<Line>,
     pub cursors: Option<CursorState>,
     text: Rope,
     pub history: History,
     pub future: History,
     language: Option<Language>,
     tree: Option<Tree>,
+    pub semtoks: Vec<SemanticToken>,
 }
 
 impl Document {
@@ -40,9 +46,10 @@ impl Document {
         Self {
             tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
             language: lang,
-            scroll: 0,
+            scroll: Ix::new(0),
             history: Default::default(),
             future: Default::default(),
+            semtoks: Default::default(),
             cursors,
             text,
         }
@@ -64,7 +71,7 @@ impl Document {
     }
 
     pub fn gutter_width(&self) -> u16 {
-        (self.text.line_count() + 1).ilog10() as u16 + 1
+        (self.text.line_count().inner() + 1).ilog10() as u16 + 1
     }
 
     pub fn overlay_rect(&self, mut rect: Rect<u16>) -> Rect<u16> {
@@ -77,7 +84,7 @@ impl Document {
         move || {
             CursorState::Select(SelectCursors::one(SelectCursor::one_pos(Pos {
                 line,
-                column: 0,
+                column: Ix::new(0),
             })))
         }
     }
@@ -93,13 +100,13 @@ pub(crate) use force_cursors;
 
 #[derive(Clone, Debug)]
 pub struct Change {
-    pub byte_pos: usize,
-    pub delete: usize,
+    pub byte_pos: Ix<Byte>,
+    pub delete: Ix<Byte>,
     pub insert: String,
 }
 
 impl Change {
-    pub fn delete(byte_pos: usize, amount: usize) -> Self {
+    pub fn delete(byte_pos: Ix<Byte>, amount: Ix<Byte>) -> Self {
         Self {
             byte_pos,
             delete: amount,
@@ -118,19 +125,28 @@ pub enum CursorChangeKind {
 pub struct CursorChange {
     pub pos: Pos,
     pub kind: CursorChangeKind,
-    pub lines: usize,
-    pub columns: usize,
+    pub lines: Ix<Line>,
+    pub columns: Ix<Column>,
+}
+
+pub enum CursorChangeBias {
+    Left,
+    Right,
 }
 
 impl CursorChange {
-    pub fn apply(self, pos: Pos) -> Pos {
+    pub fn apply(self, pos: Pos, bias: CursorChangeBias) -> Pos {
+        use CursorChangeBias::*;
         let Self {
             pos: change_pos,
             kind,
             lines,
             columns,
         } = self;
-        if pos < change_pos {
+        if match bias {
+            Left => pos <= change_pos,
+            Right => pos < change_pos,
+        } {
             return pos;
         }
 
@@ -138,7 +154,11 @@ impl CursorChange {
             return if pos.line == change_pos.line {
                 Pos {
                     line: pos.line + lines,
-                    column: if lines == 0 { pos.column } else { 0 } + columns,
+                    column: if lines == Ix::new(0) {
+                        pos.column
+                    } else {
+                        Ix::new(0)
+                    } + columns,
                 }
             } else {
                 Pos {
@@ -170,14 +190,14 @@ impl CursorChange {
         }
     }
 
-    pub fn apply_to_line(self, line: usize) -> usize {
+    pub fn apply_to_line(self, line: Ix<Line>) -> Ix<Line> {
         let Self {
             pos: change_pos,
             kind,
             lines,
             ..
         } = self;
-        let change_line = change_pos.line + (change_pos.column != 0) as usize;
+        let change_line = change_pos.line + Ix::new((change_pos.column != Ix::new(0)) as usize);
         if line < change_line {
             return line;
         }
@@ -199,13 +219,13 @@ impl CursorChange {
         (!text.is_empty()).then(|| CursorChange {
             pos,
             kind: CursorChangeKind::Insert,
-            lines: text.chars().filter(|&c| c == '\n').count(),
+            lines: Ix::new(text.chars().filter(|&c| c == '\n').count()),
             columns: if !text.ends_with("\n")
                 && let Some(line) = text.lines().next_back()
             {
-                line.len()
+                line.graphemes().map(|g| g.columns()).sum()
             } else {
-                0
+                Ix::new(0)
             },
         })
     }
@@ -213,10 +233,14 @@ impl CursorChange {
 
 #[derive(Debug, Error)]
 pub enum PosError {
-    #[error("line was out of bounds, len was {len}")]
-    BadLine { len: usize },
-    #[error("column was out of bounds, len was {len}")]
-    BadColumn { byte_of_line: usize, len: usize },
+    #[error("line was out of bounds, len was {len:?}")]
+    BadLine { len: Ix<Line> },
+    #[error("column was out of bounds, len was {bytes_in_line:?}")]
+    BadColumn {
+        byte_of_line: Ix<Byte>,
+        bytes_in_line: Ix<Byte>,
+        columns_in_line: Ix<Column>,
+    },
 }
 
 impl Document {
@@ -224,31 +248,45 @@ impl Document {
         &self.text
     }
 
-    pub fn lines_to(&self, height: usize) -> impl Iterator<Item = RopeSlice<'_>> {
-        self.text().lines().skip(self.scroll).take(height)
+    pub fn lines_to(&self, height: Ix<Line>) -> impl Iterator<Item = RopeSlice<'_>> {
+        self.text()
+            .lines()
+            .skip(self.scroll.inner())
+            .take(height.inner())
     }
 
-    pub fn byte_pos_of_pos(&self, pos: Pos) -> Result<usize, PosError> {
+    pub fn byte_pos_of_pos(&self, pos: Pos) -> Result<Ix<Byte>, PosError> {
         if pos.line >= self.text.line_len() {
             return Err(PosError::BadLine {
                 len: self.text.line_count(),
             });
         }
-        let line = self.text.byte_of_line(pos.line).ok_or(PosError::BadLine {
+        let line_ix = self.text.byte_of_line(pos.line).ok_or(PosError::BadLine {
             len: self.text.line_count(),
         })?;
-        let line_len = self
-            .text
-            .line(pos.line)
-            .map(|line| line.byte_len())
-            .unwrap_or(0);
-        if pos.column > line_len {
+        let line = self.text.line(pos.line);
+        let Some(line) = line else {
+            return if pos.column != Ix::new(0) {
+                Err(PosError::BadColumn {
+                    byte_of_line: line_ix,
+                    bytes_in_line: Ix::new(0),
+                    columns_in_line: Ix::new(0),
+                })
+            } else {
+                Ok(line_ix)
+            };
+        };
+        let line_len = line.byte_len();
+        let byte = line.columns_to_bytes(pos.column);
+
+        if byte > line_len {
             Err::<!, _>(PosError::BadColumn {
-                byte_of_line: line,
-                len: line_len,
+                byte_of_line: line_ix,
+                bytes_in_line: line_len,
+                columns_in_line: line.column_count(),
             })?;
         } else {
-            Ok(line + pos.column)
+            Ok(line_ix + byte)
         }
     }
 
@@ -271,30 +309,59 @@ impl Document {
         (
             change,
             match pos {
-                Pos { line: 0, column: 0 } => None,
-                Pos { column: 0, .. } => Some(CursorChange {
+                Pos { line, column } if line == Ix::new(0) && column == Ix::new(0) => None,
+                Pos { column, .. } if column == Ix::new(0) => Some(CursorChange {
                     pos: Pos {
-                        line: pos.line - 1,
+                        line: pos.line - Ix::new(1),
                         column: self
                             .text
-                            .line(pos.line - 1)
-                            .map(|l| l.graphemes().count())
-                            .unwrap_or(0),
+                            .line(pos.line - Ix::new(1))
+                            .map(|l| l.graphemes().map(|g| g.columns()).sum())
+                            .unwrap_or(Ix::new(0)),
                     },
                     kind: CursorChangeKind::Delete,
-                    lines: 1,
-                    columns: 0,
+                    lines: Ix::new(1),
+                    columns: Ix::new(0),
                 }),
                 _ => Some(CursorChange {
                     pos: Pos {
                         line: pos.line,
-                        column: pos.column - 1,
+                        column: pos.column - Ix::new(1),
                     },
                     kind: CursorChangeKind::Delete,
-                    lines: 0,
-                    columns: 1,
+                    lines: Ix::new(0),
+                    columns: Ix::new(1),
                 }),
             },
+        )
+    }
+
+    pub fn reverse_backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
+        let change = self.byte_pos_of_pos(pos).ok().and_then(|byte| {
+            let grapheme = self.text.byte_slice(byte..).unwrap().graphemes().next()?;
+            let size = grapheme.len();
+            Some(Change {
+                byte_pos: byte,
+                delete: size,
+                insert: "".to_owned(),
+            })
+        });
+
+        (
+            change,
+            Some({
+                let (lines, columns) = if pos.column >= self.text.columns_in_line(pos.line) {
+                    (Ix::new(1), Ix::new(0))
+                } else {
+                    (Ix::new(0), Ix::new(1))
+                };
+                CursorChange {
+                    pos,
+                    kind: CursorChangeKind::Delete,
+                    lines,
+                    columns,
+                }
+            }),
         )
     }
 
@@ -304,22 +371,26 @@ impl Document {
             Some(match self.byte_pos_of_pos(pos) {
                 Ok(byte_pos) => Change {
                     byte_pos,
-                    delete: 0,
+                    delete: Ix::new(0),
                     insert: text,
                 },
                 Err(e) => match e {
                     PosError::BadLine { len } => Change {
                         byte_pos: self.text.byte_len(),
-                        delete: 0,
-                        insert: iter::repeat_n("\n", pos.line - len)
-                            .chain(iter::repeat_n(" ", pos.column))
+                        delete: Ix::new(0),
+                        insert: iter::repeat_n("\n", (pos.line - len).inner())
+                            .chain(iter::repeat_n(" ", (pos.column).inner()))
                             .chain(iter::once(&*text))
                             .collect(),
                     },
-                    PosError::BadColumn { byte_of_line, len } => Change {
+                    PosError::BadColumn {
+                        byte_of_line,
+                        bytes_in_line: len,
+                        columns_in_line,
+                    } => Change {
                         byte_pos: byte_of_line + len,
-                        delete: 0,
-                        insert: iter::repeat_n(" ", pos.column - len)
+                        delete: Ix::new(0),
+                        insert: iter::repeat_n(" ", (pos.column - columns_in_line).inner())
                             .chain(iter::once(&*text))
                             .collect(),
                     },
@@ -336,10 +407,14 @@ impl Document {
                     Ok(pos) => pos,
                     Err(e) => match e {
                         PosError::BadLine { .. } => self.text.byte_len(),
-                        PosError::BadColumn { byte_of_line, len } => byte_of_line + len,
+                        PosError::BadColumn {
+                            byte_of_line,
+                            bytes_in_line: len,
+                            ..
+                        } => byte_of_line + len,
                     },
                 },
-                delete: 0,
+                delete: Ix::new(0),
                 insert: "\n".to_owned(),
             }),
             CursorChange::insert(pos, "\n"),
@@ -363,25 +438,25 @@ impl Document {
         self.tree_delete(delete_range.clone());
         self.text.delete(delete_range).unwrap();
         self.text.insert(byte_pos, &insert).unwrap();
-        self.tree_insert(byte_pos, insert.len());
+        self.tree_insert(byte_pos, Ix::new(insert.len()));
         if let Some(lang) = self.language {
             self.tree = Some(parse_doc(&self.text, self.tree(), lang).unwrap());
         }
         Change {
             byte_pos,
-            delete: insert.len(),
+            delete: Ix::new(insert.len()),
             insert: deleted,
         }
     }
 
-    fn tree_delete(&mut self, range: Range<usize>) {
+    fn tree_delete(&mut self, range: Range<Ix<Byte>>) {
         if let Some(tree) = &mut self.tree {
             let start = self.text.ts_pos_of_byte(range.start).unwrap();
             let end = self.text.ts_pos_of_byte(range.end).unwrap();
             tree.edit(&InputEdit {
-                start_byte: range.start,
-                old_end_byte: range.end,
-                new_end_byte: range.start,
+                start_byte: range.start.inner(),
+                old_end_byte: range.end.inner(),
+                new_end_byte: range.start.inner(),
                 start_position: start,
                 old_end_position: end,
                 new_end_position: start,
@@ -389,14 +464,14 @@ impl Document {
         }
     }
 
-    fn tree_insert(&mut self, pos: usize, len: usize) {
+    fn tree_insert(&mut self, pos: Ix<Byte>, len: Ix<Byte>) {
         if let Some(tree) = &mut self.tree {
             let start = self.text.ts_pos_of_byte(pos).unwrap();
             let end = self.text.ts_pos_of_byte(pos + len).unwrap();
             tree.edit(&InputEdit {
-                start_byte: pos,
-                old_end_byte: pos,
-                new_end_byte: pos + len,
+                start_byte: pos.inner(),
+                old_end_byte: pos.inner(),
+                new_end_byte: (pos + len).inner(),
                 start_position: start,
                 old_end_position: start,
                 new_end_position: end,
@@ -406,32 +481,38 @@ impl Document {
 
     pub fn do_insert(
         &mut self,
-        change: impl Fn(&Document, Pos) -> (Option<Change>, Option<CursorChange>),
+        change: impl Fn(&Document, Pos, InsertDirection) -> (Option<Change>, Option<CursorChange>),
     ) {
-        let mut changes = Vec::<CursorChange>::new();
         let Some(cursors) = &self.cursors else { return };
         match cursors {
-            CursorState::Insert(c) => {
-                for cursor in c.clone().iter() {
-                    let pos = changes.iter().fold(cursor.pos, |p, c| c.apply(p));
-                    let (change, cursor_change) = change(self, pos);
-                    if let Some(change) = cursor_change {
-                        changes.push(change);
-                    }
-                    if let Some(change) = change {
-                        let reverse = self.change(change.clone());
-                        self.history.push(reverse);
-                    }
+            CursorState::MirrorInsert(cursors) => {
+                for i in cursors.indices() {
+                    let forward = self.cursors.as_ref().unwrap().assume_mirror_insert()[i].forward;
+                    self.do_change(change(self, forward, InsertDirection::Forward));
+                    let reverse = self.cursors.as_ref().unwrap().assume_mirror_insert()[i].reverse;
+                    self.do_change(change(self, reverse, InsertDirection::Reverse));
                 }
             }
-            CursorState::Select(c) => todo!(),
-            CursorState::LineSelect(c) => todo!(),
-        }
-
-        for change in changes {
-            if let Some(cursors) = &mut self.cursors {
-                cursors.apply_change(change);
+            CursorState::Insert(cursors) => {
+                for i in cursors.indices() {
+                    let cursor = self.cursors.as_ref().unwrap().assume_insert()[i];
+                    self.do_change(change(self, cursor.pos, InsertDirection::Forward))
+                }
             }
+            _ => todo!(),
+        }
+    }
+
+    pub fn do_change(&mut self, change: (Option<Change>, Option<CursorChange>)) {
+        let (change, cursor_change) = change;
+        if let Some(change) = cursor_change
+            && let Some(cursors) = &mut self.cursors
+        {
+            cursors.apply_change(change, &self.text);
+        }
+        if let Some(change) = change {
+            let reverse = self.change(change.clone());
+            self.history.push(reverse);
         }
     }
 
@@ -449,7 +530,7 @@ impl Document {
 
         if let Some(cursors) = &mut self.cursors {
             for change in changes {
-                cursors.apply_change(change);
+                cursors.apply_change(change, &self.text);
             }
         }
     }
@@ -468,7 +549,7 @@ impl Document {
 
         if let Some(cursors) = &mut self.cursors {
             for change in changes {
-                cursors.apply_change(change);
+                cursors.apply_change(change, &self.text);
             }
         }
     }
@@ -483,11 +564,11 @@ impl Document {
         }
     }
 
-    pub fn delete(&mut self, range: Range<usize>) {
+    pub fn delete(&mut self, range: Range<Ix<Byte>>) {
         if range.is_empty() {
             return;
         }
-        let change = Change::delete(range.start, range.len());
+        let change = Change::delete(range.start, range.end - range.start);
         let cursor_change = self.text.cursor_change(&change);
         let reverse = self.change(change);
         self.history.push(reverse);
@@ -495,7 +576,7 @@ impl Document {
         if let Some(cursors) = &mut self.cursors
             && let Some(change) = cursor_change
         {
-            cursors.apply_change(change);
+            cursors.apply_change(change, &self.text);
         }
     }
 
@@ -510,6 +591,18 @@ impl Document {
             );
         };
 
-        cursors.inspect_range()
+        match cursors.inspect_range() {
+            Region::Pos(range) => (range.start, range.end),
+            Region::Line(range) => (
+                Pos {
+                    line: range.start,
+                    column: Ix::new(0),
+                },
+                Pos {
+                    line: range.end,
+                    column: self.text.columns_in_line(range.end),
+                },
+            ),
+        }
     }
 }
