@@ -6,6 +6,7 @@ use tree_sitter::{InputEdit, Tree};
 
 use crate::aprintln::aprintln;
 use crate::document::history::History;
+use crate::document::lsp_change::LspChange;
 use crate::document::semtoks::SemanticToken;
 use crate::draw::Rect;
 use crate::editor::cursors::CursorState;
@@ -22,6 +23,7 @@ use crate::ts::parse_doc;
 mod actions;
 mod find;
 mod history;
+mod lsp_change;
 pub mod semtoks;
 
 #[derive(Default)]
@@ -34,6 +36,8 @@ pub struct Document {
     language: Option<Language>,
     tree: Option<Tree>,
     pub semtoks: Vec<SemanticToken>,
+    pub lsp_version: i32,
+    pub lsp_changes: Vec<LspChange>,
 }
 
 impl Document {
@@ -52,6 +56,8 @@ impl Document {
             semtoks: Default::default(),
             cursors,
             text,
+            lsp_changes: Vec::new(),
+            lsp_version: 0,
         }
     }
 
@@ -436,15 +442,18 @@ impl Document {
             .unwrap()
             .to_string();
         self.tree_delete(delete_range.clone());
+        self.lsp_delete(delete_range.clone());
         self.text.delete(delete_range).unwrap();
         self.text.insert(byte_pos, &insert).unwrap();
-        self.tree_insert(byte_pos, Ix::new(insert.len()));
+        let insert_len = Ix::new(insert.len());
+        self.lsp_insert(byte_pos, insert);
+        self.tree_insert(byte_pos, insert_len);
         if let Some(lang) = self.language {
             self.tree = Some(parse_doc(&self.text, self.tree(), lang).unwrap());
         }
         Change {
             byte_pos,
-            delete: Ix::new(insert.len()),
+            delete: insert_len,
             insert: deleted,
         }
     }
@@ -477,6 +486,26 @@ impl Document {
                 new_end_position: end,
             })
         }
+    }
+
+    fn lsp_delete(&mut self, range: Range<Ix<Byte>>) {
+        let start = self.text.utf16_pos_of_byte(range.start).unwrap();
+        let end = self.text.utf16_pos_of_byte(range.end).unwrap();
+
+        self.lsp_changes.push(LspChange {
+            start,
+            end,
+            text: String::new(),
+        })
+    }
+
+    fn lsp_insert(&mut self, pos: Ix<Byte>, text: String) {
+        let pos = self.text.utf16_pos_of_byte(pos).unwrap();
+        self.lsp_changes.push(LspChange {
+            start: pos,
+            end: pos,
+            text,
+        })
     }
 
     pub fn do_insert(

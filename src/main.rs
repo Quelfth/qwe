@@ -161,7 +161,7 @@ fn run(file: Option<PathedFile>) -> io::Result<()> {
                 }
             }
         }
-        editor.poll_channels();
+        editor.poll()?;
     }
     if let Some(channel) = editor.lsp_send {
         channel.send(EditorToLspMessage::Exit).unwrap();

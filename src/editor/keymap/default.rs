@@ -41,6 +41,7 @@ impl Default for Keymaps {
                 (Key::char(']'), Mapping::once(Editor::mirror_insert_out)),
                 //
                 (Key::char(';'), Mapping::once(Editor::line_select)),
+                (Key::char(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::code(Esc), Mapping::once(Editor::drop_other_selections)),
                 //
                 (Key::char('h'), Mapping::rep(|e| e.move_x(-1))),
@@ -92,6 +93,8 @@ impl Default for Keymaps {
                 (Key::char('K'), Mapping::rep(|e| e.retract_up(1))),
                 (Key::alt('j'), Mapping::rep(|e| e.retract_down(1))),
                 (Key::alt('k'), Mapping::rep(|e| e.text_extend_up(1))),
+                //
+                (Key::char('f'), Mapping::once(Editor::find)),
                 //
                 (Key::char('z'), Mapping::once(Editor::undo)),
                 (Key::char('Z'), Mapping::once(Editor::redo)),

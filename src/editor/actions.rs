@@ -126,4 +126,8 @@ impl Editor {
                 .unwrap();
         }
     }
+
+    pub fn cursor_line_split(&mut self) {
+        self.doc.cursor_line_split();
+    }
 }

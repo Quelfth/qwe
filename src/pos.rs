@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use crate::ix::{Column, Ix, Line};
+use crate::ix::{Column, Ix, Line, Utf16};
 
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct Pos {
@@ -18,4 +18,10 @@ impl Pos {
 pub enum Region {
     Pos(Range<Pos>),
     Line(Range<Ix<Line>>),
+}
+
+#[derive(Copy, Clone)]
+pub struct Utf16Pos {
+    pub line: Ix<Line>,
+    pub column: Ix<Utf16>,
 }

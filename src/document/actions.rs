@@ -95,4 +95,14 @@ impl Document {
         let change = self.insert_change(pos, text);
         self.do_change(change)
     }
+
+    pub fn cursor_line_split(&mut self) {
+        if let Some(cursors) = &mut self.cursors {
+            match cursors {
+                CursorState::Select(cursors) => cursors.line_split(),
+                CursorState::LineSelect(cursors) => cursors.line_split(),
+                _ => (),
+            }
+        }
+    }
 }

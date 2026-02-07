@@ -40,7 +40,7 @@ pub mod gadget;
 mod inspect;
 pub mod jump_labels;
 mod keymap;
-mod poll_channels;
+mod poll;
 
 #[derive(Default)]
 pub struct Editor {

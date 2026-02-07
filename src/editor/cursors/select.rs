@@ -1,4 +1,9 @@
-use std::{cmp::Ordering::*, collections::HashMap, iter, mem, ops::Range};
+use std::{
+    cmp::Ordering::*,
+    collections::{HashMap, HashSet},
+    iter, mem,
+    ops::Range,
+};
 
 use crate::{
     document::{CursorChange, CursorChangeBias},
@@ -58,6 +63,14 @@ impl SelectCursors {
 
     pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<Ix<Byte>>> {
         self.iter().flat_map(|c| c.delete_ranges(text))
+    }
+    pub fn line_split(&mut self) {
+        let mut iter = self.main.line_split();
+        let m = iter.next().unwrap();
+        self.others = iter
+            .chain(self.others.iter().flat_map(|c| c.line_split()))
+            .collect();
+        self.main = m;
     }
 }
 
@@ -448,6 +461,18 @@ impl SelectCursor {
             }
             if let Some(so_far) = so_far {
                 yield so_far;
+            }
+        }
+    }
+
+    fn line_split(&self) -> impl Iterator<Item = Self> {
+        gen move {
+            for (line, first_line) in self.lines_ix() {
+                yield Self {
+                    line,
+                    first_line,
+                    ..Default::default()
+                };
             }
         }
     }

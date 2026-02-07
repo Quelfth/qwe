@@ -42,9 +42,18 @@ impl LineCursors {
     pub fn delete_ranges(&self, doc: &Rope) -> impl Iterator<Item = Range<Ix<Byte>>> {
         self.iter().filter_map(|c| c.text_range(doc))
     }
+
+    pub fn line_split(&mut self) {
+        let mut iter = self.main.line_split();
+        let m = iter.next().unwrap();
+        self.others = iter
+            .chain(self.others.iter().flat_map(|c| c.line_split()))
+            .collect();
+        self.main = m;
+    }
 }
 
-#[derive(Default)]
+#[derive(Copy, Clone, Default)]
 pub struct LineCursor {
     pub line: Ix<Line>,
     pub height: Ix<Line>,
@@ -152,6 +161,21 @@ impl LineCursor {
 
     pub fn inspect_range(&self) -> Region {
         Region::Line(self.line..self.line + self.height)
+    }
+
+    pub fn line_split(&self) -> impl Iterator<Item = Self> {
+        gen move {
+            if self.height == Ix::new(0) {
+                yield *self;
+                return;
+            }
+            for line in self.line..self.line + self.height {
+                yield Self {
+                    line,
+                    height: Ix::new(1),
+                };
+            }
+        }
     }
 }
 

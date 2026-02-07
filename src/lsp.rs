@@ -20,13 +20,14 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, DidOpenTextDocumentParams, InitializeResult, InitializedParams,
-    PublishDiagnosticsParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities,
-    SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams,
-    SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult,
-    SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities,
-    ServerCapabilities, TextDocumentClientCapabilities, TextDocumentItem, TokenFormat, Url,
-    WorkspaceClientCapabilities, WorkspaceFolder,
+    ClientCapabilities, DidChangeTextDocumentParams, DidOpenTextDocumentParams, InitializeResult,
+    InitializedParams, PublishDiagnosticsParams, SemanticToken, SemanticTokens,
+    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
+    SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
+    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
+    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, TextDocumentClientCapabilities,
+    TextDocumentContentChangeEvent, TextDocumentItem, TokenFormat, Url,
+    VersionedTextDocumentIdentifier, WorkspaceClientCapabilities, WorkspaceFolder,
 };
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;
@@ -254,6 +255,28 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                 continue;
                             };
 
+                            channels
+                                .outgoing
+                                .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
+                        }
+                    }
+                }
+                EditorToLspMessage::ChangeDoc {
+                    lang,
+                    path,
+                    changes,
+                    version,
+                } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        server.socket.did_change(DidChangeTextDocumentParams {
+                            text_document: VersionedTextDocumentIdentifier {
+                                uri: uri.clone(),
+                                version,
+                            },
+                            content_changes: changes,
+                        })?;
+                        if let Some(semtoks) = server.semantic_tokens(uri).await? {
                             channels
                                 .outgoing
                                 .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;

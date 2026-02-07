@@ -6,8 +6,8 @@ use crate::{
     aprintln::aprintln,
     document::{Change, CursorChange, CursorChangeKind},
     grapheme::{Grapheme, GraphemeExt},
-    ix::{self, Byte, Column, Ix, Line, MappedRange, ixto},
-    pos::Pos,
+    ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
+    pos::{Pos, Utf16Pos},
     rope::iter::{Graphemes, Lines},
 };
 
@@ -217,6 +217,11 @@ impl Rope {
         Some(self.byte_slice(byte..)?.chunks().next().unwrap_or(""))
     }
 
+    pub fn utf16_of_byte(&self, byte: Ix<Byte>) -> Option<Ix<Utf16>> {
+        self.validate_byte_offset(byte)?;
+        Some(Ix::new(self.0.utf16_code_unit_of_byte(byte.inner())))
+    }
+
     pub fn ts_callback<'a>(&'a self) -> impl Fn(usize, tree_sitter::Point) -> &'a str {
         |byte, _| {
             self.chunk_from_byte(Ix::new(byte))
@@ -229,6 +234,14 @@ impl Rope {
         Some(tree_sitter::Point {
             row: line.inner(),
             column: (byte - self.byte_of_line(line)?).inner(),
+        })
+    }
+
+    pub fn utf16_pos_of_byte(&self, byte: Ix<Byte>) -> Option<Utf16Pos> {
+        let line = self.line_of_byte(byte)?;
+        Some(Utf16Pos {
+            line,
+            column: self.utf16_of_byte(byte - self.byte_of_line(line)?)?,
         })
     }
 

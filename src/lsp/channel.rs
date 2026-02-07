@@ -6,7 +6,9 @@ use std::{
     },
 };
 
-use lsp_types::{InitializeResult, SemanticToken};
+use lsp_types::{
+    DidChangeTextDocumentParams, InitializeResult, SemanticToken, TextDocumentContentChangeEvent,
+};
 
 use crate::lang::Language;
 
@@ -25,6 +27,12 @@ pub enum EditorToLspMessage {
         lang: Language,
         path: Arc<Path>,
         text: String,
+    },
+    ChangeDoc {
+        lang: Language,
+        path: Arc<Path>,
+        changes: Vec<TextDocumentContentChangeEvent>,
+        version: i32,
     },
     RefreshSemanticTokens,
     Exit,

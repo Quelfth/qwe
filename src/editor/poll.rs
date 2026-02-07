@@ -1,9 +1,15 @@
-use std::io;
+use std::{io, mem};
 
-use crate::{editor::Editor, language_server::LanguageServer, lsp::channel::LspToEditorMessage};
+use lsp_types::TextDocumentContentChangeEvent;
+
+use crate::{
+    editor::Editor,
+    language_server::LanguageServer,
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+};
 
 impl Editor {
-    pub fn poll_channels(&mut self) -> io::Result<()> {
+    pub fn poll(&mut self) -> io::Result<()> {
         if let Some(channel) = &self.lsp_recv {
             while let Ok(msg) = channel.try_recv() {
                 use LspToEditorMessage::*;
@@ -24,6 +30,18 @@ impl Editor {
                     }
                 }
             }
+        }
+        if let Some(chan) = &self.lsp_send
+            && !self.doc.lsp_changes.is_empty()
+            && let Some(lang) = self.doc.language()
+            && let Some(path) = &self.filepath
+        {
+            _ = chan.send(EditorToLspMessage::ChangeDoc {
+                lang,
+                path: path.clone(),
+                changes: self.doc.lsp_changes.drain(..).map(Into::into).collect(),
+                version: self.doc.lsp_version,
+            });
         }
         Ok(())
     }

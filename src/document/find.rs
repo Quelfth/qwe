@@ -47,15 +47,13 @@ impl Document {
             CursorState::Select(c) => c
                 .iter()
                 .flat_map(|c| {
-                    c.lines()
-                        .flat_map(|l| self.range_haystack(c.line, l.start..l.end))
+                    c.lines_ix()
+                        .flat_map(|(i, l)| self.range_haystack(i, l.start..l.end))
                 })
                 .collect(),
             CursorState::LineSelect(c) => c
                 .iter()
-                .flat_map(|c| {
-                    (c.line..c.line + c.height - Ix::new(1)).flat_map(|l| self.line_haystack(l))
-                })
+                .flat_map(|c| (c.line..c.line + c.height).flat_map(|l| self.line_haystack(l)))
                 .collect(),
         };
         if haystacks.is_empty() {

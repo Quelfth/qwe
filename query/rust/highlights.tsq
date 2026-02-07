@@ -94,8 +94,13 @@
 ; Type
 
 (never_type "!" @o.type.never)
+((type_identifier) @i.type.self (#eq? @i.type.self Self))
 
+((identifier_word) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
 ((identifier_word) @i.type.struct (#semantic? @i.type.struct Struct))
 ((identifier_word) @i.type.enum (#semantic? @i.type.enum Enum))
-((identifier_word) @i.trait (#semantic? @i.trait Interface))
+((identifier_word) @i.type.union (#semantic? @i.type.union Union))
+((identifier_word) @i.type.alias (#semantic? @i.type.alias TypeAlias))
 
+
+((identifier_word) @i.trait (#semantic? @i.trait Interface))
