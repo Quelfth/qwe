@@ -48,10 +48,16 @@
 (use_list ["{" "," "}"] @o.use)
 (use_declaration ";" @o.use)
 
-(use_list (self) @i.namespace.self)
+(keyword_scope ["self" "super"] @i.namespace.keyword)
+(keyword_scope ["crate"] @i.namespace.crate.keyword)
 
-((identifier_word) @i.namespace (#semantic? @i.namespace Namespace))
-((identifier_word) @i.namespace.crate (#semantic? @i.namespace.crate crate-root Namespace))
+((identifier) @i.namespace (#semantic? @i.namespace Namespace))
+((identifier) @i.namespace.crate (#semantic? @i.namespace.crate crate-root Namespace))
+
+(scoped_name path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
+(scoped_use_list path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
+(scoped_name path: (keyword_scope) "::" @o.scope)
+(scoped_use_list path: (keyword_scope) "::" @o.scope)
 
 ; Functions
 
@@ -94,13 +100,13 @@
 ; Type
 
 (never_type "!" @o.type.never)
-((type_identifier) @i.type.self (#eq? @i.type.self Self))
+(self_type) @i.type.self
 
-((identifier_word) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
-((identifier_word) @i.type.struct (#semantic? @i.type.struct Struct))
-((identifier_word) @i.type.enum (#semantic? @i.type.enum Enum))
-((identifier_word) @i.type.union (#semantic? @i.type.union Union))
-((identifier_word) @i.type.alias (#semantic? @i.type.alias TypeAlias))
+((identifier) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
+((identifier) @i.type.struct (#semantic? @i.type.struct Struct))
+((identifier) @i.type.enum (#semantic? @i.type.enum Enum))
+((identifier) @i.type.union (#semantic? @i.type.union Union))
+((identifier) @i.type.alias (#semantic? @i.type.alias TypeAlias))
 
 
-((identifier_word) @i.trait (#semantic? @i.trait Interface))
+((identifier) @i.trait (#semantic? @i.trait Interface))
