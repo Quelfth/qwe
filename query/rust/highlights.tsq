@@ -55,9 +55,16 @@
 ((identifier) @i.namespace.crate (#semantic? @i.namespace.crate crate-root Namespace))
 
 (scoped_name path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
-(scoped_use_list path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
 (scoped_name path: (keyword_scope) "::" @o.scope)
+(scoped_name path: (scoped_name name: (name) @_ (#semantic? @_ Namespace)) "::" @o.scope)
+
+(scoped_use_list path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
 (scoped_use_list path: (keyword_scope) "::" @o.scope)
+(scoped_use_list path: (scoped_name name: (name) @_ (#semantic? @_ Namespace)) "::" @o.scope)
+
+(scoped_type_name path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
+(scoped_type_name path: (keyword_scope) "::" @o.scope)
+(scoped_type_name path: (scoped_name name: (name) @_ (#semantic? @_ Namespace)) "::" @o.scope)
 
 ; Functions
 
@@ -86,16 +93,41 @@
 "impl" @o.implement
 (impl_item (declaration_list ["{" "}"] @o.implement))
 
+; Attributes
+
+(attribute_item ["#" "["] @o.macro.attribute (builtin_attribute) "]" @o.macro.attribute)
+(attribute_item ["#" "["] @o.macro.attribute (attribute_macro) "]" @o.macro.attribute)
+
+(attribute_item "#" @o.implement "[" @o.implement (attribute_macro) @_ (#semantic? @_ Derive) "]" @o.implement)
+((attribute_macro (name (identifier) @o.implement)) @_ (#semantic? @_ Derive))
+((attribute_macro (token_tree ["(" "," ")"] @o.implement)) @_ (#semantic? @_ Derive))
+((identifier) @i.macro.derive (#semantic? @i.macro.derive Derive))
+
+; Statements
+
+(let_declaration ["let" "=" ";"] @o.declare.value.local)
+
 ; Expressions
 
-
 (reference_expression "&" @o.access.reference)
+
+"if" @o.branch.if
+(if_expression consequence: (block ["{" "}"] @o.branch.if))
+
+"else" @o.branch.else
+(else_clause (block ["{" "}"] @o.branch.else))
 
 "match" @o.branch.match
 (match_block ["{" "}"] @o.branch.match)
 (match_arm "=>" @o.branch.case)
 (match_arm "," @o.branch.match)
 (match_arm value: (block ["{" "}"] @o.branch.case))
+
+(let_condition ["let" "="] @o.branch.match)
+
+"move" @o.storage.move
+(closure_parameters ["|" ","] @o.call.function.closure)
+(closure_expression body: (block ["{" "}"] @o.declare.function))
 
 ; Type
 
@@ -110,3 +142,14 @@
 
 
 ((identifier) @i.trait (#semantic? @i.trait Interface))
+
+; Names
+
+
+((identifier) @i.value.constant (#semantic? @i.value.constant Const))
+
+((identifier) @i.value.global (#semantic? @i.value.global Static))
+((identifier) @i.value.local (#semantic? @i.value.local Variable))
+((identifier) @i.value.parameter (#semantic? @i.value.parameter Parameter))
+((identifier) @i.value.field (#semantic? @i.value.field Property))
+((identifier) @i.value.variant (#semantic? @i.value.variant EnumMember))

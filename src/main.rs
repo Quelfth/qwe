@@ -38,6 +38,7 @@ mod document;
 mod draw;
 mod editor;
 mod grapheme;
+mod incremental_select;
 mod ix;
 mod lang;
 mod language_server;

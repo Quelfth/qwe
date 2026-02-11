@@ -105,4 +105,18 @@ impl Document {
             }
         }
     }
+
+    pub fn incremental_select(&mut self) {
+        let cursors = force_cursors!(self);
+        match cursors {
+            CursorState::MirrorInsert(_) => (),
+            CursorState::Insert(_) => (),
+            CursorState::Select(c) => {
+                for c in c.iter_mut() {
+                    c.incremental_select(&self.text);
+                }
+            }
+            CursorState::LineSelect(_) => todo!(),
+        }
+    }
 }

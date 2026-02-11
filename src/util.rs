@@ -95,11 +95,6 @@ pub fn indent_string(columns: Ix<Column>) -> String {
 pub impl<T: Ord + Copy> RangeOverlap for Range<T> {
     fn overlaps(&self, other: impl Borrow<Self>) -> bool {
         let other = other.borrow();
-        match (self.is_empty(), other.is_empty()) {
-            (true, true) => self.start == other.start,
-            (true, false) => other.contains(&self.start),
-            (false, true) => self.contains(&other.start),
-            (false, false) => !self.clone().intersect(other.clone()).is_empty(),
-        }
+        self.start.max(other.start) <= self.end.min(other.end)
     }
 }

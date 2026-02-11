@@ -261,43 +261,8 @@ impl Document {
             .take(height.inner())
     }
 
-    pub fn byte_pos_of_pos(&self, pos: Pos) -> Result<Ix<Byte>, PosError> {
-        if pos.line >= self.text.line_len() {
-            return Err(PosError::BadLine {
-                len: self.text.line_count(),
-            });
-        }
-        let line_ix = self.text.byte_of_line(pos.line).ok_or(PosError::BadLine {
-            len: self.text.line_count(),
-        })?;
-        let line = self.text.line(pos.line);
-        let Some(line) = line else {
-            return if pos.column != Ix::new(0) {
-                Err(PosError::BadColumn {
-                    byte_of_line: line_ix,
-                    bytes_in_line: Ix::new(0),
-                    columns_in_line: Ix::new(0),
-                })
-            } else {
-                Ok(line_ix)
-            };
-        };
-        let line_len = line.byte_len();
-        let byte = line.columns_to_bytes(pos.column);
-
-        if byte > line_len {
-            Err::<!, _>(PosError::BadColumn {
-                byte_of_line: line_ix,
-                bytes_in_line: line_len,
-                columns_in_line: line.column_count(),
-            })?;
-        } else {
-            Ok(line_ix + byte)
-        }
-    }
-
     pub fn backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
-        let change = self.byte_pos_of_pos(pos).ok().and_then(|byte| {
+        let change = self.text.byte_pos_of_pos(pos).ok().and_then(|byte| {
             let grapheme = self
                 .text
                 .byte_slice(..byte)
@@ -343,7 +308,7 @@ impl Document {
     }
 
     pub fn reverse_backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
-        let change = self.byte_pos_of_pos(pos).ok().and_then(|byte| {
+        let change = self.text.byte_pos_of_pos(pos).ok().and_then(|byte| {
             let grapheme = self.text.byte_slice(byte..).unwrap().graphemes().next()?;
             let size = grapheme.len();
             Some(Change {
@@ -374,7 +339,7 @@ impl Document {
     pub fn insert_change(&self, pos: Pos, text: String) -> (Option<Change>, Option<CursorChange>) {
         let cursor_change = CursorChange::insert(pos, &text);
         (
-            Some(match self.byte_pos_of_pos(pos) {
+            Some(match self.text.byte_pos_of_pos(pos) {
                 Ok(byte_pos) => Change {
                     byte_pos,
                     delete: Ix::new(0),
@@ -409,7 +374,7 @@ impl Document {
     pub fn return_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
         (
             Some(Change {
-                byte_pos: match self.byte_pos_of_pos(pos) {
+                byte_pos: match self.text.byte_pos_of_pos(pos) {
                     Ok(pos) => pos,
                     Err(e) => match e {
                         PosError::BadLine { .. } => self.text.byte_len(),

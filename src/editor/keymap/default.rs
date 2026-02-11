@@ -40,6 +40,7 @@ impl Default for Keymaps {
                 (Key::char('['), Mapping::once(Editor::mirror_insert_in)),
                 (Key::char(']'), Mapping::once(Editor::mirror_insert_out)),
                 //
+                (Key::char('o'), Mapping::once(Editor::incremental_select)),
                 (Key::char(';'), Mapping::once(Editor::line_select)),
                 (Key::char(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::code(Esc), Mapping::once(Editor::drop_other_selections)),

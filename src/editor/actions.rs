@@ -1,7 +1,4 @@
-use std::{
-    fs, iter,
-    ops::{IntoBounds, RangeBounds},
-};
+use std::{fs, iter};
 
 use convert_case::{Case, Casing};
 
@@ -38,7 +35,7 @@ impl Editor {
     pub fn inspect(&mut self) {
         let Some(tree) = &self.doc.tree() else { return };
         let (start, end) = self.doc.inspect_range();
-        let [Ok(start), Ok(end)] = [start, end].map(|p| self.doc.byte_pos_of_pos(p)) else {
+        let [Ok(start), Ok(end)] = [start, end].map(|p| self.doc.text().byte_pos_of_pos(p)) else {
             return;
         };
         self.open_gadget(Inspector::new(
@@ -47,7 +44,11 @@ impl Editor {
                 self.doc
                     .semtoks
                     .iter()
-                    .filter(|s| s.range.overlaps(start..end))
+                    .filter(|s| {
+                        let o = s.range.overlaps(start..end);
+                        aprintln!("{:?} ~~ {:?}: {}", s.range, start..end, o);
+                        o
+                    })
                     .map(|s| {
                         iter::once(s.r#type.to_case(Case::Pascal))
                             .chain(
@@ -129,5 +130,9 @@ impl Editor {
 
     pub fn cursor_line_split(&mut self) {
         self.doc.cursor_line_split();
+    }
+
+    pub fn incremental_select(&mut self) {
+        self.doc.incremental_select();
     }
 }

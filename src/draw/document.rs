@@ -1,7 +1,5 @@
 use std::{cmp::Ordering::*, iter};
 
-use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
-
 use crate::{
     custom_literal::integer::rgb,
     document::Document,

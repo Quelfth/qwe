@@ -4,7 +4,7 @@ use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
     aprintln::aprintln,
-    document::{Change, CursorChange, CursorChangeKind},
+    document::{Change, CursorChange, CursorChangeKind, PosError},
     grapheme::{Grapheme, GraphemeExt},
     ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
     pos::{Pos, Utf16Pos},
@@ -261,6 +261,41 @@ impl Rope {
             .map(|g| g.columns())
             .sum();
         Some(Pos { line, column })
+    }
+
+    pub fn byte_pos_of_pos(&self, pos: Pos) -> Result<Ix<Byte>, PosError> {
+        if pos.line >= self.line_len() {
+            return Err(PosError::BadLine {
+                len: self.line_count(),
+            });
+        }
+        let line_ix = self.byte_of_line(pos.line).ok_or(PosError::BadLine {
+            len: self.line_count(),
+        })?;
+        let line = self.line(pos.line);
+        let Some(line) = line else {
+            return if pos.column != Ix::new(0) {
+                Err(PosError::BadColumn {
+                    byte_of_line: line_ix,
+                    bytes_in_line: Ix::new(0),
+                    columns_in_line: Ix::new(0),
+                })
+            } else {
+                Ok(line_ix)
+            };
+        };
+        let line_len = line.byte_len();
+        let byte = line.columns_to_bytes(pos.column);
+
+        if byte > line_len {
+            Err::<!, _>(PosError::BadColumn {
+                byte_of_line: line_ix,
+                bytes_in_line: line_len,
+                columns_in_line: line.column_count(),
+            })?;
+        } else {
+            Ok(line_ix + byte)
+        }
     }
 
     pub fn cursor_change(&self, change: &Change) -> Option<CursorChange> {
