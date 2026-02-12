@@ -1,7 +1,5 @@
 use std::{fs, iter};
 
-use convert_case::{Case, Casing};
-
 use crate::{
     aprintln::aprintln,
     document::Document,
@@ -10,7 +8,7 @@ use crate::{
     lang::Language,
     lsp::channel::EditorToLspMessage,
     terminal_size::terminal_size,
-    util::{RangeOverlap, pretty_node},
+    util::pretty_node,
 };
 
 mod insert;

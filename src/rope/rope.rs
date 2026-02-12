@@ -3,7 +3,6 @@ use std::ops::{Range, RangeBounds};
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
-    aprintln::aprintln,
     document::{Change, CursorChange, CursorChangeKind, PosError},
     grapheme::{Grapheme, GraphemeExt},
     ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},

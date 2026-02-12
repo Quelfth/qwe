@@ -7,7 +7,7 @@ use crate::{
     document::CursorChange,
     editor::cursors::mirror_insert::MirrorInsertCursors,
     ix::{Byte, Column, Ix, Line},
-    pos::{Pos, Region},
+    pos::Region,
     rope::Rope,
 };
 
@@ -277,7 +277,7 @@ impl<T> CursorSet<T> {
         T: Cursor,
     {
         for cursor in self.iter_mut() {
-            cursor.apply_change(change, &text)
+            cursor.apply_change(change, text)
         }
     }
 

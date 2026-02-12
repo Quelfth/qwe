@@ -92,7 +92,7 @@ impl Finder {
             self.haystacks
                 .iter()
                 .flat_map(|Haystack { text, offset }| {
-                    re.find_iter(&text).map(move |m| {
+                    re.find_iter(text).map(move |m| {
                         let Range { start, end } = m.range();
                         Ix::new(start + offset)..Ix::new(end + offset)
                     })

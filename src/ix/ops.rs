@@ -1,6 +1,6 @@
 use super::Ix;
 use std::{
-    hash::{self, Hash, Hasher},
+    hash::{Hash, Hasher},
     iter::{Step, Sum},
     ops::{Add, AddAssign, Neg, Sub, SubAssign},
 };

@@ -65,15 +65,15 @@ impl LineCursor {
         self.line + self.height
     }
 
-    fn to_insert_before(&self, doc: &Rope) -> InsertCursor {
-        let Self { line, .. } = *self;
+    fn to_insert_before(self, doc: &Rope) -> InsertCursor {
+        let Self { line, .. } = self;
         InsertCursor::forward(Pos {
             line,
             column: doc.indent_on_line(line),
         })
     }
-    fn to_insert_after(&self, doc: &Rope) -> InsertCursor {
-        let Self { line, height } = *self;
+    fn to_insert_after(self, doc: &Rope) -> InsertCursor {
+        let Self { line, height } = self;
         let line = line + height.max(Ix::new(1)) - Ix::new(1);
         InsertCursor::forward(Pos {
             line,
@@ -81,8 +81,8 @@ impl LineCursor {
         })
     }
 
-    pub fn to_select(&self, doc: &Rope) -> SelectCursor {
-        let Self { line, height } = *self;
+    pub fn to_select(self, doc: &Rope) -> SelectCursor {
+        let Self { line, height } = self;
         let height = height.max(Ix::new(1));
         let end_line = line + height;
 

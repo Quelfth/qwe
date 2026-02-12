@@ -6,9 +6,7 @@ use std::{
     },
 };
 
-use lsp_types::{
-    DidChangeTextDocumentParams, InitializeResult, SemanticToken, TextDocumentContentChangeEvent,
-};
+use lsp_types::{InitializeResult, SemanticToken, TextDocumentContentChangeEvent};
 
 use crate::lang::Language;
 

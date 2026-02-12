@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use crate::{
-    incremental_select::fragment::{CharClass, CharClassPriority, FragmentKind},
+    incremental_select::fragment::{CharClass, FragmentKind},
     ix::{Byte, Ix},
     rope::Rope,
 };
@@ -12,7 +12,7 @@ pub fn increment_range(text: &Rope, range: Range<Ix<Byte>>) -> Range<Ix<Byte>> {
     increment(text, range.clone()).unwrap_or(range)
 }
 
-fn increment(text: &Rope, mut range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
+fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
     struct State<'a> {
         text: &'a Rope,
         range: Range<Ix<Byte>>,
@@ -306,7 +306,6 @@ fn increment(text: &Rope, mut range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>>
                             break;
                         }
                     }
-                    FragmentKind::Group => todo!(),
                 }
             }
         }

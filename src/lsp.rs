@@ -26,8 +26,8 @@ use lsp_types::{
     SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
     SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
     SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, TextDocumentClientCapabilities,
-    TextDocumentContentChangeEvent, TextDocumentItem, TokenFormat, Url,
-    VersionedTextDocumentIdentifier, WorkspaceClientCapabilities, WorkspaceFolder,
+    TextDocumentItem, Url, VersionedTextDocumentIdentifier, WorkspaceClientCapabilities,
+    WorkspaceFolder,
 };
 use tokio::task::JoinHandle;
 use tower::ServiceBuilder;

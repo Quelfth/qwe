@@ -1,6 +1,4 @@
-use std::{io, mem};
-
-use lsp_types::TextDocumentContentChangeEvent;
+use std::io;
 
 use crate::{
     editor::Editor,

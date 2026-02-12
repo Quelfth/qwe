@@ -86,9 +86,14 @@
 (function_item name: (_) @i.function)
 (parameter ":" @o.type)
 
-(declaration_list (function_item (parameters ["(" "," ")" ] @o.call.function.method)))
+(declaration_list (function_item (parameters ["(" "," ")" ] @o.call.function.associated)))
 
 (declaration_list (function_item name: (_) @i.function.method))
+
+(function_signature_item ["fn" "->" ";"] @o.declare.function)
+(function_signature_item (parameters ["(" "," ")"] @o.call.function.associated.extension))
+
+(impl_item "for" (declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated.extension))))
 
 ; Struct
 
@@ -99,10 +104,21 @@
 (field_declaration name: (_) @i.value.field)
 (field_declaration ":" @o.type)
 
+; Trait
+
+"trait" @o.declare.trait
+(trait_item (declaration_list ["{" "}"] @o.declare.trait))
+
 ; Impl
 
 "impl" @o.implement
+(impl_item "for" @o.implement)
 (impl_item (declaration_list ["{" "}"] @o.implement))
+
+"where" @o.implement
+(where_clause "," @o.implement)
+
+(trait_bounds [":" "+"] @o.implement)
 
 ; Attributes
 
@@ -124,8 +140,6 @@
 "_" @o.wildcard
 (reference_expression "&" @o.access.reference)
 
-(assignment_expression "=" @o.assign)
-(expression_statement (assignment_expression) ";" @o.assign)
 
 "if" @o.branch.if
 (if_expression consequence: (block ["{" "}"] @o.branch.if))
@@ -141,9 +155,21 @@
 
 (let_condition ["let" "="] @o.branch.match)
 
+"return" @o.control.return
+(expression_statement (return_expression) ";" @o.control.return)
+
 "move" @o.storage.move
 (closure_parameters ["|" ","] @o.call.function.closure)
 (closure_expression body: (block ["{" "}"] @o.declare.function))
+
+(assignment_expression "=" @o.assign)
+(expression_statement (assignment_expression) ";" @o.assign)
+
+(let_chain "&&" @o.branch)
+
+(binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
+
+(binary_expression ["&&" "||"] @o.branch)
 
 ; Call Expressions
 
@@ -151,6 +177,9 @@
 
 (call_expression function: (field_expression) arguments: (arguments ["(" "," ")"] @o.call.function.method))
 (call_expression function: (field_expression field: (_) @_ (#semantic? @_ trait)) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+
+(call_expression function: (field_expression "." @o.access.method))
+(call_expression function: (field_expression "." @o.access.method.extension @_ (#semantic? @_ trait)))
 
 (call_expression function: (name) @_ (#semantic? @_ EnumMember) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
@@ -165,6 +194,11 @@
 (tuple_struct_pattern type: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) ["(" "," ")"] @o.call.value.variant)
 
 ; Struct Expressions
+
+(field_initializer ":" @o.key-value)
+(field_pattern ":" @o.key-value)
+
+(remaining_field_pattern ".." @o.wildcard)
 
 ;(struct_pattern type: (self_type) ["{" "," "}"] @o.call.type.self)
 
@@ -184,6 +218,8 @@
 
 ; Type
 
+(reference_type "&" @o.access.reference)
+
 (never_type "!" @o.type.never)
 (self_type) @i.type.self
 
@@ -201,6 +237,8 @@
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 
 (generic_type type: (type_name) @_ (#semantic? @_ Interface) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
+
+(bounded_type "+" @o.implement)
 
 ; Names
 

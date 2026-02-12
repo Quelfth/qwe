@@ -1,10 +1,5 @@
-use std::{
-    collections::HashMap,
-    iter,
-    ops::{IntoBounds, Range, RangeBounds},
-};
+use std::{collections::HashMap, iter, ops::Range};
 
-use convert_case::Casing;
 use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
 use crate::{

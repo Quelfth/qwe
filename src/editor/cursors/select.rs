@@ -1,9 +1,4 @@
-use std::{
-    cmp::Ordering::*,
-    collections::{HashMap, HashSet},
-    iter, mem,
-    ops::Range,
-};
+use std::{cmp::Ordering::*, collections::HashMap, iter, mem, ops::Range};
 
 use crate::{
     document::{CursorChange, CursorChangeBias},

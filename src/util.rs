@@ -1,8 +1,4 @@
-use std::{
-    borrow::Borrow,
-    fmt::Write,
-    ops::{IntoBounds, Range, RangeBounds},
-};
+use std::{borrow::Borrow, fmt::Write, ops::Range};
 
 use extension_trait::extension_trait;
 use tree_sitter::Node;

@@ -75,8 +75,6 @@ pub enum FragmentKind {
     Clause,
     /// foo + bar
     Sentence,
-    /// (foo + bar + baz)
-    Group,
 }
 
 impl FragmentKind {
