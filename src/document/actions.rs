@@ -71,9 +71,8 @@ impl Document {
                 let indent = indent_string(indent);
                 let text = text
                     .lines()
-                    .map(|l| format!("{indent}{l}"))
-                    .collect::<String>()
-                    + "\n";
+                    .map(|l| format!("{indent}{l}\n"))
+                    .collect::<String>();
                 let change = self.insert_change(pos, text);
                 self.do_change(change);
 

@@ -62,20 +62,11 @@ impl Document {
                             let node = capture_nodes[&capture];
                             if !self
                                 .semtoks
-                                .iter()
-                                .filter(|SemanticToken { range, .. }| {
-                                    !range
-                                        .clone()
-                                        .intersect(node.byte_range().map_bounds(Ix::new))
-                                        .is_empty()
-                                })
-                                .any(|SemanticToken { r#type, mods, .. }| {
+                                .overlapping(node.byte_range().map_bounds(Ix::new))
+                                .any(|SemanticToken { r#type, mods }| {
                                     predicate.check(
-                                        &iter::once(r#type.to_case(convert_case::Case::UpperCamel))
-                                            .chain(
-                                                mods.iter()
-                                                    .map(|m| m.to_case(convert_case::Case::Kebab)),
-                                            )
+                                        &iter::once(r#type.clone())
+                                            .chain(mods.iter().cloned())
                                             .collect(),
                                     )
                                 })

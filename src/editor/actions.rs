@@ -43,19 +43,10 @@ impl Editor {
                 None,
                 self.doc
                     .semtoks
-                    .iter()
-                    .filter(|s| {
-                        let o = s.range.overlaps(start..end);
-                        aprintln!("{:?} ~~ {:?}: {}", s.range, start..end, o);
-                        o
-                    })
+                    .overlapping(start..end)
                     .map(|s| {
-                        iter::once(s.r#type.to_case(Case::Pascal))
-                            .chain(
-                                s.mods
-                                    .iter()
-                                    .map(|m| " ".to_owned() + &m.to_case(Case::Kebab)),
-                            )
+                        iter::once((*s.r#type).to_owned())
+                            .chain(s.mods.iter().map(|m| " ".to_owned() + m))
                             .collect::<String>()
                             + "\n"
                     })

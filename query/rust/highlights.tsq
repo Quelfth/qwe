@@ -34,6 +34,11 @@
 (self) @i.value.receiver
 "pub" @o.visibility.public
 "::" @o.association
+"dyn" @o.dynamic
+"mut" @o.storage.mutable
+"ref" @o.storage.reference
+(self_parameter "&" @o.access.reference)
+"." @o.access.field
 
 ; Modules
 
@@ -65,6 +70,12 @@
 (scoped_type_name path: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
 (scoped_type_name path: (keyword_scope) "::" @o.scope)
 (scoped_type_name path: (scoped_name name: (name) @_ (#semantic? @_ Namespace)) "::" @o.scope)
+
+(scoped_name "::" @o.association.inherited name: (_) @_ (#semantic? @_ trait))
+
+(scoped_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
+(scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
+(use_wildcard (name) @_ (#semantic? @_ Enum) "::" @o.association.enum)
 
 ; Functions
 
@@ -109,7 +120,12 @@
 
 ; Expressions
 
+
+"_" @o.wildcard
 (reference_expression "&" @o.access.reference)
+
+(assignment_expression "=" @o.assign)
+(expression_statement (assignment_expression) ";" @o.assign)
 
 "if" @o.branch.if
 (if_expression consequence: (block ["{" "}"] @o.branch.if))
@@ -129,6 +145,43 @@
 (closure_parameters ["|" ","] @o.call.function.closure)
 (closure_expression body: (block ["{" "}"] @o.declare.function))
 
+; Call Expressions
+
+(call_expression arguments: (arguments ["(" "," ")"] @o.call))
+
+(call_expression function: (field_expression) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+(call_expression function: (field_expression field: (_) @_ (#semantic? @_ trait)) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+
+(call_expression function: (name) @_ (#semantic? @_ EnumMember) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
+(call_expression function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
+
+(call_expression function: (name) @_ (#semantic? @_ "!trait" associated Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
+(call_expression function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" associated Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
+
+(call_expression function: (name) @_ (#semantic? @_ trait Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated.extension))
+(call_expression function: (scoped_name name: (name) @_ (#semantic? @_ trait Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated.extension))
+
+(tuple_struct_pattern type: (name) @_ (#semantic? @_ EnumMember) ["(" "," ")"] @o.call.value.variant)
+(tuple_struct_pattern type: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) ["(" "," ")"] @o.call.value.variant)
+
+; Struct Expressions
+
+;(struct_pattern type: (self_type) ["{" "," "}"] @o.call.type.self)
+
+(struct_expression name: (type_name) @_ (#semantic? @_ Struct) (field_initializer_list ["{" "," "}"] @o.call.type.struct))
+(struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) (field_initializer_list ["{" "," "}"] @o.call.type.struct))
+(struct_expression name: (type_name) @_ (#semantic? @_ TypeAlias) (field_initializer_list ["{" "," "}"] @o.call.type.alias))
+(struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) (field_initializer_list ["{" "," "}"] @o.call.type.alias))
+(struct_expression name: (type_name) @_ (#semantic? @_ EnumMember) (field_initializer_list ["{" "," "}"] @o.call.value.variant))
+(struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ EnumMember)) (field_initializer_list ["{" "," "}"] @o.call.value.variant))
+
+(struct_pattern type: (type_name) @_ (#semantic? @_ Struct) ["{" "," "}"] @o.call.type.struct)
+(struct_pattern type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) ["{" "," "}"] @o.call.type.struct)
+(struct_pattern type: (type_name) @_ (#semantic? @_ TypeAlias) ["{" "," "}"] @o.call.type.alias)
+(struct_pattern type: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) ["{" "," "}"] @o.call.type.alias)
+(struct_pattern type: (type_name) @_ (#semantic? @_ EnumMember) ["{" "," "}"] @o.call.value.variant)
+(struct_pattern type: (scoped_type_name name: (type_name) @_ (#semantic? @_ EnumMember)) ["{" "," "}"] @o.call.value.variant)
+
 ; Type
 
 (never_type "!" @o.type.never)
@@ -140,11 +193,21 @@
 ((identifier) @i.type.union (#semantic? @i.type.union Union))
 ((identifier) @i.type.alias (#semantic? @i.type.alias TypeAlias))
 
+(generic_type type: (type_name) @_ (#semantic? @_ Struct) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
+(generic_type type: (type_name) @_ (#semantic? @_ Enum) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
+(generic_type type: (type_name) @_ (#semantic? @_ Union) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
+(generic_type type: (type_name) @_ (#semantic? @_ TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
 
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 
+(generic_type type: (type_name) @_ (#semantic? @_ Interface) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
+
 ; Names
 
+([(identifier) (self)] @i.reference (#semantic? @i.reference reference))
+([(identifier) (self)] @i.mutable (#semantic? @i.mutable mutable))
+
+; Value Names
 
 ((identifier) @i.value.constant (#semantic? @i.value.constant Const))
 
@@ -153,3 +216,12 @@
 ((identifier) @i.value.parameter (#semantic? @i.value.parameter Parameter))
 ((identifier) @i.value.field (#semantic? @i.value.field Property))
 ((identifier) @i.value.variant (#semantic? @i.value.variant EnumMember))
+
+; Function Names
+
+((identifier) @i.function (#semantic? @i.function "!associated" Function))
+((identifier) @i.function.associated (#semantic? @i.function.associated "!trait" associated Function))
+((identifier) @i.function.method (#semantic? @i.function.method "!trait" Method))
+((identifier) @i.function.associated.extension (#semantic? @i.function.associated.extension trait Function))
+((identifier) @i.function.method.extension (#semantic? @i.function.method.extension trait Method))
+

@@ -32,3 +32,6 @@ async-process = "2.5.0"
 tracing = "0.1.44"
 anyhow = "1.0.100"
 convert_case = "0.11.0"
+
+[profile.release]
+debug = true

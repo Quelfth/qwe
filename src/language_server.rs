@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{ops::Range, sync::Arc};
 
+use convert_case::{Case, Casing};
 use lsp_types::{
     InitializeResult, SemanticTokensLegend, SemanticTokensOptions,
     SemanticTokensRegistrationOptions, SemanticTokensServerCapabilities,
@@ -35,12 +36,12 @@ impl From<SemanticTokensLegend> for Legend {
             types: value
                 .token_types
                 .into_iter()
-                .map(|t| t.as_str().into())
+                .map(|t| t.as_str().to_case(Case::UpperCamel).into())
                 .collect(),
             mods: value
                 .token_modifiers
                 .into_iter()
-                .map(|t| t.as_str().into())
+                .map(|t| t.as_str().to_case(Case::Kebab).into())
                 .collect(),
         }
     }
@@ -91,7 +92,7 @@ impl LanguageServer {
         &self,
         tokens: Vec<lsp_types::SemanticToken>,
         text: &Rope,
-    ) -> impl Iterator<Item = SemanticToken> {
+    ) -> impl Iterator<Item = (Range<Ix<Byte>>, SemanticToken)> {
         if self.semtok_legend.is_none() {
             panic!()
         }
@@ -128,11 +129,7 @@ impl LanguageServer {
                     .map(|i| legend.mods[i as usize].clone())
                     .collect::<Vec<_>>();
 
-                SemanticToken {
-                    range,
-                    r#type,
-                    mods,
-                }
+                (range, SemanticToken { r#type, mods })
             },
         )
     }

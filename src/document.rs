@@ -15,6 +15,7 @@ use crate::editor::cursors::select::{SelectCursor, SelectCursors};
 use crate::grapheme::GraphemeExt;
 use crate::ix::{Byte, Column, Ix, Line};
 use crate::lang::Language;
+use crate::range_tree::RangeTree;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::{Pos, Region};
@@ -35,7 +36,7 @@ pub struct Document {
     pub future: History,
     language: Option<Language>,
     tree: Option<Tree>,
-    pub semtoks: Vec<SemanticToken>,
+    pub semtoks: RangeTree<Ix<Byte>, SemanticToken>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
 }
