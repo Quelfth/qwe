@@ -1,4 +1,10 @@
-use crate::ts::QuerySource;
+use std::{collections::HashMap, sync::LazyLock};
+
+use dashmap::DashMap;
+use mutx::Mutex;
+use tree_sitter::Query;
+
+use crate::{ts::QuerySource, util::leak};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Language {
@@ -60,5 +66,14 @@ impl Language {
             },
             lang: self,
         }
+    }
+
+    pub fn highlight_query(self) -> &'static Query {
+        static CACHE: LazyLock<Mutex<HashMap<Language, &'static Query>>> =
+            LazyLock::new(Default::default);
+        CACHE
+            .lock()
+            .entry(self)
+            .or_insert_with(|| leak(self.highlight_query_source().build().unwrap()))
     }
 }

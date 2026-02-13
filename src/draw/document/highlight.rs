@@ -24,10 +24,10 @@ impl Document {
             let mut cursor = QueryCursor::new();
             let root = tree.root_node();
 
-            let query = lang.highlight_query_source().build().unwrap();
+            let query = lang.highlight_query();
 
             let mut matches = cursor.matches_with_options(
-                &query,
+                query,
                 root,
                 self.text(),
                 tree_sitter::QueryCursorOptions {

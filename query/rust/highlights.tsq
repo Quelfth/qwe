@@ -98,7 +98,10 @@
 ; Struct
 
 "struct" @o.declare.struct
+(struct_item (type_parameters ["<" "," ">"] @o.declare.struct))
 (struct_item (field_declaration_list ["{" "," "}"] @o.declare.struct))
+(struct_item (ordered_field_declaration_list ["(" "," ")"] @o.declare.struct))
+(struct_item ";" @o.declare.struct)
 
 (struct_item name: (_) @i.type.struct)
 (field_declaration name: (_) @i.value.field)
@@ -114,6 +117,7 @@
 "impl" @o.implement
 (impl_item "for" @o.implement)
 (impl_item (declaration_list ["{" "}"] @o.implement))
+(impl_item (type_parameters ["<" "," ">"] @o.implement))
 
 "where" @o.implement
 (where_clause "," @o.implement)
@@ -152,6 +156,10 @@
 (match_arm "=>" @o.branch.case)
 (match_arm "," @o.branch.match)
 (match_arm value: (block ["{" "}"] @o.branch.case))
+(or_pattern "|" @o.pattern.or)
+(range_pattern [".." "..="] @o.pattern.range)
+
+(try_expression "?" @o.error.propogate)
 
 (let_condition ["let" "="] @o.branch.match)
 
@@ -171,15 +179,40 @@
 
 (binary_expression ["&&" "||"] @o.branch)
 
+; Type Constructing Expressions
+
+(unit_expression ["(" ")"] @o.tuple)
+(tuple_expression ["(" "," ")"] @o.tuple)
+
+;(unit_pattern ["(" ")"] @o.tuple)
+(tuple_pattern ["(" "," ")"] @o.tuple)
+
 ; Call Expressions
 
 (call_expression arguments: (arguments ["(" "," ")"] @o.call))
+(generic_function "::" @o.call type_arguments: (type_arguments ["<" "," ">"] @o.call))
 
 (call_expression function: (field_expression) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+(call_expression function: (generic_function function: (field_expression)) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+
 (call_expression function: (field_expression field: (_) @_ (#semantic? @_ trait)) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+(call_expression function: (generic_function function: (field_expression field: (_) @_ (#semantic? @_ trait))) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+
+
+(generic_function function: (field_expression) "::" @o.call.function.method type_arguments: (type_arguments ["<" "," ">"] @o.call.function.method))
+(generic_function
+    function: (field_expression 
+        field: (_) @_ (#semantic? @_ trait)
+    ) 
+    "::" @o.call.function.method.extension     
+    type_arguments: (type_arguments 
+        ["<" "," ">"] @o.call.function.method.extension
+    )
+)
 
 (call_expression function: (field_expression "." @o.access.method))
-(call_expression function: (field_expression "." @o.access.method.extension @_ (#semantic? @_ trait)))
+(generic_function function: (field_expression "." @o.access.method))
+;(call_expression function: (field_expression "." @o.access.method.extension @_ (#semantic? @_ trait)))
 
 (call_expression function: (name) @_ (#semantic? @_ EnumMember) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
@@ -222,17 +255,24 @@
 
 (never_type "!" @o.type.never)
 (self_type) @i.type.self
+(unit_type ["(" ")"] @o.tuple)
+(tuple_type ["(" "," ")"] @o.tuple)
 
 ((identifier) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
 ((identifier) @i.type.struct (#semantic? @i.type.struct Struct))
 ((identifier) @i.type.enum (#semantic? @i.type.enum Enum))
 ((identifier) @i.type.union (#semantic? @i.type.union Union))
 ((identifier) @i.type.alias (#semantic? @i.type.alias TypeAlias))
+((identifier) @i.type.parameter @_ (#semantic? @_ TypeParameter))
 
 (generic_type type: (type_name) @_ (#semantic? @_ Struct) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
 (generic_type type: (type_name) @_ (#semantic? @_ Enum) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
 (generic_type type: (type_name) @_ (#semantic? @_ Union) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
 (generic_type type: (type_name) @_ (#semantic? @_ TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Enum)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Union)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
 
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 
