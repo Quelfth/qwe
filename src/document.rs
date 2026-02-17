@@ -1,5 +1,6 @@
 use std::iter;
 use std::ops::Range;
+use std::time::Instant;
 
 use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
@@ -39,6 +40,7 @@ pub struct Document {
     pub semtoks: RangeTree<Ix<Byte>, SemanticToken>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
+    save_prime_instant: Option<Instant>,
 }
 
 impl Document {
@@ -59,6 +61,7 @@ impl Document {
             text,
             lsp_changes: Vec::new(),
             lsp_version: 0,
+            save_prime_instant: None,
         }
     }
 
@@ -78,7 +81,11 @@ impl Document {
     }
 
     pub fn gutter_width(&self) -> u16 {
-        (self.text.line_count().inner() + 1).ilog10() as u16 + 1
+        let n = self.text.max_line_number().inner();
+        if n == 0 {
+            return 0;
+        }
+        n.ilog10() as u16 + 1
     }
 
     pub fn overlay_rect(&self, mut rect: Rect<u16>) -> Rect<u16> {

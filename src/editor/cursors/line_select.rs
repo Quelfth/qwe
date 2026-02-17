@@ -187,4 +187,8 @@ impl Cursor for LineCursor {
         self.line = start;
         self.height = end.saturating_sub(start);
     }
+
+    fn location_cmp(left: &Self, right: &Self) -> std::cmp::Ordering {
+        left.line.cmp(&right.line)
+    }
 }

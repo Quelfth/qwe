@@ -7,6 +7,8 @@ mod from;
 mod iter;
 mod rope;
 mod slice;
+#[cfg(test)]
+mod test;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Rope(crop::Rope);

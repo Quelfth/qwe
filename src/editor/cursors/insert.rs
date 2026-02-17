@@ -101,4 +101,8 @@ impl Cursor for InsertCursor {
     fn apply_change(&mut self, change: CursorChange, _: &Rope) {
         self.pos = change.apply(self.pos, CursorChangeBias::Right);
     }
+
+    fn location_cmp(left: &Self, right: &Self) -> Ordering {
+        left.pos.cmp(&right.pos)
+    }
 }

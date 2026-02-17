@@ -1,6 +1,5 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use dashmap::DashMap;
 use mutx::Mutex;
 use tree_sitter::Query;
 

@@ -3,6 +3,7 @@ use std::ops::{Range, RangeBounds};
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
+    aprintln::aprintln,
     document::{Change, CursorChange, CursorChangeKind, PosError},
     grapheme::{Grapheme, GraphemeExt},
     ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
@@ -173,6 +174,15 @@ impl Rope {
         })
     }
 
+    pub fn max_line_number(&self) -> Ix<Line> {
+        let len = self.0.line_len();
+        Ix::new(match self.0.chars().next_back() {
+            Some('\n') => len + 1,
+            None => 0,
+            _ => len,
+        })
+    }
+
     pub fn line_of_byte(&self, byte_offset: Ix<Byte>) -> Option<Ix<Line>> {
         ixto!(byte_offset);
         if byte_offset > self.0.byte_len() {
@@ -263,7 +273,7 @@ impl Rope {
     }
 
     pub fn byte_pos_of_pos(&self, pos: Pos) -> Result<Ix<Byte>, PosError> {
-        if pos.line >= self.line_len() {
+        if pos.line >= self.max_line_number() {
             return Err(PosError::BadLine {
                 len: self.line_count(),
             });
@@ -284,16 +294,16 @@ impl Rope {
             };
         };
         let line_len = line.byte_len();
-        let byte = line.columns_to_bytes(pos.column);
+        let byte = line.columns_to_bytes_strict(pos.column);
 
-        if byte > line_len {
-            Err::<!, _>(PosError::BadColumn {
+        if let Ok(byte) = byte {
+            Ok(line_ix + byte)
+        } else {
+            Err(PosError::BadColumn {
                 byte_of_line: line_ix,
                 bytes_in_line: line_len,
                 columns_in_line: line.column_count(),
-            })?;
-        } else {
-            Ok(line_ix + byte)
+            })
         }
     }
 

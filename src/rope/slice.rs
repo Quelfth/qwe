@@ -192,16 +192,33 @@ impl<'a> RopeSlice<'a> {
 
         start.unwrap_or(self.byte_len())..end.unwrap_or(self.byte_len())
     }
+
     pub fn columns_to_bytes(&self, columns: Ix<Column>) -> Ix<Byte> {
+        match self.columns_to_bytes_strict(columns) {
+            Ok(x) | Err(x) => x,
+        }
+    }
+
+    pub fn columns_to_bytes_strict(&self, columns: Ix<Column>) -> Result<Ix<Byte>, Ix<Byte>> {
         let mut byte = None;
+        let mut c_len = Ix::new(0);
         for (c, b) in self.columns_bytes() {
             let (x, i) = (&mut byte, columns);
             if x.is_none() && i == c {
                 *x = Some(b);
             }
+            c_len = c + Ix::new(1);
         }
-
-        byte.unwrap_or(self.byte_len())
+        match byte {
+            Some(b) => Ok(b),
+            None => {
+                if columns == c_len {
+                    Ok(self.byte_len())
+                } else {
+                    Err(self.byte_len())
+                }
+            }
+        }
     }
 
     pub fn column_count(&self) -> Ix<Column> {

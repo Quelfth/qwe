@@ -63,6 +63,7 @@ impl Default for Keymaps {
                 //
                 (Key::char('z'), Mapping::once(Editor::undo)),
                 (Key::char('Z'), Mapping::once(Editor::redo)),
+                (Key::char('X'), Mapping::once(Editor::delete)),
                 (Key::char('x'), Mapping::once(Editor::cut)),
                 (Key::char('c'), Mapping::once(Editor::copy)),
                 (Key::char('v'), Mapping::once(Editor::paste)),
@@ -87,6 +88,7 @@ impl Default for Keymaps {
                 (Key::char('A'), Mapping::once(Editor::insert_after)),
                 //
                 (Key::char(';'), Mapping::once(Editor::select)),
+                (Key::char(':'), Mapping::once(Editor::cursor_line_split)),
                 //
                 (Key::char('j'), Mapping::rep(|e| e.move_y(1))),
                 (Key::char('k'), Mapping::rep(|e| e.move_y(-1))),
@@ -99,6 +101,7 @@ impl Default for Keymaps {
                 //
                 (Key::char('z'), Mapping::once(Editor::undo)),
                 (Key::char('Z'), Mapping::once(Editor::redo)),
+                (Key::char('X'), Mapping::once(Editor::delete)),
                 (Key::char('x'), Mapping::once(Editor::cut)),
                 (Key::char('c'), Mapping::once(Editor::copy)),
                 (Key::char('v'), Mapping::once(Editor::paste)),

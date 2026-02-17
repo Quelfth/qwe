@@ -183,10 +183,6 @@ impl Server {
                 })
                 .await?;
             if let Some(semtoks) = semtoks {
-                match semtoks {
-                    SemanticTokensResult::Tokens(_) => aprintln!("full"),
-                    SemanticTokensResult::Partial(_) => aprintln!("partial"),
-                }
                 let (SemanticTokensResult::Tokens(SemanticTokens { data, .. })
                 | SemanticTokensResult::Partial(SemanticTokensPartialResult { data })) = semtoks;
                 return Ok(Some(data));
@@ -249,7 +245,6 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 EditorToLspMessage::Exit => break,
                 EditorToLspMessage::RefreshSemanticTokens => {
                     for server in servers.values_mut() {
-                        aprintln!("manual refresh");
                         for doc in server.docs.clone() {
                             let Some(semtoks) = server.semantic_tokens(doc).await? else {
                                 continue;
@@ -292,7 +287,6 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
             {
                 match msg {
                     ClientMessage::SemanticTokensRefresh => {
-                        aprintln!("do the refresh");
                         for doc in server.docs.clone() {
                             let Some(semtoks) = server.semantic_tokens(doc).await? else {
                                 continue;
@@ -366,7 +360,6 @@ impl LanguageClient for Client {
         &mut self,
         (): (),
     ) -> Pin<Box<dyn Future<Output = Result<(), Self::Error>> + Send + 'static>> {
-        aprintln!("semantic tokens refresh");
         let channel = self.channel.clone();
         Box::pin(async move {
             channel.send(ClientMessage::SemanticTokensRefresh).unwrap();

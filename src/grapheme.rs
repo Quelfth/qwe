@@ -7,7 +7,7 @@ use crate::{
 
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Grapheme(Cow<'static, str>);
 
 impl Default for Grapheme {

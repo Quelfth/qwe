@@ -45,4 +45,10 @@ impl Cursor for MirrorInsertCursor {
         *forward = change.apply(*forward, CursorChangeBias::Right);
         *reverse = change.apply(*reverse, CursorChangeBias::Left);
     }
+
+    fn location_cmp(left: &Self, right: &Self) -> std::cmp::Ordering {
+        left.forward
+            .min(left.reverse)
+            .cmp(&right.forward.min(right.reverse))
+    }
 }

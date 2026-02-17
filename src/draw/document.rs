@@ -23,14 +23,18 @@ impl Document {
                 cursors
                     .iter()
                     .find(|c| c.range.is_none_or(|r| r.contains(i)))
-                    .map(|c| c.kind)
+                    .map(|c| c.r#type)
                     .map(|k| k.style())
             }
         }
         let highlight_scopes = self.highlight();
 
-        let numbered_lines = self.text().line_count() + Ix::new(1);
-        let gutter_width = numbered_lines.inner().ilog10() as u16 + 1;
+        let numbered_lines = self.text().max_line_number();
+        let gutter_width = if numbered_lines != Ix::new(0) {
+            numbered_lines.inner().ilog10() as u16 + 1
+        } else {
+            0
+        };
         let write_line_nr = {
             let width = gutter_width.into();
             move |canvas: &mut Canvas<'_>, line_nr: Ix<Line>, screen_line_nr: u16| {

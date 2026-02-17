@@ -128,6 +128,8 @@
 
 (attribute_item ["#" "["] @o.macro.attribute (builtin_attribute) "]" @o.macro.attribute)
 (attribute_item ["#" "["] @o.macro.attribute (attribute_macro) "]" @o.macro.attribute)
+(attribute_macro (name (identifier) @i.macro.attribute))
+(attribute_macro (token_tree ["(" "," ")"] @o.macro.attribute))
 
 (attribute_item "#" @o.implement "[" @o.implement (attribute_macro) @_ (#semantic? @_ Derive) "]" @o.implement)
 ((attribute_macro (name (identifier) @o.implement)) @_ (#semantic? @_ Derive))
@@ -144,6 +146,7 @@
 "_" @o.wildcard
 (reference_expression "&" @o.access.reference)
 
+(field_expression field: (integer_literal) @i.value.field.tuple)
 
 "if" @o.branch.if
 (if_expression consequence: (block ["{" "}"] @o.branch.if))
@@ -216,6 +219,11 @@
 
 (call_expression function: (name) @_ (#semantic? @_ EnumMember) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
+
+(call_expression function: (self_type) arguments: (arguments ["(" "," ")"] @o.call.type.self))
+
+(call_expression function: (name) @_ (#semantic? @_ Struct) arguments: (arguments ["(" "," ")"] @o.call.type.struct))
+(call_expression function: (scoped_name name: (name) @_ (#semantic? @_ Struct)) arguments: (arguments ["(" "," ")"] @o.call.type.struct))
 
 (call_expression function: (name) @_ (#semantic? @_ "!trait" associated Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" associated Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
@@ -302,4 +310,3 @@
 ((identifier) @i.function.method (#semantic? @i.function.method "!trait" Method))
 ((identifier) @i.function.associated.extension (#semantic? @i.function.associated.extension trait Function))
 ((identifier) @i.function.method.extension (#semantic? @i.function.method.extension trait Method))
-

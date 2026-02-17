@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     iter,
     ops::{Index, IndexMut, Range},
 };
@@ -265,6 +266,18 @@ impl<T> CursorSet<T> {
         iter::once(&mut self.main).chain(&mut self.others)
     }
 
+    /// main first, then others in sorted order by location
+    pub fn sorted_iter(&self) -> impl Iterator<Item = &T>
+    where
+        T: Cursor,
+    {
+        iter::once(&self.main).chain({
+            let mut sorted = self.others.iter().collect::<Vec<_>>();
+            sorted.sort_unstable_by(|a, b| T::location_cmp(a, b));
+            sorted.into_iter()
+        })
+    }
+
     pub fn map_to<U>(&self, map: impl Fn(&T) -> U) -> CursorSet<U> {
         CursorSet {
             main: map(&self.main),
@@ -318,4 +331,5 @@ impl<T> Index<CursorIndex> for CursorSet<T> {
 
 pub trait Cursor {
     fn apply_change(&mut self, change: CursorChange, text: &Rope);
+    fn location_cmp(left: &Self, right: &Self) -> Ordering;
 }
