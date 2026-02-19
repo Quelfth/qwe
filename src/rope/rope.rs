@@ -3,7 +3,6 @@ use std::ops::{Range, RangeBounds};
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
-    aprintln::aprintln,
     document::{Change, CursorChange, CursorChangeKind, PosError},
     grapheme::{Grapheme, GraphemeExt},
     ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
@@ -254,6 +253,15 @@ impl Rope {
         })
     }
 
+    pub fn byte_of_utf16_pos(&self, utf16_pos: Utf16Pos) -> Option<Ix<Byte>> {
+        let line_byte = self.byte_of_line(utf16_pos.line)?;
+        let line = self.line(utf16_pos.line)?;
+
+        let byte = line.byte_of_utf16(utf16_pos.column);
+
+        Some(line_byte + byte)
+    }
+
     pub fn pos_of_byte_pos(&self, byte_pos: Ix<Byte>) -> Option<Pos> {
         let line = self.line_of_byte(byte_pos)?;
         let line_byte = self.byte_of_line(line)?;
@@ -394,6 +402,12 @@ impl Rope {
         }
 
         start.unwrap_or(self.byte_len())..end.unwrap_or(self.byte_len())
+    }
+
+    pub fn byte_range_of_line(&self, line: Ix<Line>) -> Option<Range<Ix<Byte>>> {
+        let start = self.byte_of_line(line)?;
+        let len = self.line(line)?.byte_len();
+        Some(start..start + len)
     }
 }
 

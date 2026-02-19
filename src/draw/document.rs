@@ -2,7 +2,7 @@ use std::{cmp::Ordering::*, iter};
 
 use crate::{
     custom_literal::integer::rgb,
-    document::Document,
+    document::{Document, diagnostics::Severity},
     draw::{cursor::CursorStyle, document::highlight::Highlight, screen::Canvas},
     grapheme::{Grapheme, GraphemeExt},
     ix::{Column, Ix, Line},
@@ -102,8 +102,12 @@ impl Document {
                 j
             };
 
+            let inline_diagnostic = self
+                .last_line_diagnostic(Ix::new(i as _) + scroll)
+                .map(|(s, m)| (s, m.graphemes().collect::<Vec<_>>()));
+
             if width > len {
-                for j in len..width {
+                for (rj, j) in (len..width).enumerate() {
                     let cell = &mut canvas[(i, j)];
                     if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize)) {
                         use CursorStyle::*;
@@ -118,6 +122,7 @@ impl Document {
                             }
                         }
                     }
+
                     match j.cmp(&shadow_len) {
                         Less => cell.style.bg = rgb! {0x160000},
                         Equal => {
@@ -125,6 +130,34 @@ impl Document {
                             cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
                         }
                         Greater => (),
+                    }
+                    if let Some((severity, message)) = &inline_diagnostic {
+                        const MESSAGE_GAP: usize = 2;
+                        if rj < MESSAGE_GAP {
+                            continue;
+                        }
+                        if rj == MESSAGE_GAP {
+                            cell.style.fg = rgb! {0x302020};
+                            cell.grapheme = Grapheme::LEFT_TRIANGLE;
+                        } else if rj < message.len() + MESSAGE_GAP + 1 {
+                            cell.style.bg = rgb! {0x302020};
+                            cell.style.fg = match severity {
+                                Severity::Err => rgb! {0xff007f},
+                                Severity::Warn => rgb! {0xbfff01},
+                                Severity::Info => rgb! {0x00ff7f},
+                                Severity::Hint => rgb! {0x906060},
+                            };
+                            cell.style.italic = true;
+                            let grapheme = message[rj - MESSAGE_GAP - 1].clone();
+                            if grapheme.is_whitespace() {
+                                cell.grapheme = Grapheme::SPACE;
+                            } else {
+                                cell.grapheme = grapheme;
+                            }
+                        } else if rj == message.len() + MESSAGE_GAP + 1 {
+                            cell.style.fg = rgb! {0x302020};
+                            cell.grapheme = Grapheme::RIGHT_TRIANGLE;
+                        }
                     }
                 }
             }

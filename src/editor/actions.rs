@@ -3,7 +3,9 @@ use std::{fs, iter};
 use crate::{
     aprintln::aprintln,
     document::Document,
-    editor::{Editor, finder::Finder, inspect::Inspector, jump_labels::JumpLabels},
+    editor::{
+        Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels,
+    },
     ix::Ix,
     lang::Language,
     lsp::channel::EditorToLspMessage,
@@ -22,6 +24,10 @@ impl Editor {
 
     pub fn scroll_down(&mut self, lines: usize) {
         self.doc.scroll += Ix::new(lines);
+    }
+
+    pub fn scroll_to_main_cursor(&mut self) {
+        self.doc.scroll_to_main_cursor();
     }
 
     pub fn save_file(&mut self) {
@@ -123,5 +129,17 @@ impl Editor {
 
     pub fn incremental_select(&mut self) {
         self.doc.incremental_select();
+    }
+
+    pub fn cycle_cursors_forward(&mut self) {
+        if let Some(c) = &mut self.doc.cursors {
+            c.cycle_forward();
+        }
+    }
+
+    pub fn cycle_cursors_backward(&mut self) {
+        if let Some(c) = &mut self.doc.cursors {
+            c.cycle_backward();
+        }
     }
 }

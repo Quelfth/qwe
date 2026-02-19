@@ -3,7 +3,7 @@ use std::{collections::HashMap, iter, ops::Range};
 use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
 use crate::{
-    document::{Document, semtoks::SemanticToken},
+    document::{Document, diagnostics::Severity, semtoks::SemanticToken},
     draw::document::highlight::predicate::Predicate,
     ix::{Byte, Ix},
     util::MapBounds,
@@ -82,6 +82,21 @@ impl Document {
                 }
             }
         }
+        for (range, diagnostic) in &self.diagnostics {
+            let severity = match diagnostic.severity {
+                Severity::Err => "error",
+                Severity::Warn => "warning",
+                Severity::Info => "info",
+                Severity::Hint => "hint",
+            }
+            .to_owned();
+
+            highlight_scopes.push(Highlight {
+                range: range.clone(),
+                scope: vec!["diagnostic".to_owned(), severity],
+            })
+        }
+
         highlight_scopes
     }
 }

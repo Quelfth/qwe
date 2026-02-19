@@ -1,9 +1,15 @@
 use std::io;
 
 use crate::{
+    document::diagnostics::{Diagnostic, Severity},
     editor::Editor,
+    ix::Ix,
     language_server::LanguageServer,
-    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    lsp::{
+        self,
+        channel::{EditorToLspMessage, LspToEditorMessage},
+    },
+    pos::Utf16Pos,
 };
 
 impl Editor {
@@ -25,6 +31,41 @@ impl Editor {
                             .translate_semtoks(tokens, self.doc.text())
                             .collect();
                         self.draw()?;
+                    }
+                    Diagnostics { uri, diagnostics } => {
+                        if self.filepath.as_ref().is_none_or(|p| {
+                            lsp_types::Url::from_file_path(p.canonicalize().unwrap()).unwrap()
+                                != uri
+                        }) {
+                            continue;
+                        }
+                        self.doc.diagnostics = diagnostics
+                            .into_iter()
+                            .map(
+                                |lsp_types::Diagnostic {
+                                     range: lsp_types::Range { start, end },
+                                     severity,
+                                     message,
+                                     ..
+                                 }| {
+                                    (
+                                        self.doc
+                                            .text()
+                                            .byte_of_utf16_pos(Utf16Pos::from_lsp_pos(start))
+                                            .unwrap()
+                                            ..self
+                                                .doc
+                                                .text()
+                                                .byte_of_utf16_pos(Utf16Pos::from_lsp_pos(end))
+                                                .unwrap(),
+                                        Diagnostic {
+                                            severity: Severity::from_lsp(severity),
+                                            message,
+                                        },
+                                    )
+                                },
+                            )
+                            .collect();
                     }
                 }
             }

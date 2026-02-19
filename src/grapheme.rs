@@ -27,7 +27,12 @@ impl Grapheme {
         Self(data.as_ref().to_owned().into())
     }
 
+    pub const SPACE: Self = Self(Cow::Borrowed(" "));
     pub const UPPER_LEFT_TRIANGLE: Self = Self(Cow::Borrowed("◤"));
+    pub const UPPER_RIGHT_TRIANGLE: Self = Self(Cow::Borrowed("◥"));
+    pub const LOWER_LEFT_TRIANGLE: Self = Self(Cow::Borrowed("◣"));
+    pub const LEFT_TRIANGLE: Self = Self(Cow::Borrowed(""));
+    pub const RIGHT_TRIANGLE: Self = Self(Cow::Borrowed(""));
 
     pub fn len(&self) -> Ix<Byte> {
         Ix::new(self.0.len())

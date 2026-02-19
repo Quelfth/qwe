@@ -10,6 +10,17 @@ mod insert;
 mod select;
 
 impl Document {
+    pub fn scroll_to_main_cursor(&mut self) {
+        if let Some(cursors) = &self.cursors {
+            self.scroll = match cursors {
+                CursorState::MirrorInsert(cursors) => cursors.main().forward.line,
+                CursorState::Insert(cursors) => cursors.main().pos.line,
+                CursorState::Select(cursors) => cursors.main().start_pos().line,
+                CursorState::LineSelect(cursors) => cursors.main().line,
+            }
+        }
+    }
+
     pub fn copy_text(&self) -> impl Iterator<Item = String> {
         gen {
             if let Some(cursors) = &self.cursors {

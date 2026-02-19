@@ -1,6 +1,6 @@
 use std::{
     cmp::Ordering,
-    iter,
+    iter, mem,
     ops::{Index, IndexMut, Range},
 };
 
@@ -13,6 +13,7 @@ use crate::{
 };
 
 use auto_enums::auto_enum;
+use dispa::dispatch;
 use insert::InsertCursors;
 use line_select::LineCursors;
 use select::SelectCursors;
@@ -28,6 +29,7 @@ pub enum CursorIndex {
     Other(usize),
 }
 
+#[dispatch(Cursors)]
 pub enum CursorState {
     MirrorInsert(MirrorInsertCursors),
     Insert(InsertCursors),
@@ -35,17 +37,39 @@ pub enum CursorState {
     LineSelect(LineCursors),
 }
 
-impl CursorState {
-    pub fn drop_others(&mut self) {
-        use CursorState::*;
-        match self {
-            MirrorInsert(c) => c.drop_others(),
-            Insert(c) => c.drop_others(),
-            Select(c) => c.drop_others(),
-            LineSelect(c) => c.drop_others(),
-        }
+#[dispatch]
+pub trait Cursors {
+    fn drop_others(&mut self);
+
+    fn cycle_forward(&mut self);
+    fn cycle_backward(&mut self);
+}
+
+impl<T: Cursor> Cursors for CursorSet<T> {
+    fn drop_others(&mut self) {
+        self.others.clear();
     }
 
+    fn cycle_forward(&mut self) {
+        if self.others.is_empty() {
+            return;
+        }
+
+        let next = self.others.remove(0);
+        self.others.push(mem::replace(&mut self.main, next))
+    }
+
+    fn cycle_backward(&mut self) {
+        if self.others.is_empty() {
+            return;
+        }
+
+        let next = self.others.pop().unwrap();
+        self.others.insert(0, mem::replace(&mut self.main, next))
+    }
+}
+
+impl CursorState {
     #[auto_enum(Iterator)]
     pub fn indices(&self) -> impl Iterator<Item = CursorIndex> + use<> {
         use CursorState::*;
@@ -92,6 +116,10 @@ pub struct CursorSet<Cursor> {
 }
 
 impl<T> CursorSet<T> {
+    pub fn main(&self) -> &T {
+        &self.main
+    }
+
     pub fn one(cursor: T) -> Self {
         Self {
             main: cursor,
@@ -105,10 +133,6 @@ impl<T> CursorSet<T> {
             main: iter.next()?,
             others: iter.collect(),
         })
-    }
-
-    pub fn drop_others(&mut self) {
-        self.others.clear();
     }
 
     pub fn indices(&self) -> impl Iterator<Item = CursorIndex> + use<T> {

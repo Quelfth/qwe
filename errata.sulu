@@ -1,4 +1,8 @@
 
+diagnostic.error = u:curl u.error;
+diagnostic.warning = u:curl u.warning;
+diagnostic.hint = b.hint-bg;
+
 l.number = f.number;
 l.number.affix = f.number-affix;
 l.string = f.string;
@@ -30,7 +34,9 @@ o.call.type.self = f.self;
 o.call.type.struct = f.struct;
 o.call.type.alias = f.type-alias;
 o.call.value.variant = f.variant;
+o.collection = f.list;
 o.comment = f.dark;
+o.comparison = f.comparison;
 o.construct.sequence = f.sequence;
 o.control.return = f.fn-decl;
 o.declare.function = f.fn-decl;
@@ -45,14 +51,18 @@ o.generics.type.struct = f.struct;
 o.generics.type.enum = f.enum;
 o.generics.type.union = f.union;
 o.generics.type.alias = f.type-alias;
+o.generics.type.artifact = f.type-artifact;
 o.group = f.group;
 o.implement = f.bounds;
 o.key-value = f.key-value;
 o.logical = f.logical;
+o.loop = f.loop;
 o.macro.attribute = f.attribute-macro;
 o.pattern = f.case;
 o.pattern.disjunct = f.enum;
+o.range = f.range;
 o.scope = f.scope;
+o.sequence = f.sequence;
 o.storage = f.access;
 o.strop = f.dark;
 o.tuple = f.tuple;
@@ -80,6 +90,7 @@ i.namespace.keyword = !i b f.namespace;
 i.reference = i;
 i.trait = i u:line f.trait;
 i.type.alias = b f.type-alias;
+i.type.artifact = b f.type-artifact;
 i.type.builtin = b f.builtin-type;
 i.type.enum = b f.enum;
 i.type.parameter = b f.type-parameter;
@@ -168,10 +179,11 @@ i.value.variant = f.variant;
 
 .tuple = #70a0a0;
 .sequence = #ffd549;
+.list = #ddbb40;
 .group = #505069;
 .key-value = #488b83;
 
-.range = #d5ff49;
+.range = #00bd7f;
 
 .fn-decl = #696969;
 .terminator = #00ff00;
@@ -201,3 +213,5 @@ i.value.variant = f.variant;
 .error = #ff007f;
 .warning = #bfff01;
 .hint = #00b5ff;
+
+.hint-bg = #302020;

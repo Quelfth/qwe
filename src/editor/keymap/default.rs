@@ -44,6 +44,9 @@ impl Default for Keymaps {
                 (Key::char(';'), Mapping::once(Editor::line_select)),
                 (Key::char(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::code(Esc), Mapping::once(Editor::drop_other_selections)),
+                (Key::char('9'), Mapping::rep(Editor::cycle_cursors_backward)),
+                (Key::char('0'), Mapping::rep(Editor::cycle_cursors_forward)),
+                (Key::char('8'), Mapping::once(Editor::scroll_to_main_cursor)),
                 //
                 (Key::char('h'), Mapping::rep(|e| e.move_x(-1))),
                 (Key::char('j'), Mapping::rep(|e| e.move_y(1))),
@@ -89,6 +92,9 @@ impl Default for Keymaps {
                 //
                 (Key::char(';'), Mapping::once(Editor::select)),
                 (Key::char(':'), Mapping::once(Editor::cursor_line_split)),
+                (Key::code(Esc), Mapping::once(Editor::drop_other_selections)),
+                (Key::char('9'), Mapping::rep(Editor::cycle_cursors_backward)),
+                (Key::char('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 //
                 (Key::char('j'), Mapping::rep(|e| e.move_y(1))),
                 (Key::char('k'), Mapping::rep(|e| e.move_y(-1))),

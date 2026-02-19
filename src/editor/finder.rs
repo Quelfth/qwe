@@ -52,7 +52,9 @@ impl Gadget for Finder {
             } => self.find().map(|f| {
                 let x: Box<dyn FnOnce(&mut Editor)> = Box::new(|e: &mut Editor| {
                     e.close_gadget();
-                    _ = e.select_ranges(f);
+                    if e.select_ranges(f).is_ok() {
+                        e.scroll_to_main_cursor();
+                    }
                 });
                 x
             }),

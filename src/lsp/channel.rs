@@ -6,9 +6,9 @@ use std::{
     },
 };
 
-use lsp_types::{InitializeResult, SemanticToken, TextDocumentContentChangeEvent};
+use lsp_types::{Diagnostic, InitializeResult, SemanticToken, TextDocumentContentChangeEvent, Url};
 
-use crate::lang::Language;
+use crate::{lang::Language, lsp::Diagnostics};
 
 pub enum LspToEditorMessage {
     NewLsp {
@@ -17,6 +17,10 @@ pub enum LspToEditorMessage {
     },
     SemanticTokens {
         tokens: Vec<SemanticToken>,
+    },
+    Diagnostics {
+        uri: Url,
+        diagnostics: Vec<Diagnostic>,
     },
 }
 

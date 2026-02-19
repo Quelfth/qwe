@@ -1,6 +1,6 @@
 use crate::{
     document::{Document, force_cursors},
-    editor::cursors::CursorState,
+    editor::cursors::{CursorState, Cursors},
     ix::{Column, Ix, Line},
 };
 

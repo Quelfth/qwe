@@ -6,6 +6,7 @@ use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
 use crate::aprintln::aprintln;
+use crate::document::diagnostics::{Diagnostic, Severity};
 use crate::document::history::History;
 use crate::document::lsp_change::LspChange;
 use crate::document::semtoks::SemanticToken;
@@ -21,12 +22,15 @@ use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::{Pos, Region};
 use crate::ts::parse_doc;
+use crate::util::RangeOverlap;
 
 mod actions;
+pub mod diagnostics;
 mod find;
 mod history;
 mod lsp_change;
 pub mod semtoks;
+mod unopened;
 
 #[derive(Default)]
 pub struct Document {
@@ -38,6 +42,7 @@ pub struct Document {
     language: Option<Language>,
     tree: Option<Tree>,
     pub semtoks: RangeTree<Ix<Byte>, SemanticToken>,
+    pub diagnostics: Vec<(Range<Ix<Byte>>, Diagnostic)>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
     save_prime_instant: Option<Instant>,
@@ -57,6 +62,7 @@ impl Document {
             history: Default::default(),
             future: Default::default(),
             semtoks: Default::default(),
+            diagnostics: Default::default(),
             cursors,
             text,
             lsp_changes: Vec::new(),
@@ -101,6 +107,18 @@ impl Document {
                 column: Ix::new(0),
             })))
         }
+    }
+
+    pub fn last_line_diagnostic(&self, line: Ix<Line>) -> Option<(Severity, &str)> {
+        let range = self.text.byte_range_of_line(line)?;
+        let mut diag = None::<(Range<Ix<Byte>>, Severity, &str)>;
+        for (r, d) in &self.diagnostics {
+            if range.overlaps(r) && diag.as_ref().is_none_or(|d| r.end >= d.0.end) {
+                diag = Some((r.clone(), d.severity, &d.message));
+            }
+        }
+        let (_, s, m) = diag?;
+        Some((s, m))
     }
 }
 

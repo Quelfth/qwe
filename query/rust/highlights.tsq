@@ -82,6 +82,7 @@
 (function_item ["fn" "->" ";"] @o.declare.function)
 (function_item body: (_ ["{" "}"] @o.declare.function))
 (parameters ["(" "," ")"] @o.call.function)
+(function_item type_parameters: (type_parameters ["<" "," ">"] @o.call.function))
 
 (function_item name: (_) @i.function)
 (parameter ":" @o.type)
@@ -92,8 +93,10 @@
 
 (function_signature_item ["fn" "->" ";"] @o.declare.function)
 (function_signature_item (parameters ["(" "," ")"] @o.call.function.associated.extension))
+(function_signature_item (type_parameters ["<" "," ">"] @o.call.function.associated.extension))
 
 (impl_item "for" (declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated.extension))))
+(impl_item "for" (declaration_list (function_item (type_parameters ["<" "," ">"] @o.call.function.associated.extension))))
 
 ; Struct
 
@@ -145,6 +148,7 @@
 
 "_" @o.wildcard
 (reference_expression "&" @o.access.reference)
+(reference_pattern "&" @o.access.reference)
 
 (field_expression field: (integer_literal) @i.value.field.tuple)
 
@@ -161,6 +165,11 @@
 (match_arm value: (block ["{" "}"] @o.branch.case))
 (or_pattern "|" @o.pattern.or)
 (range_pattern [".." "..="] @o.pattern.range)
+
+(for_expression ["for" "in"] @o.loop.for)
+(for_expression body: (block ["{" "}"] @o.loop.for))
+
+"while" @o.loop.while
 
 (try_expression "?" @o.error.propogate)
 
@@ -179,16 +188,27 @@
 (let_chain "&&" @o.branch)
 
 (binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
-
+(binary_expression ["==" "!=" "<" ">" "<=" ">="] @o.comparison)
+(binary_expression ["&" "|" "^"] @o.logical)
+(binary_expression ["<<" ">>"] @o.sequence)
 (binary_expression ["&&" "||"] @o.branch)
+
+(unary_expression "!" @o.logical)
+
+
+(index_expression ["[" "]"] @o.sequence)
 
 ; Type Constructing Expressions
 
 (unit_expression ["(" ")"] @o.tuple)
 (tuple_expression ["(" "," ")"] @o.tuple)
 
-;(unit_pattern ["(" ")"] @o.tuple)
 (tuple_pattern ["(" "," ")"] @o.tuple)
+
+(array_expression ["[" "," ";" "]"] @o.collection.list)
+(slice_pattern ["[" "," ";" "]"] @o.collection.list)
+
+(range_expression [".." "..="] @o.collection.range)
 
 ; Call Expressions
 
@@ -270,13 +290,15 @@
 ((identifier) @i.type.struct (#semantic? @i.type.struct Struct))
 ((identifier) @i.type.enum (#semantic? @i.type.enum Enum))
 ((identifier) @i.type.union (#semantic? @i.type.union Union))
-((identifier) @i.type.alias (#semantic? @i.type.alias TypeAlias))
+((identifier) @i.type.alias (#semantic? @i.type.alias "!trait" TypeAlias))
+((identifier) @i.type.artifact (#semantic? @i.type.artifact trait TypeAlias))
 ((identifier) @i.type.parameter @_ (#semantic? @_ TypeParameter))
 
 (generic_type type: (type_name) @_ (#semantic? @_ Struct) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
 (generic_type type: (type_name) @_ (#semantic? @_ Enum) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
 (generic_type type: (type_name) @_ (#semantic? @_ Union) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
-(generic_type type: (type_name) @_ (#semantic? @_ TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (type_name) @_ (#semantic? @_ "!trait" TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (type_name) @_ (#semantic? @_ trait TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.artifact))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Enum)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Union)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
@@ -287,6 +309,7 @@
 (generic_type type: (type_name) @_ (#semantic? @_ Interface) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
 
 (bounded_type "+" @o.implement)
+(type_binding "=" @o.type)
 
 ; Names
 
