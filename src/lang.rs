@@ -8,6 +8,7 @@ use crate::{ts::QuerySource, util::leak};
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Language {
     Css,
+    Javascript,
     Query,
     Rust,
     Sulu,
@@ -23,6 +24,7 @@ impl Language {
     pub fn from_file_ext(ext: &str) -> Option<Self> {
         Some(match ext {
             "css" => Self::Css,
+            "js" => Self::Javascript,
             "tsq" => Self::Query,
             "rs" => Self::Rust,
             "sulu" => Self::Sulu,
@@ -33,20 +35,18 @@ impl Language {
 
     pub fn lsp_info(self) -> Option<LangLspInfo> {
         match self {
-            Language::Css => None,
-            Language::Query => None,
             Language::Rust => Some(LangLspInfo {
                 id: "rust",
                 command: "rust-analyzer",
             }),
-            Language::Sulu => None,
-            Language::Yaml => None,
+            _ => None,
         }
     }
 
     pub fn ts_lang(self) -> tree_sitter::Language {
         match self {
             Language::Css => tree_sitter_css_orchard::LANGUAGE.into(),
+            Language::Javascript => tree_sitter_javascript::LANGUAGE.into(),
             Language::Query => tree_sitter_tsquery::LANGUAGE.into(),
             Language::Rust => tree_sitter_rust::LANGUAGE.into(),
             Language::Sulu => tree_sitter_sulu::LANGUAGE.into(),
@@ -58,6 +58,7 @@ impl Language {
         QuerySource {
             source: match self {
                 Language::Css => include_str!("../query/css/highlights.tsq"),
+                Language::Javascript => include_str!("../query/js/highlights.tsq"),
                 Language::Query => include_str!("../query/query/highlights.tsq"),
                 Language::Rust => include_str!("../query/rust/highlights.tsq"),
                 Language::Sulu => include_str!("../query/sulu/highlights.tsq"),

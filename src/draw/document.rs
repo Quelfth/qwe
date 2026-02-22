@@ -102,9 +102,16 @@ impl Document {
                 j
             };
 
-            let inline_diagnostic = self
-                .last_line_diagnostic(Ix::new(i as _) + scroll)
-                .map(|(s, m)| (s, m.graphemes().collect::<Vec<_>>()));
+            let inline_diagnostic =
+                self.last_line_diagnostic(Ix::new(i as _) + scroll)
+                    .map(|(s, m)| {
+                        (
+                            s,
+                            m.graphemes()
+                                .take_while(|p| !p.is_newline())
+                                .collect::<Vec<_>>(),
+                        )
+                    });
 
             if width > len {
                 for (rj, j) in (len..width).enumerate() {
@@ -137,16 +144,11 @@ impl Document {
                             continue;
                         }
                         if rj == MESSAGE_GAP {
-                            cell.style.fg = rgb! {0x302020};
+                            cell.style.fg = severity.bg();
                             cell.grapheme = Grapheme::LEFT_TRIANGLE;
                         } else if rj < message.len() + MESSAGE_GAP + 1 {
-                            cell.style.bg = rgb! {0x302020};
-                            cell.style.fg = match severity {
-                                Severity::Err => rgb! {0xff007f},
-                                Severity::Warn => rgb! {0xbfff01},
-                                Severity::Info => rgb! {0x00ff7f},
-                                Severity::Hint => rgb! {0x906060},
-                            };
+                            cell.style.fg = severity.fg();
+                            cell.style.bg = severity.bg();
                             cell.style.italic = true;
                             let grapheme = message[rj - MESSAGE_GAP - 1].clone();
                             if grapheme.is_whitespace() {
@@ -155,7 +157,7 @@ impl Document {
                                 cell.grapheme = grapheme;
                             }
                         } else if rj == message.len() + MESSAGE_GAP + 1 {
-                            cell.style.fg = rgb! {0x302020};
+                            cell.style.fg = severity.bg();
                             cell.grapheme = Grapheme::RIGHT_TRIANGLE;
                         }
                     }
@@ -168,21 +170,33 @@ impl Document {
         }
 
         while i < height {
+            shadow_len = shadow_len.saturating_sub(1);
             let gi = Ix::new(i as usize) + scroll;
             let cursors = cursors(gi);
             let cursor_color = cursor_color(&cursors);
             write_line_nr(&mut canvas, gi, i);
             for j in gutter_width..width {
+                let cell = &mut canvas[(i, j)];
                 if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize)) {
                     use CursorStyle::*;
                     match style {
-                        Color(color) => canvas[(i, j)].style.bg = color,
+                        Color(color) => {
+                            cell.style.bg = color;
+                            continue;
+                        }
                         Underline(color) => {
-                            let cell = &mut canvas[(i, j)];
                             cell.style.under = Some(Under::Line);
                             cell.style.uc = Some(color);
                         }
                     }
+                }
+                match j.cmp(&shadow_len) {
+                    Less => cell.style.bg = rgb! {0x160000},
+                    Equal => {
+                        cell.style.fg = rgb! {0x160000};
+                        cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
+                    }
+                    Greater => (),
                 }
             }
 

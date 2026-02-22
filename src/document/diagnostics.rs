@@ -1,3 +1,5 @@
+use crossterm::style::Color;
+use culit::culit;
 use lsp_types::DiagnosticSeverity;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
@@ -20,6 +22,26 @@ impl Severity {
             DiagnosticSeverity::INFORMATION => Self::Info,
             DiagnosticSeverity::HINT => Self::Hint,
             _ => Self::default(),
+        }
+    }
+
+    #[culit]
+    pub fn fg(self) -> Color {
+        match self {
+            Severity::Err => 0xff007frgb,
+            Severity::Warn => 0xbfff01rgb,
+            Severity::Info => 0x00ff7frgb,
+            Severity::Hint => 0x906060rgb,
+        }
+    }
+
+    #[culit]
+    pub fn bg(self) -> Color {
+        match self {
+            Severity::Err => 0x300015rgb,
+            Severity::Warn => 0x203000rgb,
+            Severity::Info => 0x302020rgb,
+            Severity::Hint => 0x302020rgb,
         }
     }
 }

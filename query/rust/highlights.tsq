@@ -261,7 +261,9 @@
 
 (remaining_field_pattern ".." @o.wildcard)
 
+(struct_expression name: (self_type) (field_initializer_list ["{" "," "}"] @o.call.type.self))
 ;(struct_pattern type: (self_type) ["{" "," "}"] @o.call.type.self)
+
 
 (struct_expression name: (type_name) @_ (#semantic? @_ Struct) (field_initializer_list ["{" "," "}"] @o.call.type.struct))
 (struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) (field_initializer_list ["{" "," "}"] @o.call.type.struct))

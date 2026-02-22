@@ -3,13 +3,10 @@ use std::io;
 use crate::{
     document::diagnostics::{Diagnostic, Severity},
     editor::Editor,
-    ix::Ix,
     language_server::LanguageServer,
-    lsp::{
-        self,
-        channel::{EditorToLspMessage, LspToEditorMessage},
-    },
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     pos::Utf16Pos,
+    range_tree::RangeTree,
 };
 
 impl Editor {
@@ -24,12 +21,13 @@ impl Editor {
                         .or_default()
                         .push(LanguageServer::new(init_result)),
                     SemanticTokens { tokens } => {
-                        self.doc.semtoks = self
-                            .language_servers
-                            .get(&self.doc.language().unwrap())
-                            .unwrap()[0]
-                            .translate_semtoks(tokens, self.doc.text())
-                            .collect();
+                        self.doc.semtoks = RangeTree::build(
+                            self.language_servers
+                                .get(&self.doc.language().unwrap())
+                                .unwrap()[0]
+                                .translate_semtoks(tokens, self.doc.text())
+                                .collect(),
+                        );
                         self.draw()?;
                     }
                     Diagnostics { uri, diagnostics } => {

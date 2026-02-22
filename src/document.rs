@@ -113,7 +113,7 @@ impl Document {
         let range = self.text.byte_range_of_line(line)?;
         let mut diag = None::<(Range<Ix<Byte>>, Severity, &str)>;
         for (r, d) in &self.diagnostics {
-            if range.overlaps(r) && diag.as_ref().is_none_or(|d| r.end >= d.0.end) {
+            if range.contains(&r.end) && diag.as_ref().is_none_or(|d| r.end >= d.0.end) {
                 diag = Some((r.clone(), d.severity, &d.message));
             }
         }

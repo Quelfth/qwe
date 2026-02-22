@@ -1,34 +1,117 @@
 use std::{
     collections::BTreeMap,
     iter::{self, Sum},
-    ops::Range,
+    ops::{Add, Range, Sub},
 };
 
 use auto_enums::auto_enum;
 
 use crate::ix::Ix;
 
-pub struct RangeTree<R, T>(Option<Box<RangeTreeInner<R, T>>>);
+pub struct RangeTree<R, T>(RelRangeTree<R, T>);
+
+impl<R, T> RangeTree<R, T>
+where
+    R: Default + Copy + Sub<Output = R> + Add<Output = R> + DivideUsize + Sum + Ord,
+{
+    pub fn build(values: Vec<(Range<R>, T)>) -> Self {
+        Self(RelRangeTree::build(
+            values,
+            R::default(),
+            RelativeDirection::Right,
+        ))
+    }
+}
+
 impl<R, T> Default for RangeTree<R, T> {
+    fn default() -> Self {
+        Self(Default::default())
+    }
+}
+
+impl<R, T> RangeTree<R, T>
+where
+    R: Copy + Default + Sub<Output = R> + Add<Output = R> + Ord,
+{
+    pub fn overlapping(&self, range: Range<R>) -> impl Iterator<Item = &T> {
+        RangeTreeRef {
+            parent_center: R::default(),
+            direction: RelativeDirection::Right,
+            rel_ref: &self.0,
+        }
+        .overlapping(range)
+    }
+}
+
+#[derive(Copy, Clone)]
+enum RelativeDirection {
+    Left,
+    Right,
+}
+
+impl RelativeDirection {
+    fn rel_to_abs<R: Copy + Add<Output = R> + Sub<Output = R>>(&self, center: R, rel: R) -> R {
+        match self {
+            RelativeDirection::Left => center - rel,
+            RelativeDirection::Right => center + rel,
+        }
+    }
+
+    fn abs_to_rel<R: Copy + Sub<Output = R>>(&self, center: R, abs: R) -> R {
+        match self {
+            RelativeDirection::Left => center - abs,
+            RelativeDirection::Right => abs - center,
+        }
+    }
+}
+
+macro_rules! def_abs_ref {
+    ($name:ident, $inner:ident) => {
+        struct $name<'a, R: Copy, T> {
+            parent_center: R,
+            direction: RelativeDirection,
+            rel_ref: &'a $inner<R, T>,
+        }
+
+        impl<'a, R: Copy, T> $name<'a, R, T> {
+            pub fn rel(self) -> &'a $inner<R, T> {
+                self.rel_ref
+            }
+        }
+        impl<'a, R: Copy, T> Copy for $name<'a, R, T> {}
+        impl<'a, R: Copy, T> Clone for $name<'a, R, T> {
+            fn clone(&self) -> Self {
+                *self
+            }
+        }
+    };
+}
+
+def_abs_ref!(RangeTreeRef, RelRangeTree);
+def_abs_ref!(RangeTreeInnerRef, RelRangeTreeInner);
+def_abs_ref!(RangeTreeCenterRef, RelRangeTreeCenter);
+
+pub struct RelRangeTree<R, T>(Option<Box<RelRangeTreeInner<R, T>>>);
+impl<R, T> Default for RelRangeTree<R, T> {
     fn default() -> Self {
         Self(None)
     }
 }
 
-struct RangeTreeInner<R, T> {
-    center: RangeTreeCenter<R, T>,
-    left: RangeTree<R, T>,
-    right: RangeTree<R, T>,
+struct RelRangeTreeInner<R, T> {
+    center: RelRangeTreeCenter<R, T>,
+    left: RelRangeTree<R, T>,
+    right: RelRangeTree<R, T>,
 }
 
-struct RangeTreeCenter<R, T> {
+struct RelRangeTreeCenter<R, T> {
     center: R,
     data: Vec<T>,
     starts: BTreeMap<R, usize>,
     ends: BTreeMap<R, usize>,
 }
 
-trait DivideUsize {
+pub trait DivideUsize {
     fn divide_usize(self, usize: usize) -> Self;
 }
 
@@ -44,20 +127,19 @@ impl<U> DivideUsize for Ix<U> {
     }
 }
 
-impl<R, T> FromIterator<(Range<R>, T)> for RangeTree<R, T>
-where
-    R: Sum + DivideUsize + Ord + Copy,
-{
-    fn from_iter<I: IntoIterator<Item = (Range<R>, T)>>(iter: I) -> Self {
-        let ranges = iter.into_iter().collect::<Vec<_>>();
-        if ranges.is_empty() {
+impl<R, T> RelRangeTree<R, T> {
+    fn build(values: Vec<(Range<R>, T)>, parent_center: R, direction: RelativeDirection) -> Self
+    where
+        R: Copy + Ord + Sum + DivideUsize + Sub<Output = R>,
+    {
+        if values.is_empty() {
             return Self(None);
         }
-        let c = ranges
+        let abs_center = values
             .iter()
             .flat_map(|r| [r.0.start, r.0.end])
             .sum::<R>()
-            .divide_usize(ranges.len() * 2);
+            .divide_usize(values.len() * 2);
 
         let mut left = Vec::new();
         let mut right = Vec::new();
@@ -66,68 +148,142 @@ where
         let mut starts = BTreeMap::new();
         let mut ends = BTreeMap::new();
 
-        for range in ranges {
-            if range.0.end < c {
+        for range in values {
+            if range.0.end < abs_center {
                 left.push(range);
-            } else if range.0.start > c {
+            } else if range.0.start > abs_center {
                 right.push(range);
             } else {
                 let (Range { start, end }, datum) = range;
                 let i = data.len();
                 data.push(datum);
-                starts.insert(start, i);
-                ends.insert(end, i);
+                starts.insert(RelativeDirection::Left.abs_to_rel(abs_center, start), i);
+                ends.insert(RelativeDirection::Right.abs_to_rel(abs_center, end), i);
             }
         }
 
-        Self(Some(Box::new(RangeTreeInner {
-            center: RangeTreeCenter {
-                center: c,
+        Self(Some(Box::new(RelRangeTreeInner {
+            center: RelRangeTreeCenter {
+                center: direction.abs_to_rel(parent_center, abs_center),
                 data,
                 starts,
                 ends,
             },
-            left: left.into_iter().collect(),
-            right: right.into_iter().collect(),
+            left: Self::build(
+                left.into_iter().collect(),
+                abs_center,
+                RelativeDirection::Left,
+            ),
+            right: Self::build(
+                right.into_iter().collect(),
+                abs_center,
+                RelativeDirection::Right,
+            ),
         })))
     }
 }
 
-impl<R: Ord + Copy, T> RangeTree<R, T> {
-    pub fn overlapping(&self, range: Range<R>) -> Box<dyn Iterator<Item = &T> + '_> {
-        match &self.0 {
+impl<'a, R: Copy, T> RangeTreeRef<'a, R, T> {
+    pub fn inner(&self) -> Option<RangeTreeInnerRef<'a, R, T>> {
+        self.rel().0.as_deref().map(|inner| RangeTreeInnerRef {
+            parent_center: self.parent_center,
+            direction: self.direction,
+            rel_ref: inner,
+        })
+    }
+
+    pub fn overlapping(self, range: Range<R>) -> Box<dyn Iterator<Item = &'a T> + 'a>
+    where
+        R: Ord + Add<Output = R> + Sub<Output = R>,
+    {
+        match &self.inner() {
             Some(inner) => Box::new(inner.overlapping(range)),
             None => Box::new(iter::empty()),
         }
     }
 }
 
-impl<R: Ord + Copy, T> RangeTreeInner<R, T> {
-    #[auto_enum(Iterator)]
-    pub fn overlapping(&self, range: Range<R>) -> impl Iterator<Item = &T> {
-        if range.end < self.center.center {
-            self.left
-                .overlapping(range.clone())
-                .chain(self.center.starting_before(range.end))
-        } else if range.start > self.center.center {
-            self.right
-                .overlapping(range.clone())
-                .chain(self.center.ending_after(range.start))
-        } else {
-            self.left
-                .overlapping(range.clone())
-                .chain(self.center.data.iter())
-                .chain(self.right.overlapping(range.clone()))
+impl<'a, R: Copy, T> RangeTreeInnerRef<'a, R, T> {
+    fn center(&self) -> RangeTreeCenterRef<'a, R, T> {
+        RangeTreeCenterRef {
+            parent_center: self.parent_center,
+            direction: self.direction,
+            rel_ref: &self.rel().center,
+        }
+    }
+
+    fn left(&self) -> RangeTreeRef<'a, R, T>
+    where
+        R: Copy + Sub<Output = R> + Add<Output = R>,
+    {
+        RangeTreeRef {
+            parent_center: self.center().center_point(),
+            direction: RelativeDirection::Left,
+            rel_ref: &self.rel().left,
+        }
+    }
+
+    fn right(&self) -> RangeTreeRef<'a, R, T>
+    where
+        R: Copy + Sub<Output = R> + Add<Output = R>,
+    {
+        RangeTreeRef {
+            parent_center: self.center().center_point(),
+            direction: RelativeDirection::Right,
+            rel_ref: &self.rel().right,
         }
     }
 }
 
-impl<R: Ord, T> RangeTreeCenter<R, T> {
-    pub fn starting_before(&self, point: R) -> impl Iterator<Item = &T> {
-        self.starts.range(..=point).map(|(_, &i)| &self.data[i])
+impl<'a, R: Copy, T> RangeTreeInnerRef<'a, R, T> {
+    #[auto_enum(Iterator)]
+    pub fn overlapping(self, range: Range<R>) -> impl Iterator<Item = &'a T>
+    where
+        R: Ord + Copy + Sub<Output = R> + Add<Output = R>,
+    {
+        if range.end < self.center().center_point() {
+            self.left()
+                .overlapping(range.clone())
+                .chain(self.center().starting_before(range.end))
+        } else if range.start > self.center().center_point() {
+            self.right()
+                .overlapping(range.clone())
+                .chain(self.center().ending_after(range.start))
+        } else {
+            self.left()
+                .overlapping(range.clone())
+                .chain(self.center().rel().data.iter())
+                .chain(self.right().overlapping(range.clone()))
+        }
+    }
+}
+
+impl<'a, R: Copy, T> RangeTreeCenterRef<'a, R, T> {
+    pub fn center_point(self) -> R
+    where
+        R: Sub<Output = R> + Add<Output = R>,
+    {
+        self.direction
+            .rel_to_abs(self.parent_center, self.rel().center)
     }
 
-    pub fn ending_after(&self, point: R) -> impl Iterator<Item = &T> {
-        self.ends.range(point..).map(|(_, &i)| &self.data[i])
+    pub fn starting_before(self, point: R) -> impl Iterator<Item = &'a T>
+    where
+        R: Ord + Add<Output = R> + Sub<Output = R>,
+    {
+        self.rel()
+            .starts
+            .range((self.center_point() - point)..)
+            .map(move |(_, &i)| &self.rel().data[i])
+    }
+
+    pub fn ending_after(self, point: R) -> impl Iterator<Item = &'a T>
+    where
+        R: Ord + Add<Output = R> + Sub<Output = R>,
+    {
+        self.rel()
+            .ends
+            .range((point - self.center_point())..)
+            .map(move |(_, &i)| &self.rel().data[i])
     }
 }

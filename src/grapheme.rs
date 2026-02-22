@@ -46,6 +46,10 @@ impl Grapheme {
         self.0.chars().all(char::is_whitespace)
     }
 
+    pub fn is_newline(&self) -> bool {
+        self.0.chars().any(|c| c == '\n')
+    }
+
     pub fn is_ident(&self) -> bool {
         self.0.chars().all(|c| c.is_alphanumeric() || c == '_')
     }
