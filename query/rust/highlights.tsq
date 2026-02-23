@@ -23,6 +23,8 @@
 (char_literal [(char_prefix) "\'"] @l.string.quote)
 (char_literal (literal_suffix) @l.string.suffix)
 
+(boolean_literal) @i.value.boolean
+
 [(line_comment) (block_comment)] @comment
 (line_comment "//" @o.comment.line)
 (block_comment ["/*" "*/"] @o.comment.block)
@@ -261,16 +263,40 @@
 
 (remaining_field_pattern ".." @o.wildcard)
 
-(struct_expression name: (self_type) (field_initializer_list ["{" "," "}"] @o.call.type.self))
+(struct_expression
+    name: (self_type)
+    (field_initializer_list
+        ["{" "," "}"] @o.call.type.self
+        (base_field_initializer ".." @o.call.type.self)?
+    )
+)
 ;(struct_pattern type: (self_type) ["{" "," "}"] @o.call.type.self)
 
 
-(struct_expression name: (type_name) @_ (#semantic? @_ Struct) (field_initializer_list ["{" "," "}"] @o.call.type.struct))
-(struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) (field_initializer_list ["{" "," "}"] @o.call.type.struct))
-(struct_expression name: (type_name) @_ (#semantic? @_ TypeAlias) (field_initializer_list ["{" "," "}"] @o.call.type.alias))
-(struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) (field_initializer_list ["{" "," "}"] @o.call.type.alias))
-(struct_expression name: (type_name) @_ (#semantic? @_ EnumMember) (field_initializer_list ["{" "," "}"] @o.call.value.variant))
-(struct_expression name: (scoped_type_name name: (type_name) @_ (#semantic? @_ EnumMember)) (field_initializer_list ["{" "," "}"] @o.call.value.variant))
+(struct_expression
+    name: (type_name) @_ (#semantic? @_ Struct) 
+    (field_initializer_list ["{" "," "}"] @o.call.type.struct (base_field_initializer ".." @o.call.type.struct)?)
+)
+(struct_expression 
+    name: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct))
+    (field_initializer_list ["{" "," "}"] @o.call.type.struct (base_field_initializer ".." @o.call.type.struct)?)
+)
+(struct_expression 
+    name: (type_name) @_ (#semantic? @_ TypeAlias) 
+    (field_initializer_list ["{" "," "}"] @o.call.type.alias (base_field_initializer ".." @o.call.type.alias)?)
+)
+(struct_expression 
+    name: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) 
+    (field_initializer_list ["{" "," "}"] @o.call.type.alias (base_field_initializer ".." @o.call.type.alias)?)
+)
+(struct_expression 
+    name: (type_name) @_ (#semantic? @_ EnumMember) 
+    (field_initializer_list ["{" "," "}"] @o.call.value.variant (base_field_initializer ".." @o.call.value.variant)?)
+)
+(struct_expression 
+    name: (scoped_type_name name: (type_name) @_ (#semantic? @_ EnumMember)) 
+    (field_initializer_list ["{" "," "}"] @o.call.value.variant (base_field_initializer ".." @o.call.value.variant)?)
+)
 
 (struct_pattern type: (type_name) @_ (#semantic? @_ Struct) ["{" "," "}"] @o.call.type.struct)
 (struct_pattern type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) ["{" "," "}"] @o.call.type.struct)

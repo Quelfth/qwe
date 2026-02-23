@@ -45,6 +45,7 @@ mod language_server;
 mod lsp;
 mod pos;
 mod pred;
+mod range_sequence;
 mod range_tree;
 mod rope;
 mod setup;

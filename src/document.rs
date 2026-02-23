@@ -17,12 +17,11 @@ use crate::editor::cursors::select::{SelectCursor, SelectCursors};
 use crate::grapheme::GraphemeExt;
 use crate::ix::{Byte, Column, Ix, Line};
 use crate::lang::Language;
-use crate::range_tree::RangeTree;
+use crate::range_sequence::RangeSequence;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::{Pos, Region};
 use crate::ts::parse_doc;
-use crate::util::RangeOverlap;
 
 mod actions;
 pub mod diagnostics;
@@ -41,7 +40,7 @@ pub struct Document {
     pub future: History,
     language: Option<Language>,
     tree: Option<Tree>,
-    pub semtoks: RangeTree<Ix<Byte>, SemanticToken>,
+    pub semtoks: RangeSequence<Ix<Byte>, SemanticToken>,
     pub diagnostics: Vec<(Range<Ix<Byte>>, Diagnostic)>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
@@ -432,13 +431,11 @@ impl Document {
             .byte_slice(delete_range.clone())
             .unwrap()
             .to_string();
-        self.tree_delete(delete_range.clone());
-        self.lsp_delete(delete_range.clone());
+        self.upkeep_delete(delete_range.clone());
         self.text.delete(delete_range).unwrap();
         self.text.insert(byte_pos, &insert).unwrap();
         let insert_len = Ix::new(insert.len());
-        self.lsp_insert(byte_pos, insert);
-        self.tree_insert(byte_pos, insert_len);
+        self.upkeep_insert(byte_pos, insert);
         if let Some(lang) = self.language {
             self.tree = Some(parse_doc(&self.text, self.tree(), lang).unwrap());
         }
@@ -447,6 +444,20 @@ impl Document {
             delete: insert_len,
             insert: deleted,
         }
+    }
+
+    fn upkeep_delete(&mut self, range: Range<Ix<Byte>>) {
+        self.tree_delete(range.clone());
+        self.lsp_delete(range.clone());
+        self.semtoks
+            .edit_delete(range.start, range.end - range.start);
+    }
+
+    fn upkeep_insert(&mut self, pos: Ix<Byte>, text: String) {
+        let len = Ix::new(text.len());
+        self.semtoks.edit_insert(pos, len);
+        self.lsp_insert(pos, text);
+        self.tree_insert(pos, len);
     }
 
     fn tree_delete(&mut self, range: Range<Ix<Byte>>) {

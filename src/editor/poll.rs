@@ -6,7 +6,7 @@ use crate::{
     language_server::LanguageServer,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     pos::Utf16Pos,
-    range_tree::RangeTree,
+    range_sequence::RangeSequence,
 };
 
 impl Editor {
@@ -21,12 +21,11 @@ impl Editor {
                         .or_default()
                         .push(LanguageServer::new(init_result)),
                     SemanticTokens { tokens } => {
-                        self.doc.semtoks = RangeTree::build(
+                        self.doc.semtoks = RangeSequence::from_abs_ordered(
                             self.language_servers
                                 .get(&self.doc.language().unwrap())
                                 .unwrap()[0]
-                                .translate_semtoks(tokens, self.doc.text())
-                                .collect(),
+                                .translate_semtoks(tokens, self.doc.text()),
                         );
                         self.draw()?;
                     }

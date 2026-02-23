@@ -10,7 +10,7 @@ use crate::{
     lang::Language,
     lsp::channel::EditorToLspMessage,
     terminal_size::terminal_size,
-    util::pretty_node,
+    util::{RangeOverlap, pretty_node},
 };
 
 mod insert;
@@ -47,8 +47,9 @@ impl Editor {
                 None,
                 self.doc
                     .semtoks
-                    .overlapping(start..end)
-                    .map(|s| {
+                    .ranges()
+                    .filter(|(r, _)| r.overlaps(start..end))
+                    .map(|(_, s)| {
                         iter::once((*s.r#type).to_owned())
                             .chain(s.mods.iter().map(|m| " ".to_owned() + m))
                             .collect::<String>()

@@ -53,7 +53,6 @@ o.generics.type.union = f.union;
 o.generics.type.alias = f.type-alias;
 o.generics.type.artifact = f.type-artifact;
 o.group = f.group;
-o.implement = f.bounds;
 o.key-value = f.key-value;
 o.logical = f.logical;
 o.loop = f.loop;
@@ -107,6 +106,9 @@ i.value.local = f.local-var;
 i.value.receiver = f.self;
 i.value.parameter = f.parameter;
 i.value.variant = f.variant;
+
+/ layer 2;
+o.implement = f.bounds;
 
 / Pallete ;
 

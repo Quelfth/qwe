@@ -1,9 +1,10 @@
+use std::ops::Range;
+
 use crate::{
     document::diagnostics::Diagnostic,
     ix::{Byte, Ix},
-    range_tree::RangeTree,
 };
 
 pub struct UnopenedDocument {
-    diagnostics: Option<RangeTree<Ix<Byte>, Diagnostic>>,
+    diagnostics: Option<Vec<(Range<Ix<Byte>>, Diagnostic)>>,
 }

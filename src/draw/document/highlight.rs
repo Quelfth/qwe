@@ -6,7 +6,8 @@ use crate::{
     document::{Document, diagnostics::Severity, semtoks::SemanticToken},
     draw::document::highlight::predicate::Predicate,
     ix::{Byte, Ix},
-    util::MapBounds,
+    range_tree::RangeTree,
+    util::{MapBounds, RangeOverlap},
 };
 
 pub mod predicate;
@@ -19,6 +20,7 @@ pub struct Highlight {
 impl Document {
     pub fn highlight(&self) -> Vec<Highlight> {
         let mut highlight_scopes = Vec::new();
+        let semtoks = self.semtoks.ranges().collect::<RangeTree<_, _>>();
 
         if let (Some(lang), Some(tree)) = (self.language(), self.tree()) {
             let mut cursor = QueryCursor::new();
@@ -55,8 +57,7 @@ impl Document {
                     match pred {
                         Predicate::Semantic { capture, predicate } => {
                             let node = capture_nodes[&capture];
-                            if !self
-                                .semtoks
+                            if !semtoks
                                 .overlapping(node.byte_range().map_bounds(Ix::new))
                                 .any(|SemanticToken { r#type, mods }| {
                                     predicate.check(
