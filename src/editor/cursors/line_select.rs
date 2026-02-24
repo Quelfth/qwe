@@ -133,6 +133,10 @@ impl LineCursor {
         self.height = self.height.saturating_sub(rows);
     }
 
+    pub fn lines(&self) -> impl Iterator<Item = Ix<Line>> {
+        self.line..self.line + self.height
+    }
+
     pub fn text_range(&self, text: &Rope) -> Option<Range<Ix<Byte>>> {
         if self.height == Ix::new(0) {
             return None;

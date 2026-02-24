@@ -1,4 +1,9 @@
-use std::ops::{Add, Range, Sub};
+use std::{
+    fmt::{self, Debug},
+    ops::{Add, Range, Sub},
+};
+
+use crate::aprintln::aprintln;
 
 pub struct RelRange<R> {
     start_offset: R,
@@ -43,10 +48,14 @@ impl<R, T> RangeSequence<R, T> {
         }
     }
 
+    /// This assumes that `R::default()` is 0.
     pub fn edit_insert(&mut self, pos: R, len: R)
     where
-        R: Copy + Ord + Default + Add<Output = R>,
+        R: Copy + Ord + Default + Add<Output = R> + Debug,
     {
+        if len == R::default() {
+            return;
+        }
         let mut rel_start = R::default();
         for (
             RelRange {
@@ -86,11 +95,11 @@ impl<R, T> RangeSequence<R, T> {
             let end = start + *range_len;
             rel_start = start;
             if start > pos {
-                *start_offset = *start_offset - len.max(start - pos);
+                *start_offset = *start_offset - len.min(start - pos);
                 break;
             }
             if end > pos {
-                *range_len = *range_len - len.max(end - pos);
+                *range_len = *range_len - len.min(end - pos);
             }
         }
     }

@@ -100,6 +100,12 @@
 (impl_item "for" (declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated.extension))))
 (impl_item "for" (declaration_list (function_item (type_parameters ["<" "," ">"] @o.call.function.associated.extension))))
 
+; Type Alias
+
+"type" @o.declare.type.alias
+(type_item (type_parameters ["<" "," ">"] @o.call.type.alias))
+(type_item ["=" ";"] @o.declare.type.alias)
+
 ; Struct
 
 "struct" @o.declare.struct
@@ -173,6 +179,9 @@
 
 "while" @o.loop.while
 
+"loop" @o.loop.infinite
+(loop_expression body: (block ["{" "," "}"] @o.loop.infinite))
+
 (try_expression "?" @o.error.propogate)
 
 (let_condition ["let" "="] @o.branch.match)
@@ -180,9 +189,14 @@
 "return" @o.control.return
 (expression_statement (return_expression) ";" @o.control.return)
 
+"await" @o.control.await
+(await_expression "." @o.control.await)
+
 "move" @o.storage.move
 (closure_parameters ["|" ","] @o.call.function.closure)
 (closure_expression body: (block ["{" "}"] @o.declare.function))
+"async" @o.async
+(async_block (block ["{" "}"] @o.async))
 
 (assignment_expression "=" @o.assign)
 (expression_statement (assignment_expression) ";" @o.assign)
@@ -229,8 +243,8 @@
     function: (field_expression 
         field: (_) @_ (#semantic? @_ trait)
     ) 
-    "::" @o.call.function.method.extension     
-    type_arguments: (type_arguments 
+    "::" @o.call.function.method.extension
+    type_arguments: (type_arguments
         ["<" "," ">"] @o.call.function.method.extension
     )
 )
@@ -255,6 +269,21 @@
 
 (tuple_struct_pattern type: (name) @_ (#semantic? @_ EnumMember) ["(" "," ")"] @o.call.value.variant)
 (tuple_struct_pattern type: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) ["(" "," ")"] @o.call.value.variant)
+
+(generic_function
+    function: (name) @_ (#semantic? @_ EnumMember)
+    "::" @o.call.value.variant
+    type_arguments: (type_arguments
+        ["<" "," ">"] @o.call.value.variant
+    )
+)
+(generic_function
+    function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember))
+    "::" @o.call.value.variant
+    type_arguments: (type_arguments
+        ["<" "," ">"] @o.call.value.variant
+    )
+)
 
 ; Struct Expressions
 
@@ -343,6 +372,7 @@
 
 ([(identifier) (self)] @i.reference (#semantic? @i.reference reference))
 ([(identifier) (self)] @i.mutable (#semantic? @i.mutable mutable))
+([(identifier) (self)] @i.async (#semantic? @i.async async))
 
 ; Value Names
 

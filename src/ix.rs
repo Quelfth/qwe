@@ -6,7 +6,7 @@ pub struct Ix<U, T = usize>(T, PhantomData<U>);
 
 impl<U, T: std::fmt::Debug> std::fmt::Debug for Ix<U, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Ix").field(&self.0).finish()
+        write!(f, "{:?}", self.0)
     }
 }
 

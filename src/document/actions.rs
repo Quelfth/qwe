@@ -1,4 +1,5 @@
 use crate::{
+    aprintln::aprintln,
     document::{Document, force_cursors},
     editor::cursors::{CursorIndex, CursorState, select::RangeCursorLine},
     ix::Ix,
@@ -37,14 +38,29 @@ impl Document {
                                 };
                                 let range = line.column_range_to_byte_range(start..end);
                                 s.extend(line.byte_slice(range).unwrap().chunks());
+                                s += "\n";
                             }
+                            s.pop();
                             yield s;
                         }
                     }
                     LineSelect(cursor_set) => {
                         for cursor in cursor_set.iter() {
                             if let Some(range) = cursor.text_range(&self.text) {
-                                yield self.text.byte_slice(range).unwrap().to_string();
+                                let mut s = String::new();
+                                let slice = self.text.byte_slice(range).unwrap();
+                                let indent = cursor
+                                    .lines()
+                                    .map(|l| self.text.indent_on_line(l))
+                                    .min()
+                                    .unwrap_or_default();
+                                for line in slice.lines() {
+                                    let indent = line.columns_to_bytes(indent);
+                                    s += &line.byte_slice(indent..).unwrap().to_string();
+                                    s += "\n";
+                                }
+
+                                yield slice.to_string();
                             }
                         }
                     }

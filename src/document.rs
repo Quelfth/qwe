@@ -586,6 +586,7 @@ impl Document {
     }
 
     pub fn do_delete(&mut self) {
+        self.history.checkpoint();
         if let Some(cursors) = &self.cursors {
             let mut ranges = cursors.delete_ranges(&self.text).collect::<Vec<_>>();
             ranges.sort_unstable_by_key(|r| r.start);
