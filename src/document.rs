@@ -287,14 +287,28 @@ impl Document {
     }
 
     pub fn backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
-        let change = self.text.byte_pos_of_pos(pos).ok().and_then(|byte| {
-            let grapheme = self
-                .text
-                .byte_slice(..byte)
-                .unwrap()
-                .graphemes()
-                .next_back()?;
-            let size = grapheme.len();
+        let p = self.text.byte_pos_of_pos(pos).ok();
+        let indent = self.text.context_indent(pos.line);
+
+        let change = p.and_then(|byte| {
+            let mut graphemes = self.text.byte_slice(..byte).unwrap().graphemes();
+            let grapheme = graphemes.next_back()?;
+            let size = if grapheme.is_whitespace() && pos.column <= indent {
+                let mut sum = grapheme.len();
+                while let Some(g) = graphemes.next_back() {
+                    if !g.is_whitespace() {
+                        sum = grapheme.len();
+                        break;
+                    }
+                    sum += g.len();
+                    if g.is_newline() {
+                        break;
+                    }
+                }
+                sum
+            } else {
+                grapheme.len()
+            };
             Some(Change {
                 byte_pos: byte - size,
                 delete: size,
@@ -306,19 +320,29 @@ impl Document {
             change,
             match pos {
                 Pos { line, column } if line == Ix::new(0) && column == Ix::new(0) => None,
-                Pos { column, .. } if column == Ix::new(0) => Some(CursorChange {
-                    pos: Pos {
-                        line: pos.line - Ix::new(1),
-                        column: self
-                            .text
-                            .line(pos.line - Ix::new(1))
-                            .map(|l| l.graphemes().map(|g| g.columns()).sum())
-                            .unwrap_or(Ix::new(0)),
-                    },
-                    kind: CursorChangeKind::Delete,
-                    lines: Ix::new(1),
-                    columns: Ix::new(0),
-                }),
+                Pos { column, .. }
+                    if column <= indent && {
+                        let line = self.text.line(pos.line);
+                        line.is_none_or(|l| {
+                            l.byte_slice(..l.columns_to_bytes(pos.column))
+                                .is_none_or(|s| s.chars().all(char::is_whitespace))
+                        })
+                    } =>
+                {
+                    Some(CursorChange {
+                        pos: Pos {
+                            line: pos.line - Ix::new(1),
+                            column: self
+                                .text
+                                .line(pos.line - Ix::new(1))
+                                .map(|l| l.graphemes().map(|g| g.columns()).sum())
+                                .unwrap_or(Ix::new(0)),
+                        },
+                        kind: CursorChangeKind::Delete,
+                        lines: Ix::new(1),
+                        columns: Ix::new(0),
+                    })
+                }
                 _ => Some(CursorChange {
                     pos: Pos {
                         line: pos.line,
