@@ -8,6 +8,7 @@
 #![allow(clippy::module_inception)]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::large_enum_variant)]
+#![allow(clippy::blocks_in_conditions)]
 
 use std::{
     cell::Cell,

@@ -107,6 +107,32 @@ impl CursorState {
         };
         cursors
     }
+    pub fn assume_mirror_insert_mut(&mut self) -> &mut MirrorInsertCursors {
+        let Self::MirrorInsert(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
+    pub fn assume_insert_mut(&mut self) -> &mut InsertCursors {
+        let Self::Insert(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
+    #[allow(unused)]
+    pub fn assume_select_mut(&mut self) -> &mut SelectCursors {
+        let Self::Select(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
+    #[allow(unused)]
+    pub fn assume_line_select_mut(&mut self) -> &mut LineCursors {
+        let Self::LineSelect(cursors) = self else {
+            panic!()
+        };
+        cursors
+    }
 }
 
 #[derive(Clone, Default)]

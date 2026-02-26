@@ -2,7 +2,7 @@ use super::Ix;
 use std::{
     hash::{Hash, Hasher},
     iter::{Step, Sum},
-    ops::{Add, AddAssign, Neg, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub, SubAssign},
 };
 
 macro_rules! op {
@@ -43,6 +43,28 @@ impl<U, T: Neg> Neg for Ix<U, T> {
 
     fn neg(self) -> Self::Output {
         Ix::new(-self.0)
+    }
+}
+
+impl<U, T: Div> Div<T> for Ix<U, T> {
+    type Output = Ix<U, <T as Div>::Output>;
+
+    fn div(self, rhs: T) -> Self::Output {
+        Ix::new(self.0 / rhs)
+    }
+}
+impl<U, T: Mul> Mul<T> for Ix<U, T> {
+    type Output = Ix<U, <T as Mul>::Output>;
+
+    fn mul(self, rhs: T) -> Self::Output {
+        Ix::new(self.0 * rhs)
+    }
+}
+impl<U, T: Rem> Rem<T> for Ix<U, T> {
+    type Output = Ix<U, <T as Rem>::Output>;
+
+    fn rem(self, rhs: T) -> Self::Output {
+        Ix::new(self.0 % rhs)
     }
 }
 

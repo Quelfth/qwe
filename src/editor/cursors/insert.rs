@@ -70,11 +70,11 @@ impl InsertCursor {
         }
     }
 
-    fn tab(&mut self) {
+    pub fn tab(&mut self) {
         self.pos.column = Ix::new((self.pos.column.inner() / TAB_WIDTH + 1) * TAB_WIDTH)
     }
 
-    fn move_x(&mut self, columns: Ix<Column, isize>) {
+    pub fn move_x(&mut self, columns: Ix<Column, isize>) {
         match columns.cmp(&Ix::new(0)) {
             Ordering::Less => {
                 self.pos.column = self.pos.column.saturating_sub((-columns).to_usize())

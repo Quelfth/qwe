@@ -11,9 +11,9 @@ use crate::document::history::History;
 use crate::document::lsp_change::LspChange;
 use crate::document::semtoks::SemanticToken;
 use crate::draw::Rect;
-use crate::editor::cursors::CursorState;
 use crate::editor::cursors::mirror_insert::InsertDirection;
 use crate::editor::cursors::select::{SelectCursor, SelectCursors};
+use crate::editor::cursors::{CursorIndex, CursorState};
 use crate::grapheme::GraphemeExt;
 use crate::ix::{Byte, Column, Ix, Line};
 use crate::lang::Language;
@@ -515,20 +515,27 @@ impl Document {
         change: impl Fn(&Document, Pos, InsertDirection) -> (Option<Change>, Option<CursorChange>),
     ) {
         let Some(cursors) = &self.cursors else { return };
+        for i in cursors.indices() {
+            self.do_insert_at_index(i, &change);
+        }
+    }
+
+    pub fn do_insert_at_index(
+        &mut self,
+        index: CursorIndex,
+        change: impl Fn(&Document, Pos, InsertDirection) -> (Option<Change>, Option<CursorChange>),
+    ) {
+        let Some(cursors) = &self.cursors else { return };
         match cursors {
-            CursorState::MirrorInsert(cursors) => {
-                for i in cursors.indices() {
-                    let forward = self.cursors.as_ref().unwrap().assume_mirror_insert()[i].forward;
-                    self.do_change(change(self, forward, InsertDirection::Forward));
-                    let reverse = self.cursors.as_ref().unwrap().assume_mirror_insert()[i].reverse;
-                    self.do_change(change(self, reverse, InsertDirection::Reverse));
-                }
+            CursorState::MirrorInsert(_) => {
+                let forward = self.cursors.as_ref().unwrap().assume_mirror_insert()[index].forward;
+                self.do_change(change(self, forward, InsertDirection::Forward));
+                let reverse = self.cursors.as_ref().unwrap().assume_mirror_insert()[index].reverse;
+                self.do_change(change(self, reverse, InsertDirection::Reverse));
             }
-            CursorState::Insert(cursors) => {
-                for i in cursors.indices() {
-                    let cursor = self.cursors.as_ref().unwrap().assume_insert()[i];
-                    self.do_change(change(self, cursor.pos, InsertDirection::Forward))
-                }
+            CursorState::Insert(_) => {
+                let cursor = self.cursors.as_ref().unwrap().assume_insert()[index];
+                self.do_change(change(self, cursor.pos, InsertDirection::Forward))
             }
             _ => todo!(),
         }
