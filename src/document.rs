@@ -6,6 +6,7 @@ use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
 use crate::aprintln::aprintln;
+use crate::constants::TAB_WIDTH;
 use crate::document::diagnostics::{Diagnostic, Severity};
 use crate::document::history::History;
 use crate::document::lsp_change::LspChange;
@@ -293,19 +294,42 @@ impl Document {
         let change = p.and_then(|byte| {
             let mut graphemes = self.text.byte_slice(..byte).unwrap().graphemes();
             let grapheme = graphemes.next_back()?;
-            let size = if grapheme.is_whitespace() && pos.column <= indent {
-                let mut sum = grapheme.len();
-                while let Some(g) = graphemes.next_back() {
-                    if !g.is_whitespace() {
-                        sum = grapheme.len();
-                        break;
+            let size = if grapheme.is_whitespace() {
+                if pos.column <= indent {
+                    let mut sum = grapheme.len();
+                    while let Some(g) = graphemes.next_back() {
+                        if !g.is_whitespace() {
+                            sum = grapheme.len();
+                            break;
+                        }
+                        sum += g.len();
+                        if g.is_newline() {
+                            break;
+                        }
                     }
-                    sum += g.len();
-                    if g.is_newline() {
-                        break;
-                    }
+                    sum
+                } else if self.text.line(pos.line).is_none_or(|l| {
+                    l.column_slice(..pos.column)
+                        .chars()
+                        .all(char::is_whitespace)
+                }) {
+                    let to_remove = {
+                        let rem = pos.column % TAB_WIDTH;
+                        if rem == Ix::new(0) {
+                            Ix::new(TAB_WIDTH)
+                        } else {
+                            rem
+                        }
+                    };
+                    grapheme.len()
+                        + graphemes
+                            .rev()
+                            .take(to_remove.inner() - 1)
+                            .map(|g| g.len())
+                            .sum()
+                } else {
+                    grapheme.len()
                 }
-                sum
             } else {
                 grapheme.len()
             };
@@ -320,28 +344,46 @@ impl Document {
             change,
             match pos {
                 Pos { line, column } if line == Ix::new(0) && column == Ix::new(0) => None,
-                Pos { column, .. }
-                    if column <= indent && {
-                        let line = self.text.line(pos.line);
-                        line.is_none_or(|l| {
-                            l.byte_slice(..l.columns_to_bytes(pos.column))
-                                .is_none_or(|s| s.chars().all(char::is_whitespace))
-                        })
-                    } =>
+                _ if self.text.line(pos.line).is_none_or(|l| {
+                    l.column_slice(..pos.column)
+                        .chars()
+                        .all(char::is_whitespace)
+                }) =>
                 {
-                    Some(CursorChange {
-                        pos: Pos {
-                            line: pos.line - Ix::new(1),
-                            column: self
-                                .text
-                                .line(pos.line - Ix::new(1))
-                                .map(|l| l.graphemes().map(|g| g.columns()).sum())
-                                .unwrap_or(Ix::new(0)),
-                        },
-                        kind: CursorChangeKind::Delete,
-                        lines: Ix::new(1),
-                        columns: Ix::new(0),
-                    })
+                    if pos.column <= indent {
+                        Some(CursorChange {
+                            pos: Pos {
+                                line: pos.line - Ix::new(1),
+                                column: self
+                                    .text
+                                    .line(pos.line - Ix::new(1))
+                                    .map(|l| l.graphemes().map(|g| g.columns()).sum())
+                                    .unwrap_or(Ix::new(0)),
+                            },
+                            kind: CursorChangeKind::Delete,
+                            lines: Ix::new(1),
+                            columns: Ix::new(0),
+                        })
+                    } else {
+                        let amount = {
+                            let rem = pos.column % TAB_WIDTH;
+                            if rem == Ix::new(0) {
+                                Ix::new(TAB_WIDTH)
+                            } else {
+                                rem
+                            }
+                        };
+
+                        Some(CursorChange {
+                            pos: Pos {
+                                line: pos.line,
+                                column: pos.column - amount,
+                            },
+                            kind: CursorChangeKind::Delete,
+                            lines: Ix::new(0),
+                            columns: amount,
+                        })
+                    }
                 }
                 _ => Some(CursorChange {
                     pos: Pos {

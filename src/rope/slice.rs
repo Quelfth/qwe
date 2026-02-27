@@ -10,6 +10,7 @@ use crate::{
         iter::{Graphemes, Lines},
         range_bounds_to_start_end,
     },
+    util::MapBounds,
 };
 
 impl<'a> RopeSlice<'a> {
@@ -176,21 +177,25 @@ impl<'a> RopeSlice<'a> {
         }
     }
 
-    pub fn column_range_to_byte_range(&self, column_range: Range<Ix<Column>>) -> Range<Ix<Byte>> {
-        let mut start = None;
-        let mut end = None;
-        for (c, b) in self.columns_bytes() {
-            for (x, i) in [
-                (&mut start, column_range.start),
-                (&mut end, column_range.end),
-            ] {
-                if x.is_none() && i == c {
-                    *x = Some(b);
-                }
-            }
-        }
+    pub fn column_range_to_byte_range<R: MapBounds<Ix<Column>, Ix<Byte>>>(
+        &self,
+        column_range: R,
+    ) -> R::Out {
+        column_range.map_bounds(|b| self.columns_to_bytes(b))
+        // let mut start = None;
+        // let mut end = None;
+        // for (c, b) in self.columns_bytes() {
+        //     for (x, i) in [
+        //         (&mut start, column_range.start),
+        //         (&mut end, column_range.end),
+        //     ] {
+        //         if x.is_none() && i == c {
+        //             *x = Some(b);
+        //         }
+        //     }
+        // }
 
-        start.unwrap_or(self.byte_len())..end.unwrap_or(self.byte_len())
+        // start.unwrap_or(self.byte_len())..end.unwrap_or(self.byte_len())
     }
 
     pub fn columns_to_bytes(&self, columns: Ix<Column>) -> Ix<Byte> {
@@ -225,13 +230,12 @@ impl<'a> RopeSlice<'a> {
         self.graphemes().map(|g| g.columns()).sum()
     }
 
-    pub fn column_slice(&self, column_range: Range<Ix<Column>>) -> RopeSlice<'a> {
-        let Some(slice) = self.byte_slice(self.column_range_to_byte_range(column_range.clone()))
-        else {
-            panic!(
-                "column range end {:?} was greater than the start {:?}",
-                column_range.end, column_range.start
-            );
+    pub fn column_slice(
+        &self,
+        column_range: impl MapBounds<Ix<Column>, Ix<Byte>, Out: RangeBounds<Ix<Byte>> + Clone>,
+    ) -> RopeSlice<'a> {
+        let Some(slice) = self.byte_slice(self.column_range_to_byte_range(column_range)) else {
+            panic!("column range end was greater than the start",);
         };
         slice
     }

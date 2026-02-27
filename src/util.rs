@@ -1,4 +1,8 @@
-use std::{borrow::Borrow, fmt::Write, ops::Range};
+use std::{
+    borrow::Borrow,
+    fmt::Write,
+    ops::{Range, RangeFrom, RangeFull, RangeTo},
+};
 
 use extension_trait::extension_trait;
 use tree_sitter::Node;
@@ -55,12 +59,41 @@ fn format_node(node: Node<'_>, indent: usize, field_name: Option<&str>, out: &mu
     out.push_str(&format!("{})", indent_str));
 }
 
-#[extension_trait]
-pub impl<T> MapBounds for Range<T> {
-    type T = T;
+pub trait MapBounds<T, U> {
+    type Out;
 
-    fn map_bounds<U>(self, map: impl Fn(Self::T) -> U) -> Range<U> {
+    fn map_bounds(self, map: impl Fn(T) -> U) -> Self::Out;
+}
+
+impl<T, U> MapBounds<T, U> for Range<T> {
+    type Out = Range<U>;
+
+    fn map_bounds(self, map: impl Fn(T) -> U) -> Self::Out {
         map(self.start)..map(self.end)
+    }
+}
+
+impl<T, U> MapBounds<T, U> for RangeFrom<T> {
+    type Out = RangeFrom<U>;
+
+    fn map_bounds(self, map: impl Fn(T) -> U) -> Self::Out {
+        map(self.start)..
+    }
+}
+
+impl<T, U> MapBounds<T, U> for RangeTo<T> {
+    type Out = RangeTo<U>;
+
+    fn map_bounds(self, map: impl Fn(T) -> U) -> Self::Out {
+        ..map(self.end)
+    }
+}
+
+impl<T, U> MapBounds<T, U> for RangeFull {
+    type Out = RangeFull;
+
+    fn map_bounds(self, _: impl Fn(T) -> U) -> Self::Out {
+        ..
     }
 }
 
