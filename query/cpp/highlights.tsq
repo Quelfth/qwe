@@ -30,6 +30,8 @@
     body: (block ["{" "}"] @o.declare.function)
 )
 
+(variable_declaration [ "=" "(" "," ")" ";" ] @o.declare.value)
+
 ; Expression
 
 (binary_expression [ "+" "-" "*" "/" "%" ] @o.arithmetic)
@@ -68,7 +70,13 @@
 
 ; Names
 
+((identifier) @i.type.struct @_ (#semantic? @_ Class))
+
 ((identifier) @i.function @_ (#semantic? @_ Function))
+
 ((identifier) @i.value.global @_ (#semantic? @_ global-scope Variable))
+((identifier) @i.value.local @_ (#semantic? @_ function-scope Variable))
 
 ((identifier) @i.namespace @_ (#semantic? @_ Namespace))
+
+(template_name (name) @_ (#semantic? @_ Class) (template_arguments ["<" "," ">"] @o.generics.type.struct))
