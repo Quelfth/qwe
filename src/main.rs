@@ -19,7 +19,7 @@ use std::{
     time::Duration,
 };
 
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll},
     terminal::{self},
@@ -59,6 +59,10 @@ mod util;
 #[derive(Parser)]
 struct Args {
     path: Option<PathBuf>,
+    #[clap(short, long, action = ArgAction::SetTrue)]
+    new: bool,
+    #[clap(short, long, action = ArgAction::SetTrue)]
+    dirs: bool,
 }
 
 thread_local! {
@@ -71,7 +75,7 @@ fn is_main_thread() -> bool {
 
 fn main() -> io::Result<()> {
     IS_MAIN_THREAD.set(true);
-    let Args { path } = Args::parse();
+    let Args { path, new, dirs } = Args::parse();
 
     let default_hook = panic::take_hook();
     panic::set_hook(Box::new(move |info| {
@@ -97,7 +101,13 @@ fn main() -> io::Result<()> {
     setup::setup()?;
     let result = try {
         let path = if let Some(path) = path {
-            Some(PathedFile::open(path.into())?)
+            Some(if !new {
+                PathedFile::open(path.into())?
+            } else if !dirs {
+                PathedFile::create(path.into())?
+            } else {
+                PathedFile::create_with_dirs(path.into())?
+            })
         } else {
             None
         };
@@ -115,11 +125,30 @@ pub struct PathedFile {
 }
 
 impl PathedFile {
+    fn empty(path: Arc<Path>) -> Self {
+        Self {
+            file: "".to_owned(),
+            path,
+        }
+    }
+
     pub fn open(path: Arc<Path>) -> io::Result<Self> {
         Ok(Self {
             file: fs::read_to_string(&path)?,
             path,
         })
+    }
+
+    pub fn create(path: Arc<Path>) -> io::Result<Self> {
+        fs::File::create_new(&path)?;
+        Ok(Self::empty(path))
+    }
+
+    pub fn create_with_dirs(path: Arc<Path>) -> io::Result<Self> {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        Self::create(path)
     }
 }
 
@@ -133,6 +162,8 @@ fn run(file: Option<PathedFile>) -> io::Result<()> {
     editor.set_lsp_channels(send_editor_to_lsp, recv_lsp_to_editor);
     if let Some(file) = file {
         editor.open_new_doc(file);
+    } else {
+        editor.open_scratch_doc();
     }
 
     let _lsp_thread_handle = run_lsp_thread(lsp::channel::LspChannels {

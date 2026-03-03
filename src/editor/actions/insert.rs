@@ -1,4 +1,4 @@
-use crate::editor::Editor;
+use crate::{aprintln, editor::Editor};
 
 impl Editor {
     pub fn select(&mut self) {
@@ -19,5 +19,9 @@ impl Editor {
 
     pub fn insert_tab(&mut self) {
         self.doc.insert_tab()
+    }
+
+    pub fn tab_out(&mut self) {
+        self.doc.tab_out()
     }
 }

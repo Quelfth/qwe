@@ -60,6 +60,10 @@ impl Editor {
         Self::default()
     }
 
+    pub fn open_scratch_doc(&mut self) {
+        self.doc = Document::new(None, "", Some(Default::default()));
+    }
+
     pub fn open_new_doc(&mut self, doc: PathedFile) {
         let PathedFile { path, file } = doc;
         self.doc = Document::new(

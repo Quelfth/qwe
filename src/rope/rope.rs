@@ -370,6 +370,20 @@ impl Rope {
 
         Ix::new(0)
     }
+    pub fn context_indent_inc(&self, line: Ix<Line>) -> Ix<Column> {
+        let mut line = line;
+        while line > Ix::new(0) {
+            if self
+                .line(line)
+                .is_some_and(|l| !l.chars().all(char::is_whitespace))
+            {
+                return self.indent_on_line(line);
+            }
+            line -= Ix::new(1);
+        }
+
+        Ix::new(0)
+    }
 
     pub fn indent_on_line(&self, line: Ix<Line>) -> Ix<Column> {
         let Some(line) = self.line(line) else {

@@ -24,11 +24,6 @@ impl InsertCursors {
         self.map_to(|c| c.to_line_select())
     }
 
-    pub fn tab(mut self) -> Self {
-        self.iter_mut().for_each(|c| c.tab());
-        self
-    }
-
     pub fn move_x(&mut self, columns: Ix<Column, isize>) {
         self.iter_mut().for_each(|c| c.move_x(columns))
     }

@@ -56,11 +56,11 @@ impl Document {
                                     .unwrap_or_default();
                                 for line in slice.lines() {
                                     let indent = line.columns_to_bytes(indent);
-                                    s += &line.byte_slice(indent..).unwrap().to_string();
+                                    let cropped = &line.to_string()[indent.inner()..];
+                                    s += cropped;
                                     s += "\n";
                                 }
-
-                                yield slice.to_string();
+                                yield s.to_string();
                             }
                         }
                     }

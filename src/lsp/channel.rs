@@ -8,7 +8,7 @@ use std::{
 
 use lsp_types::{Diagnostic, InitializeResult, SemanticToken, TextDocumentContentChangeEvent, Url};
 
-use crate::{lang::Language, lsp::Diagnostics};
+use crate::lang::Language;
 
 pub enum LspToEditorMessage {
     NewLsp {

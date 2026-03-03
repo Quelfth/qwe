@@ -3,6 +3,16 @@
 version = 4
 
 [[package]]
+name = "adot-tree-sitter-toml"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95fdeddf7d69819d0e52ea0b20a9520fa2a88683aa180c9104d925318593c413"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -944,6 +954,7 @@ dependencies = [
 name = "qwe"
 version = "0.1.0"
 dependencies = [
+ "adot-tree-sitter-toml",
  "anyhow",
  "async-lsp",
  "async-process",
@@ -967,6 +978,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tree-sitter",
+ "tree-sitter-cpp",
  "tree-sitter-css-orchard",
  "tree-sitter-javascript",
  "tree-sitter-rust",
@@ -1367,6 +1379,14 @@ dependencies = [
  "regex-syntax",
  "serde_json",
  "streaming-iterator",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-cpp"
+version = "0.1.0"
+dependencies = [
+ "cc",
  "tree-sitter-language",
 ]
 

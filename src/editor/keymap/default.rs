@@ -29,6 +29,7 @@ impl Default for Keymaps {
                 (Key::code(Backspace), Mapping::rep(Editor::backspace)),
                 (Key::code(Enter), Mapping::rep(Editor::insert_return)),
                 (Key::code(Tab), Mapping::rep(Editor::insert_tab)),
+                (Key::code(BackTab), Mapping::rep(Editor::tab_out)),
                 (Key::ctrl('z'), Mapping::once(Editor::undo)),
                 (Key::ctrl('v'), Mapping::once(Editor::paste)),
             ])),

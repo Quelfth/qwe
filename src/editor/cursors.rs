@@ -107,6 +107,7 @@ impl CursorState {
         };
         cursors
     }
+    #[allow(unused)]
     pub fn assume_mirror_insert_mut(&mut self) -> &mut MirrorInsertCursors {
         let Self::MirrorInsert(cursors) = self else {
             panic!()

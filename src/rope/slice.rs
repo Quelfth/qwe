@@ -1,4 +1,4 @@
-use std::ops::{Range, RangeBounds};
+use std::ops::{Bound, RangeBounds};
 
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
@@ -61,7 +61,19 @@ impl<'a> RopeSlice<'a> {
         byte_range: impl RangeBounds<Ix<Byte>> + Clone,
     ) -> Option<RopeSlice<'a>> {
         self.validate_byte_range(&byte_range)?;
-        Some(self.0.byte_slice(MappedRange::new(byte_range)).into())
+        let start = match byte_range.start_bound() {
+            Bound::Included(start) => *start,
+            Bound::Excluded(start) => *start + Ix::new(1),
+            Bound::Unbounded => Ix::new(0),
+        }
+        .inner();
+        let end = match byte_range.end_bound() {
+            Bound::Included(end) => *end + Ix::new(1),
+            Bound::Excluded(end) => *end,
+            Bound::Unbounded => self.byte_len(),
+        }
+        .inner();
+        Some(self.0.byte_slice(start..end).into())
     }
 
     pub fn bytes(&self) -> Bytes<'a> {

@@ -1,0 +1,74 @@
+
+(comment) @comment
+
+"::" @o.association
+
+[(integer) (float)] @l.number
+(string_content) @l.string
+(string "\"" @l.string.quote)
+(boolean) @i.value.boolean
+(nullptr) @i.value.null.pointer
+
+"include" @o.include
+(include_directive "#" @o.include)
+(include_path ["<" ">" "\""] @o.include)
+(include_path_content) @l.filepath
+
+"using" @o.use
+(using_declaration ";" @o.use)
+
+"namespace" @o.visibility.middle
+
+(scoped_name scope: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
+
+(function_declaration
+    name: (name) @i.function
+)
+
+(parameters ["(" "," ")"] @o.call.function)
+(function_declaration
+    body: (block ["{" "}"] @o.declare.function)
+)
+
+; Expression
+
+(binary_expression [ "+" "-" "*" "/" "%" ] @o.arithmetic)
+(pre_unary_expression [ "+" "-" ] @o.arithmetic)
+(pre_unary_expression [ "++" "--" ] @o.arithmetic.assign)
+(post_unary_expression [ "++" "--" ] @o.arithmetic.assign)
+
+(binary_expression [ "==" "!=" "<" ">" "<=" ">=" "<=>" ] @o.comparison)
+
+(binary_expression [ "&" "^" "|" ] @o.logical)
+(pre_unary_expression [ "!" "~" ] @o.logical)
+
+(binary_expression [ "&&" "||" ] @o.branch)
+
+(binary_expression [ "<<" ">>" ] @o.sequence)
+
+(assignment_expression [ "+=" "-=" "*=" "/=" "%=" ] @o.arithmetic.assign)
+(assignment_expression [ "&=" "|=" "^=" ] @o.logical.assign)
+(assignment_expression [ "<<=" ">>=" ] @o.sequence.assign)
+(assignment_expression "=" @o.assign)
+
+[ "if" "else" ] @o.branch
+(if_statement [ "(" ")" ] @o.branch)
+(if_statement (block ["{" "}"] @o.branch))
+
+"switch" @o.branch
+(switch_statement [ "(" ")" ] @o.branch)
+(switch_statement (block ["{" "}"] @o.branch))
+
+"return" @o.control.return
+(return_statement ";" @o.control.return)
+
+; Type
+
+(primitive_type) @i.type.builtin.keyword
+
+; Names
+
+((identifier) @i.function @_ (#semantic? @_ Function))
+((identifier) @i.value.global @_ (#semantic? @_ global-scope Variable))
+
+((identifier) @i.namespace @_ (#semantic? @_ Namespace))

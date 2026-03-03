@@ -7,7 +7,7 @@ use crate::{
     draw::document::highlight::predicate::Predicate,
     ix::{Byte, Ix},
     range_tree::RangeTree,
-    util::{MapBounds, RangeOverlap},
+    util::MapBounds,
 };
 
 pub mod predicate;

@@ -338,13 +338,12 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     }
                     if let Some(Diagnostics { main, .. }) =
                         server.diagnostics(doc_uri.clone()).await?
+                        && let Some(diagnostics) = main
                     {
-                        if let Some(diagnostics) = main {
-                            channels.outgoing.send(LspToEditorMessage::Diagnostics {
-                                uri: doc_uri.clone(),
-                                diagnostics,
-                            })?;
-                        }
+                        channels.outgoing.send(LspToEditorMessage::Diagnostics {
+                            uri: doc_uri.clone(),
+                            diagnostics,
+                        })?;
                     }
 
                     init_delay_queue.push_back((lang, doc_uri, Instant::now()))
@@ -362,13 +361,12 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                             if let Some(Diagnostics {
                                 main: diagnostics, ..
                             }) = server.diagnostics(doc.clone()).await?
+                                && let Some(diagnostics) = diagnostics
                             {
-                                if let Some(diagnostics) = diagnostics {
-                                    channels.outgoing.send(LspToEditorMessage::Diagnostics {
-                                        uri: doc,
-                                        diagnostics,
-                                    })?;
-                                }
+                                channels.outgoing.send(LspToEditorMessage::Diagnostics {
+                                    uri: doc,
+                                    diagnostics,
+                                })?;
                             }
                         }
                     }
@@ -494,7 +492,8 @@ impl LanguageClient for Client {
             uri, diagnostics, ..
         } = params;
 
-        self.channel
+        _ = self
+            .channel
             .send(ClientMessage::PublishDiagnostics { uri, diagnostics });
 
         ControlFlow::Continue(())

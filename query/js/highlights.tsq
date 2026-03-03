@@ -1,1 +1,27 @@
 (comment) @comment
+
+(string_fragment) @l.string
+(string ["\"" "'"] @l.string.quote)
+
+; Expression
+
+(member_expression "." @o.field)
+
+(assignment_expression "=" @o.assign)
+
+(arguments ["(" "," ")"] @o.call.function)
+
+(object ["{" "," "}"] @o.construct.map)
+(pair ":" @o.key-value)
+
+(array ["[" "," "]"] @o.construct.sequence)
+
+(arrow_function "=>" @o.declare.function)
+
+; Names
+
+(call_expression
+    function: (identifier) @i.function
+)
+
+(property_identifier) @i.value.field

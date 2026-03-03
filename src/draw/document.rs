@@ -2,7 +2,7 @@ use std::{cmp::Ordering::*, iter};
 
 use crate::{
     custom_literal::integer::rgb,
-    document::{Document, diagnostics::Severity},
+    document::Document,
     draw::{cursor::CursorStyle, document::highlight::Highlight, screen::Canvas},
     grapheme::{Grapheme, GraphemeExt},
     ix::{Column, Ix, Line},

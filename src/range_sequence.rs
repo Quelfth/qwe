@@ -1,9 +1,7 @@
 use std::{
-    fmt::{self, Debug},
+    fmt::Debug,
     ops::{Add, Range, Sub},
 };
-
-use crate::aprintln::aprintln;
 
 pub struct RelRange<R> {
     start_offset: R,

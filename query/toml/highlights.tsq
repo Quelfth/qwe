@@ -1,0 +1,14 @@
+(string) @l.string
+(string "\"" @l.string.quote)
+
+(boolean) @i.value.boolean
+
+(bare_key) @i.value.field
+
+(pair "=" @o.key-value)
+(dotted_key "." @o.access.field)
+
+(table ["[" "]"] @o.construct.map)
+(inline_table ["{" "," "}"] @o.construct.map)
+
+(array ["[" "," "]"] @o.construct.sequence)

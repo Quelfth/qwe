@@ -1,7 +1,7 @@
 use crate::{
     constants::TAB_WIDTH,
     document::{Change, CursorChange, Document},
-    editor::cursors::{CursorState, insert::InsertCursor, mirror_insert::InsertDirection},
+    editor::cursors::{CursorState, mirror_insert::InsertDirection},
     ix::Ix,
     pos::Pos,
     util::{indent_string, mirror_string},
@@ -62,6 +62,13 @@ impl Document {
                 }
             }
         }
+    }
+
+    pub fn tab_out(&mut self) {
+        self.do_insert(|doc, pos, dir| match dir {
+            InsertDirection::Forward => doc.tab_out_change(pos),
+            InsertDirection::Reverse => (None, None),
+        })
     }
 }
 
