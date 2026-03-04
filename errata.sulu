@@ -30,6 +30,7 @@ o.call = f.fn;
 o.call.function.associated = f.method;
 o.call.function.associated.extension = f.ext-method;
 o.call.function.closure = b f.fn;
+o.call.function.constructor.declaration = f.self;
 o.call.function.method = f.method;
 o.call.function.method.extension = f.ext-method;
 o.call.type.self = f.self;
@@ -43,10 +44,12 @@ o.construct.map = f.class;
 o.construct.sequence = f.list;
 o.control.await = f.async;
 o.control.return = f.fn-decl;
+o.declare.abstract = f.class;
 o.declare.function = f.fn-decl;
 o.declare.module = f.private;
-o.declare.struct = f.struct;
+o.declare.negative = f.never;
 o.declare.type = f.type-op;
+o.declare.type.struct = f.struct;
 o.declare.trait = f.trait;
 o.declare.value = f.key-value;
 o.dynamic = f.class;
@@ -70,6 +73,7 @@ o.scope = f.scope;
 o.sequence = f.sequence;
 o.storage = f.access;
 o.strop = f.dark;
+o.template = f.bounds;
 o.tuple = f.tuple;
 o.type = f.type-op;
 o.use = f.scope;
@@ -120,6 +124,7 @@ i.value.variant = f.variant;
 
 / layer 2;
 o.implement = f.bounds;
+i.function.constructor.declaration = b f.self;
 
 / Pallete ;
 
@@ -221,7 +226,7 @@ o.implement = f.bounds;
 .lambda = #b000b0;
 
 .exception = #ff844e;
-.never-type = #cc3333;
+.never = #cc3333;
 
 .error = #ff007f;
 .warning = #bfff01;

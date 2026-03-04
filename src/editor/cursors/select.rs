@@ -147,7 +147,7 @@ impl Cursor for SelectCursor {
     }
 
     fn line_range(&self) -> Range<Ix<Line>> {
-        self.line..Ix::new(self.other_lines.len() + 1)
+        self.line..self.line + Ix::new(self.other_lines.len() + 1)
     }
 }
 

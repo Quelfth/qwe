@@ -21,16 +21,44 @@
 
 (scoped_name scope: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
 
-(function_declaration
-    name: (name) @i.function
-)
+"template" @o.template
+(template_parameters ["<" "," ">"] @o.template)
+(type_parameter "typename" @o.type)
+
+"public" @o.visibility.public
+"protected" @o.visibility.middle
+"private" @o.visibility.private
+(visibility_declaration (visibility "public") ":" @o.visibility.public)
+(visibility_declaration (visibility "protected") ":" @o.visibility.middle)
+(visibility_declaration (visibility "private") ":" @o.visibility.private)
+
+(class_declaration ["class" "struct"] @o.declare.type.struct ";" @o.declare.type.struct)
 
 (parameters ["(" "," ")"] @o.call.function)
 (function_declaration
     body: (block ["{" "}"] @o.declare.function)
 )
+(function_declaration ["=" ";"] @o.declare.function)
+(constructor_declaration
+    body: (block ["{" "}"] @o.declare.function)
+)
+(constructor_declaration [":" "=" ";"] @o.declare.function)
+(constructor_declaration (parameters ["(" "," ")"] @o.call.function.constructor.declaration))
+(constructor_declaration name: (name (identifier) @i.function.constructor.declaration))
+
+(operator_declaration ["=" ";"] @o.declare.function)
+(operator_declaration (parameters ["(" "," ")"] @o.declare.function))
+
+(delete_function_assignment "delete" @o.declare.negative)
+(default_function_assignment "default" @o.declare.function)
+(abstract_function_assignment) @o.declare.abstract
 
 (variable_declaration [ "=" "(" "," ")" ";" ] @o.declare.value)
+(member_initializer ["(" "," ")"] @o.declare.value)
+
+(member_list ["{" "}"] @o.implement)
+
+(member_list (function_declaration (parameters ["(" "," ")"] @o.call.function.method)))
 
 ; Expression
 
@@ -68,15 +96,40 @@
 
 (primitive_type) @i.type.builtin.keyword
 
+(reference_type "&" @o.access.reference)
+(reference_modifier "&" @o.access.reference)
+(rvalue_reference_type "&&" @o.access.reference)
+(rvalue_reference_modifier "&&" @o.access.reference)
+
+"const" @o.storage.immutable
+
 ; Names
 
+((identifier) @i.reference @_ (#semantic? @_ Method))
+
 ((identifier) @i.type.struct @_ (#semantic? @_ Class))
+((identifier) @i.type.parameter @_ (#semantic? @_ TypeParameter))
 
 ((identifier) @i.function @_ (#semantic? @_ Function))
+((identifier) @i.function.method @_ (#semantic? @_ Method))
 
 ((identifier) @i.value.global @_ (#semantic? @_ global-scope Variable))
 ((identifier) @i.value.local @_ (#semantic? @_ function-scope Variable))
+((identifier) @i.value.field @_ (#semantic? @_ Property))
+((identifier) @i.value.parameter @_ (#semantic? @_ Parameter))
 
 ((identifier) @i.namespace @_ (#semantic? @_ Namespace))
 
 (template_name (name) @_ (#semantic? @_ Class) (template_arguments ["<" "," ">"] @o.generics.type.struct))
+
+"operator" @o.declare.function
+
+(operator_name ["+" "-" "*" "/" "%"] @o.arithmetic)
+(operator_name ["==" "!=" "<" ">" "<=" ">="] @o.comparison) ; need to add 3-way comparison
+(operator_name ["&" "^" "|" "!" "~" "&&" "||"] @o.logical)
+(operator_name ["<<" ">>"] @o.sequence)
+
+(operator_name "=" @o.assign)
+(operator_name ["+=" "-=" "*=" "/=" "%=" "++" "--"] @o.arithmetic.assign) 
+(operator_name ["&=" "^=" "|="] @o.logical.assign)
+(operator_name ["<<=" ">>="] @o.sequence.assign)
