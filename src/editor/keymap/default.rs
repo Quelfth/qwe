@@ -41,6 +41,9 @@ impl Default for Keymaps {
                 (Key::char('['), Mapping::once(Editor::mirror_insert_in)),
                 (Key::char(']'), Mapping::once(Editor::mirror_insert_out)),
                 //
+                (Key::code(Tab), Mapping::rep(Editor::tab_lines_in)),
+                (Key::code(BackTab), Mapping::rep(Editor::tab_lines_out)),
+                //
                 (Key::char('o'), Mapping::once(Editor::incremental_select)),
                 (Key::char(';'), Mapping::once(Editor::line_select)),
                 (Key::char(':'), Mapping::once(Editor::cursor_line_split)),
@@ -90,6 +93,9 @@ impl Default for Keymaps {
                 ),
                 (Key::char('I'), Mapping::once(Editor::insert_before)),
                 (Key::char('A'), Mapping::once(Editor::insert_after)),
+                //
+                (Key::code(Tab), Mapping::rep(Editor::tab_lines_in)),
+                (Key::code(BackTab), Mapping::rep(Editor::tab_lines_out)),
                 //
                 (Key::char(';'), Mapping::once(Editor::select)),
                 (Key::char(':'), Mapping::once(Editor::cursor_line_split)),

@@ -1,6 +1,9 @@
+use std::collections::HashSet;
+
 use crate::{
+    constants::TAB_WIDTH,
     document::{Document, force_cursors},
-    editor::cursors::{CursorIndex, CursorState, select::RangeCursorLine},
+    editor::cursors::{CursorIndex, CursorState, Cursors, select::RangeCursorLine},
     ix::Ix,
     pos::Pos,
     util::indent_string,
@@ -137,6 +140,65 @@ impl Document {
                 }
             }
             CursorState::LineSelect(_) => todo!(),
+        }
+    }
+
+    pub fn tab_lines_in(&mut self) {
+        let Some(cursors) = &self.cursors else { return };
+
+        let mut done_lines = HashSet::new();
+
+        for index in cursors.indices() {
+            for line in self.cursors.as_ref().unwrap().line_range_at(index) {
+                if done_lines.contains(&line) {
+                    continue;
+                }
+                done_lines.insert(line);
+
+                if self
+                    .text
+                    .line(line)
+                    .is_none_or(|l| l.chars().all(char::is_whitespace))
+                {
+                    continue;
+                }
+
+                self.direct_insert(
+                    Pos {
+                        line,
+                        column: Ix::new(0),
+                    },
+                    &indent_string(Ix::new(TAB_WIDTH)),
+                );
+            }
+        }
+    }
+
+    pub fn tab_lines_out(&mut self) {
+        let Some(cursors) = &self.cursors else { return };
+
+        let mut done_lines = HashSet::new();
+
+        for index in cursors.indices() {
+            for line in self.cursors.as_ref().unwrap().line_range_at(index) {
+                if done_lines.contains(&line) {
+                    continue;
+                }
+                done_lines.insert(line);
+
+                if self
+                    .text
+                    .line(line)
+                    .is_none_or(|l| l.chars().all(char::is_whitespace))
+                {
+                    continue;
+                }
+
+                self.do_change(self.tab_out_change(Pos {
+                    line,
+                    column: Ix::new(TAB_WIDTH),
+                }));
+            }
         }
     }
 }

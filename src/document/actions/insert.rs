@@ -70,6 +70,10 @@ impl Document {
             InsertDirection::Reverse => (None, None),
         })
     }
+
+    pub fn direct_insert(&mut self, pos: Pos, text: &str) {
+        self.do_change(self.insert_change(pos, text.to_owned()))
+    }
 }
 
 fn insert_effect(

@@ -145,4 +145,12 @@ impl Editor {
             self.doc.scroll_main_cursor_on_screen();
         }
     }
+
+    pub fn tab_lines_in(&mut self) {
+        self.doc.tab_lines_in();
+    }
+
+    pub fn tab_lines_out(&mut self) {
+        self.doc.tab_lines_out();
+    }
 }

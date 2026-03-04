@@ -44,6 +44,7 @@ pub trait Cursors {
     fn cycle_forward(&mut self);
     fn cycle_backward(&mut self);
 
+    fn line_range_at(&self, index: CursorIndex) -> Range<Ix<Line>>;
     fn line_ranges(&self) -> impl Iterator<Item = Range<Ix<Line>>>;
 }
 
@@ -68,6 +69,10 @@ impl<T: Cursor> Cursors for CursorSet<T> {
 
         let next = self.others.pop().unwrap();
         self.others.insert(0, mem::replace(&mut self.main, next))
+    }
+
+    fn line_range_at(&self, index: CursorIndex) -> Range<Ix<Line>> {
+        self[index].line_range()
     }
 
     fn line_ranges(&self) -> impl Iterator<Item = Range<Ix<Line>>> {
