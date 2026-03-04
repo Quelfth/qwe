@@ -5,6 +5,7 @@ use crate::{
     ix::{Byte, Ix},
 };
 
+#[allow(unused)]
 pub struct UnopenedDocument {
     diagnostics: Option<Vec<(Range<Ix<Byte>>, Diagnostic)>>,
 }

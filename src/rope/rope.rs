@@ -257,7 +257,7 @@ impl Rope {
         let line_byte = self.byte_of_line(utf16_pos.line)?;
         let line = self.line(utf16_pos.line)?;
 
-        let byte = line.byte_of_utf16(utf16_pos.column);
+        let byte = line.byte_of_utf16_saturating(utf16_pos.column);
 
         Some(line_byte + byte)
     }

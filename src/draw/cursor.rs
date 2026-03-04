@@ -259,7 +259,7 @@ impl CursorType {
 
 impl CursorState {
     #[auto_enum(Iterator)]
-    pub(super) fn line_ranges(&self, line: Ix<Line>) -> impl Iterator<Item = CursorRange> {
+    pub(super) fn ranges_for_line(&self, line: Ix<Line>) -> impl Iterator<Item = CursorRange> {
         use CursorState::*;
         match self {
             MirrorInsert(cursors) => cursors

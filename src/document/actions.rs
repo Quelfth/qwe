@@ -1,5 +1,4 @@
 use crate::{
-    aprintln::aprintln,
     document::{Document, force_cursors},
     editor::cursors::{CursorIndex, CursorState, select::RangeCursorLine},
     ix::Ix,
@@ -12,14 +11,9 @@ mod select;
 
 impl Document {
     pub fn scroll_to_main_cursor(&mut self) {
-        if let Some(cursors) = &self.cursors {
-            self.scroll = match cursors {
-                CursorState::MirrorInsert(cursors) => cursors.main().forward.line,
-                CursorState::Insert(cursors) => cursors.main().pos.line,
-                CursorState::Select(cursors) => cursors.main().start_pos().line,
-                CursorState::LineSelect(cursors) => cursors.main().line,
-            }
-        }
+        self.scroll = self
+            .main_cursor_line()
+            .saturating_sub(*self.view_height.lock() / 2)
     }
 
     pub fn copy_text(&self) -> impl Iterator<Item = String> {

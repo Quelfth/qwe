@@ -135,12 +135,14 @@ impl Editor {
     pub fn cycle_cursors_forward(&mut self) {
         if let Some(c) = &mut self.doc.cursors {
             c.cycle_forward();
+            self.doc.scroll_main_cursor_on_screen();
         }
     }
 
     pub fn cycle_cursors_backward(&mut self) {
         if let Some(c) = &mut self.doc.cursors {
             c.cycle_backward();
+            self.doc.scroll_main_cursor_on_screen();
         }
     }
 }

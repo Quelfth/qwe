@@ -195,4 +195,8 @@ impl Cursor for LineCursor {
     fn location_cmp(left: &Self, right: &Self) -> std::cmp::Ordering {
         left.line.cmp(&right.line)
     }
+
+    fn line_range(&self) -> Range<Ix<Line>> {
+        self.line..self.line + self.height
+    }
 }

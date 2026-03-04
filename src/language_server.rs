@@ -117,8 +117,11 @@ impl LanguageServer {
                     pos = text.byte_of_line(line).unwrap();
                 }
                 let line = text.line(line).unwrap();
-                pos += line.byte_of_utf16(delta_start);
-                let len = text.byte_slice(pos..).unwrap().byte_of_utf16(len);
+                pos += line.byte_of_utf16_saturating(delta_start);
+                let len = text
+                    .byte_slice(pos..)
+                    .unwrap()
+                    .byte_of_utf16_saturating(len);
                 let range = pos..pos + len;
 
                 let legend = self.semtok_legend.as_ref().unwrap();

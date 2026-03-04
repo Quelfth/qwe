@@ -286,6 +286,7 @@ impl Server {
 
 pub struct Diagnostics {
     pub main: Option<Vec<Diagnostic>>,
+    #[expect(unused)]
     pub related: HashMap<Url, Vec<Diagnostic>>,
 }
 

@@ -145,6 +145,10 @@ impl Cursor for SelectCursor {
     fn location_cmp(left: &Self, right: &Self) -> std::cmp::Ordering {
         left.start_pos().cmp(&right.start_pos())
     }
+
+    fn line_range(&self) -> Range<Ix<Line>> {
+        self.line..Ix::new(self.other_lines.len() + 1)
+    }
 }
 
 #[derive(Clone, Default)]

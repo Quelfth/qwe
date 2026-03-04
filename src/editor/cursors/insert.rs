@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, ops::Range};
 
 use crate::{
     constants::TAB_WIDTH,
@@ -99,5 +99,9 @@ impl Cursor for InsertCursor {
 
     fn location_cmp(left: &Self, right: &Self) -> Ordering {
         left.pos.cmp(&right.pos)
+    }
+
+    fn line_range(&self) -> Range<Ix<Line>> {
+        self.pos.line..self.pos.line + Ix::new(1)
     }
 }

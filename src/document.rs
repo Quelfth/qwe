@@ -2,6 +2,7 @@ use std::iter;
 use std::ops::Range;
 use std::time::Instant;
 
+use mutx::Mutex;
 use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
@@ -36,6 +37,7 @@ mod unopened;
 #[derive(Default)]
 pub struct Document {
     pub scroll: Ix<Line>,
+    pub view_height: Mutex<Ix<Line>>,
     pub cursors: Option<CursorState>,
     text: Rope,
     pub history: History,
@@ -43,9 +45,10 @@ pub struct Document {
     language: Option<Language>,
     tree: Option<Tree>,
     pub semtoks: RangeSequence<Ix<Byte>, SemanticToken>,
-    pub diagnostics: Vec<(Range<Ix<Byte>>, Diagnostic)>,
+    pub diagnostics: RangeSequence<Ix<Byte>, Diagnostic>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
+    #[expect(unused)]
     save_prime_instant: Option<Instant>,
 }
 
@@ -60,6 +63,7 @@ impl Document {
             tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
             language: lang,
             scroll: Ix::new(0),
+            view_height: Default::default(),
             history: Default::default(),
             future: Default::default(),
             semtoks: Default::default(),
@@ -113,13 +117,35 @@ impl Document {
     pub fn last_line_diagnostic(&self, line: Ix<Line>) -> Option<(Severity, &str)> {
         let range = self.text.byte_range_of_line(line)?;
         let mut diag = None::<(Range<Ix<Byte>>, Severity, &str)>;
-        for (r, d) in &self.diagnostics {
+        for (r, d) in self.diagnostics.ranges() {
             if range.contains(&r.end) && diag.as_ref().is_none_or(|d| r.end >= d.0.end) {
                 diag = Some((r.clone(), d.severity, &d.message));
             }
         }
         let (_, s, m) = diag?;
         Some((s, m))
+    }
+
+    pub fn main_cursor_line(&self) -> Ix<Line> {
+        let Some(cursors) = &self.cursors else {
+            return Ix::new(0);
+        };
+        match cursors {
+            CursorState::MirrorInsert(cursors) => cursors.main().forward.line,
+            CursorState::Insert(cursors) => cursors.main().pos.line,
+            CursorState::Select(cursors) => cursors.main().start_pos().line,
+            CursorState::LineSelect(cursors) => cursors.main().line,
+        }
+    }
+
+    pub fn main_cursor_is_visible(&self) -> bool {
+        (self.scroll..self.scroll + *self.view_height.lock()).contains(&self.main_cursor_line())
+    }
+
+    pub fn scroll_main_cursor_on_screen(&mut self) {
+        if !self.main_cursor_is_visible() {
+            self.scroll_to_main_cursor();
+        }
     }
 }
 
@@ -611,11 +637,14 @@ impl Document {
         self.lsp_delete(range.clone());
         self.semtoks
             .edit_delete(range.start, range.end - range.start);
+        self.diagnostics
+            .edit_delete(range.start, range.end - range.start);
     }
 
     fn upkeep_insert(&mut self, pos: Ix<Byte>, text: String) {
         let len = Ix::new(text.len());
         self.semtoks.edit_insert(pos, len);
+        self.diagnostics.edit_insert(pos, len);
         self.lsp_insert(pos, text);
         self.tree_insert(pos, len);
     }

@@ -83,7 +83,7 @@ impl Document {
                 }
             }
         }
-        for (range, diagnostic) in &self.diagnostics {
+        for (range, diagnostic) in self.diagnostics.ranges() {
             let severity = match diagnostic.severity {
                 Severity::Err => "error",
                 Severity::Warn => "warning",

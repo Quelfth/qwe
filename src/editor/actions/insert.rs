@@ -1,4 +1,4 @@
-use crate::{aprintln, editor::Editor};
+use crate::editor::Editor;
 
 impl Editor {
     pub fn select(&mut self) {

@@ -1,9 +1,12 @@
+use std::ops::Range;
+
 use crate::{
     document::{CursorChange, CursorChangeBias},
     editor::cursors::{
         Cursor, CursorSet,
         select::{SelectCursor, SelectCursors},
     },
+    ix::{Ix, Line},
     pos::Pos,
     rope::Rope,
 };
@@ -50,5 +53,10 @@ impl Cursor for MirrorInsertCursor {
         left.forward
             .min(left.reverse)
             .cmp(&right.forward.min(right.reverse))
+    }
+
+    fn line_range(&self) -> Range<Ix<Line>> {
+        self.forward.line.min(self.reverse.line)
+            ..self.forward.line.max(self.reverse.line) + Ix::new(1)
     }
 }

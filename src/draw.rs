@@ -107,7 +107,7 @@ impl Editor {
             self.doc()
                 .cursors
                 .as_ref()
-                .map(|c| c.line_ranges(i).collect())
+                .map(|c| c.ranges_for_line(i).collect())
                 .unwrap_or_default()
         });
 

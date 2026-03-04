@@ -36,9 +36,8 @@ impl Editor {
                         }) {
                             continue;
                         }
-                        self.doc.diagnostics = diagnostics
-                            .into_iter()
-                            .map(
+                        self.doc.diagnostics =
+                            RangeSequence::from_abs_ordered(diagnostics.into_iter().map(
                                 |lsp_types::Diagnostic {
                                      range: lsp_types::Range { start, end },
                                      severity,
@@ -61,8 +60,7 @@ impl Editor {
                                         },
                                     )
                                 },
-                            )
-                            .collect();
+                            ));
                     }
                 }
             }

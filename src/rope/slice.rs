@@ -167,8 +167,15 @@ impl<'a> RopeSlice<'a> {
         self.0.raw_lines()
     }
 
-    pub fn byte_of_utf16(&self, utf16: Ix<Utf16>) -> Ix<Byte> {
-        Ix::new(self.0.byte_of_utf16_code_unit(utf16.inner()))
+    pub fn byte_of_utf16(&self, utf16: Ix<Utf16>) -> Option<Ix<Byte>> {
+        if utf16.inner() > self.0.utf16_len() {
+            return None;
+        }
+        Some(Ix::new(self.0.byte_of_utf16_code_unit(utf16.inner())))
+    }
+
+    pub fn byte_of_utf16_saturating(&self, utf16: Ix<Utf16>) -> Ix<Byte> {
+        self.byte_of_utf16(utf16).unwrap_or(self.byte_len())
     }
 
     pub fn columns_bytes(&self) -> impl Iterator<Item = (Ix<Column>, Ix<Byte>)> {

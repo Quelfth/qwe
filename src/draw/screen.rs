@@ -175,6 +175,13 @@ impl<'s> Canvas<'s> {
             },
         }
     }
+
+    pub fn reborrow<'a>(&'a mut self) -> Canvas<'a> {
+        Canvas {
+            screen: self.screen,
+            rect: self.rect,
+        }
+    }
 }
 
 impl IndexMut<(u16, u16)> for Canvas<'_> {
