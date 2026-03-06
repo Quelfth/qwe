@@ -1,12 +1,11 @@
-use std::{collections::HashMap, iter, ops::Range};
+use std::ops::Range;
 
-use tree_sitter::{QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
+use tree_sitter::{QueryCapture, QueryCursor};
 
 use crate::{
-    document::{Document, diagnostics::Severity, semtoks::SemanticToken},
-    draw::document::highlight::predicate::Predicate,
+    document::{Document, diagnostics::Severity},
     ix::{Byte, Ix},
-    range_tree::RangeTree,
+    lang::Highlights,
     util::MapBounds,
 };
 
@@ -20,69 +19,26 @@ pub struct Highlight {
 impl Document {
     pub fn highlight(&self) -> Vec<Highlight> {
         let mut highlight_scopes = Vec::new();
-        let semtoks = self.semtoks.ranges().collect::<RangeTree<_, _>>();
+        let cx = self.query_capture_context();
 
-        if let (Some(lang), Some(tree)) = (self.language(), self.tree()) {
-            let mut cursor = QueryCursor::new();
-            let root = tree.root_node();
+        macro_rules! qc {
+            () => {
+                &mut QueryCursor::new()
+            };
+        }
 
-            let query = lang.highlight_query();
-
-            let mut matches = cursor.matches_with_options(
-                query,
-                root,
-                self.text(),
-                tree_sitter::QueryCursorOptions {
-                    progress_callback: None,
-                },
-            );
-
-            'matches: while let Some(QueryMatch {
-                pattern_index,
-                captures,
-                ..
-            }) = matches.next()
-            {
-                let preds = query
-                    .general_predicates(*pattern_index)
-                    .iter()
-                    .filter_map(|p| Predicate::parse(p).ok())
-                    .collect::<Vec<_>>();
-                let capture_nodes = captures
-                    .iter()
-                    .map(|QueryCapture { node, index }| (*index, node))
-                    .collect::<HashMap<_, _>>();
-
-                for pred in preds {
-                    match pred {
-                        Predicate::Semantic { capture, predicate } => {
-                            let node = capture_nodes[&capture];
-                            if !semtoks
-                                .overlapping(node.byte_range().map_bounds(Ix::new))
-                                .any(|SemanticToken { r#type, mods }| {
-                                    predicate.check(
-                                        &iter::once(r#type.clone())
-                                            .chain(mods.iter().cloned())
-                                            .collect(),
-                                    )
-                                })
-                            {
-                                continue 'matches;
-                            }
-                        }
-                    }
-                }
-
-                for QueryCapture { node, index } in *captures {
-                    let name = query.capture_names()[*index as usize];
-                    let range = node.byte_range().map_bounds(Ix::new);
-                    highlight_scopes.push(Highlight {
-                        scope: name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>(),
-                        range,
-                    });
-                }
+        if let Some(lang) = self.language() {
+            let query = lang.query::<Highlights>();
+            for QueryCapture { node, index } in self.query_captures(qc!(), &cx, query) {
+                let name = query.capture_names()[*index as usize];
+                let range = node.byte_range().map_bounds(Ix::new);
+                highlight_scopes.push(Highlight {
+                    scope: name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>(),
+                    range,
+                });
             }
         }
+
         for (range, diagnostic) in self.diagnostics.ranges() {
             let severity = match diagnostic.severity {
                 Severity::Err => "error",

@@ -36,6 +36,8 @@ dispa.git = "https://github.com/Quelfth/dispa"
 tree-sitter-javascript = "0.25.0"
 tree-sitter-cpp.path = "../tree-sitter-cpp"
 adot-tree-sitter-toml = "0.1.0"
+include_optional = { version = "1.1.1", features = ["nightly"] }
+concat_into.path = "../concat_into"
 
 [profile.release]
 debug = true

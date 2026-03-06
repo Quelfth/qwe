@@ -39,8 +39,15 @@
 "dyn" @o.dynamic
 "mut" @o.storage.mutable
 "ref" @o.storage.reference
+"static" @o.storage.static
 (self_parameter "&" @o.access.reference)
 "." @o.access.field
+
+"const" @o.const
+(pointer_type "const" @o.storage.immutable)
+";" @o.group
+(parenthesized_expression ["(" ")"] @o.group)
+(block ["{" "}"] @o.group)
 
 ; Modules
 
@@ -79,6 +86,8 @@
 (scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 (use_wildcard (name) @_ (#semantic? @_ Enum) "::" @o.association.enum)
 
+(use_wildcard "*" @o.wildcard)
+
 ; Functions
 
 (function_item ["fn" "->" ";"] @o.declare.function)
@@ -108,11 +117,11 @@
 
 ; Struct
 
-"struct" @o.declare.struct
-(struct_item (type_parameters ["<" "," ">"] @o.declare.struct))
-(struct_item (field_declaration_list ["{" "," "}"] @o.declare.struct))
-(struct_item (ordered_field_declaration_list ["(" "," ")"] @o.declare.struct))
-(struct_item ";" @o.declare.struct)
+"struct" @o.declare.type.struct
+(struct_item (type_parameters ["<" "," ">"] @o.declare.type.struct))
+(struct_item (field_declaration_list ["{" "," "}"] @o.declare.type.struct))
+(struct_item (ordered_field_declaration_list ["(" "," ")"] @o.declare.type.struct))
+(struct_item ";" @o.declare.type.struct)
 
 (struct_item name: (_) @i.type.struct)
 (field_declaration name: (_) @i.value.field)
@@ -137,15 +146,34 @@
 
 ; Attributes
 
-(attribute_item ["#" "["] @o.macro.attribute (builtin_attribute) "]" @o.macro.attribute)
 (attribute_item ["#" "["] @o.macro.attribute (attribute_macro) "]" @o.macro.attribute)
+(inner_attribute_item ["#" "!" "["] @o.macro.attribute (attribute_macro) "]" @o.macro.attribute)
 (attribute_macro (name (identifier) @i.macro.attribute))
 (attribute_macro (token_tree ["(" "," ")"] @o.macro.attribute))
+
+(attribute_item ["#" "["] @o.attribute (builtin_attribute) "]" @o.attribute)
+(inner_attribute_item ["#" "!" "["] @o.attribute (builtin_attribute) "]" @o.attribute)
+
+(builtin_attribute "feature" @i.attribute ["(" ")"] @o.attribute)
+
+(lint_level_attribute ["expect" "allow" "warn" "deny" "forbid"] @i.attribute ["(" ")"] @o.attribute)
+
+(simple_path "::" @o.scope)
+(simple_path (name) @i.namespace . "::")
 
 (attribute_item "#" @o.implement "[" @o.implement (attribute_macro) @_ (#semantic? @_ Derive) "]" @o.implement)
 ((attribute_macro (name (identifier) @o.implement)) @_ (#semantic? @_ Derive))
 ((attribute_macro (token_tree ["(" "," ")"] @o.implement)) @_ (#semantic? @_ Derive))
 ((identifier) @i.macro.derive (#semantic? @i.macro.derive Derive))
+
+(attribute_item "#" @o.implement "[" @o.implement (attribute_macro (name) @_ (#semantic? @_ DeriveHelper)) "]" @o.implement)
+(attribute_macro (name (identifier) @o.implement) @_ (#semantic? @_ DeriveHelper))
+(attribute_macro (name) @_ (#semantic? @_ DeriveHelper) (token_tree ["(" "," ")" "="] @o.implement))
+
+; Macros
+
+(macro_invocation (name) @_ (#semantic? @_ Macro) "!" @i.macro.function)
+(macro_invocation (token_tree ["(" ")" "[" "]" "{" "}" "," ";" "=>"] @o.call.macro.function))
 
 ; Statements
 
@@ -153,10 +181,10 @@
 
 ; Expressions
 
-
 "_" @o.wildcard
 (reference_expression "&" @o.access.reference)
 (reference_pattern "&" @o.access.reference)
+(unary_expression "*" @o.access.dereference)
 
 (field_expression field: (integer_literal) @i.value.field.tuple)
 
@@ -183,8 +211,15 @@
 (loop_expression body: (block ["{" "," "}"] @o.loop.infinite))
 
 (try_expression "?" @o.error.propogate)
+"try" @o.error.try
+(try_block (block ["{" "}"] @o.error.try))
 
 (let_condition ["let" "="] @o.branch.match)
+
+"continue" @o.control.continue
+(expression_statement (continue_expression) ";" @o.control.continue)
+"break" @o.control.break
+(expression_statement (break_expression) ";" @o.control.break)
 
 "return" @o.control.return
 (expression_statement (return_expression) ";" @o.control.return)
@@ -384,6 +419,8 @@
 ((identifier) @i.value.field (#semantic? @i.value.field Property))
 ((identifier) @i.value.variant (#semantic? @i.value.variant EnumMember))
 
+((identifier) @i.value.function @_ (#semantic? @_ callable))
+
 ; Function Names
 
 ((identifier) @i.function (#semantic? @i.function "!associated" Function))
@@ -391,3 +428,10 @@
 ((identifier) @i.function.method (#semantic? @i.function.method "!trait" Method))
 ((identifier) @i.function.associated.extension (#semantic? @i.function.associated.extension trait Function))
 ((identifier) @i.function.method.extension (#semantic? @i.function.method.extension trait Method))
+
+; Macro Names
+
+((identifier) @i.macro.function @_ (#semantic? @_ Macro))
+
+(lifetime) @i.lifetime
+(lifetime "'" @o.wildcard.lifetime "_" @o.wildcard.lifetime)

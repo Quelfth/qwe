@@ -11,7 +11,11 @@ l.string.quote = f.quote;
 
 comment = f.comment;
 
+
 o = f.key-value;
+
+o.group = f.group;
+
 o.access = f.access;
 o.access.field = f.key-value;
 o.access.method = f.method-access;
@@ -29,10 +33,12 @@ o.branch.match = f.match;
 o.call = f.fn;
 o.call.function.associated = f.method;
 o.call.function.associated.extension = f.ext-method;
-o.call.function.closure = b f.fn;
+o.call.function.closure = f.fn;
 o.call.function.constructor.declaration = f.self;
+o.call.function.destructor = f.never;
 o.call.function.method = f.method;
 o.call.function.method.extension = f.ext-method;
+o.call.macro.function = f.invoke;
 o.call.type.self = f.self;
 o.call.type.struct = f.struct;
 o.call.type.alias = f.type-alias;
@@ -40,18 +46,23 @@ o.call.value.variant = f.variant;
 o.collection = f.list;
 o.comment = f.dark;
 o.comparison = f.comparison;
+o.const = f.const;
 o.construct.map = f.class;
 o.construct.sequence = f.list;
 o.control.await = f.async;
+o.control.break = f.branch;
+o.control.continue = f.loop;
 o.control.return = f.fn-decl;
 o.declare.abstract = f.class;
 o.declare.function = f.fn-decl;
 o.declare.module = f.private;
 o.declare.negative = f.never;
 o.declare.type = f.type-op;
+o.declare.type.enum = f.enum;
 o.declare.type.struct = f.struct;
 o.declare.trait = f.trait;
 o.declare.value = f.key-value;
+o.declare.virtual = f.class;
 o.dynamic = f.class;
 o.error = f.exception;
 o.generics.trait = f.trait;
@@ -60,7 +71,6 @@ o.generics.type.enum = f.enum;
 o.generics.type.union = f.union;
 o.generics.type.alias = f.type-alias;
 o.generics.type.artifact = f.type-artifact;
-o.group = f.group;
 o.include = f.include;
 o.key-value = f.key-value;
 o.logical = f.logical;
@@ -72,6 +82,7 @@ o.range = f.range;
 o.scope = f.scope;
 o.sequence = f.sequence;
 o.storage = f.access;
+o.storage.static = f.static;
 o.strop = f.dark;
 o.template = f.bounds;
 o.tuple = f.tuple;
@@ -93,6 +104,7 @@ i.function.associated.extension = b f.ext-method;
 i.function.method.extension = !b f.ext-method;
 i.macro.derive = i b f.trait;
 i.macro.attribute = f.attribute-macro;
+i.macro.function = i b f.fn-macro;
 i.mutable = u:line;  i.async = u:dotted;
 /i.mutable i.async = u:dashed;
 i.namespace = i f.namespace;
@@ -122,9 +134,12 @@ i.value.null.pointer = f.pointer;
 i.value.parameter = f.parameter;
 i.value.variant = f.variant;
 
+i.value.function = f.fn;
+
 / layer 2;
 o.implement = f.bounds;
 i.function.constructor.declaration = b f.self;
+i.function.destructor = b f.never;
 
 / Pallete ;
 
@@ -205,7 +220,8 @@ i.function.constructor.declaration = b f.self;
 
 .fn-decl = #696969;
 .terminator = #00ff00;
-.const = #990099;
+.const = #a52d65;
+.static = #990099;
 .async = #009900;
 .coroutine = #009999;
 .unsafe = #ff0000;

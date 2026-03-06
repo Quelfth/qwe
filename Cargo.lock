@@ -292,6 +292,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
+name = "concat_into"
+version = "0.1.0"
+
+[[package]]
 name = "concurrent-queue"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -718,6 +722,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "include_optional"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c5ad74261146ea73c53b02bb611bc0eb01cb96fc07a987f217e3ffaa21d167cd"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -960,12 +974,14 @@ dependencies = [
  "async-process",
  "auto_enums",
  "clap",
+ "concat_into",
  "convert_case 0.11.0",
  "crop",
  "crossterm",
  "culit",
  "dispa",
  "extension-trait",
+ "include_optional",
  "lsp-types",
  "mutx",
  "regex",
