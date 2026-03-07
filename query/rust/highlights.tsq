@@ -98,7 +98,8 @@
 (function_item name: (_) @i.function)
 (parameter ":" @o.type)
 
-(declaration_list (function_item (parameters ["(" "," ")" ] @o.call.function.associated)))
+(declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated)))
+(declaration_list (function_item (type_parameters ["<" "," ">"] @o.call.function.associated)))
 
 (declaration_list (function_item name: (_) @i.function.method))
 
@@ -214,6 +215,9 @@
 "try" @o.error.try
 (try_block (block ["{" "}"] @o.error.try))
 
+"gen" @o.coroutine
+(gen_block (block ["{" "}"] @o.coroutine))
+
 (let_condition ["let" "="] @o.branch.match)
 
 "continue" @o.control.continue
@@ -223,6 +227,10 @@
 
 "return" @o.control.return
 (expression_statement (return_expression) ";" @o.control.return)
+
+"yield"
+@o.control.yield
+(expression_statement (yield_expression) ";" @o.control.yield)
 
 "await" @o.control.await
 (await_expression "." @o.control.await)
@@ -245,7 +253,6 @@
 (binary_expression ["&&" "||"] @o.branch)
 
 (unary_expression "!" @o.logical)
-
 
 (index_expression ["[" "]"] @o.sequence)
 
@@ -433,5 +440,10 @@
 
 ((identifier) @i.macro.function @_ (#semantic? @_ Macro))
 
-(lifetime) @i.lifetime
+(lifetime (name) ) @i.lifetime
 (lifetime "'" @o.wildcard.lifetime "_" @o.wildcard.lifetime)
+(lifetime "'" @o.storage.static "static")
+
+(label "'" @o.label (name (identifier) @i.label))
+
+((label) . ":" @o.label)
