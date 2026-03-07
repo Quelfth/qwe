@@ -43,6 +43,8 @@ impl Index<(u16, u16)> for Screen {
 
 impl IndexMut<(u16, u16)> for Screen {
     fn index_mut(&mut self, (row, col): (u16, u16)) -> &mut Self::Output {
+        assert!(row <= self.height);
+        assert!(col <= self.width);
         &mut self.cells[(row * self.width + col) as usize]
     }
 }

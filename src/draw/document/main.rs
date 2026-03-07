@@ -1,6 +1,7 @@
 use std::{cmp::Ordering::*, iter};
 
 use crate::{
+    color,
     custom_literal::integer::rgb,
     document::Document,
     draw::{cursor::CursorStyle, document::highlight::Highlight, screen::Canvas},
@@ -83,7 +84,7 @@ impl Document {
                         })
                         .collect::<Vec<_>>();
 
-                    let hl_style = (Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}))
+                    let hl_style = (Style::fg(color::FG) + Style::bg(color::BG))
                         + theme().highlight(&hl_scopes);
                     canvas[(i, j)] = Cell {
                         grapheme,
@@ -135,9 +136,9 @@ impl Document {
                     }
 
                     match j.cmp(&shadow_len) {
-                        Less => cell.style.bg = rgb! {0x160000},
+                        Less => cell.style.bg = color::SHADOW,
                         Equal => {
-                            cell.style.fg = rgb! {0x160000};
+                            cell.style.fg = color::SHADOW;
                             cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
                         }
                         Greater => (),
@@ -195,9 +196,9 @@ impl Document {
                     }
                 }
                 match j.cmp(&shadow_len) {
-                    Less => cell.style.bg = rgb! {0x160000},
+                    Less => cell.style.bg = color::SHADOW,
                     Equal => {
-                        cell.style.fg = rgb! {0x160000};
+                        cell.style.fg = color::SHADOW;
                         cell.grapheme = Grapheme::UPPER_LEFT_TRIANGLE;
                     }
                     Greater => (),

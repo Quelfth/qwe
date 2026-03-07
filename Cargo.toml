@@ -38,6 +38,7 @@ tree-sitter-cpp.path = "../tree-sitter-cpp"
 adot-tree-sitter-toml = "0.1.0"
 include_optional = { version = "1.1.1", features = ["nightly"] }
 concat_into.path = "../concat_into"
+walkdir = "2.5.0"
 
 [profile.release]
 debug = true

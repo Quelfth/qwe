@@ -40,6 +40,7 @@ pub mod gadget;
 mod inspect;
 pub mod jump_labels;
 mod keymap;
+pub mod picker;
 mod poll;
 
 #[derive(Default)]

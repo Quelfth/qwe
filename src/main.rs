@@ -30,6 +30,7 @@ use crate::{
 };
 
 mod aprintln;
+mod color;
 mod constants;
 mod custom_literal;
 mod document;

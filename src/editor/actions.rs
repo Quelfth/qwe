@@ -5,6 +5,7 @@ use crate::{
     document::Document,
     editor::{
         Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels,
+        picker::Picker,
     },
     ix::Ix,
     lang::Language,
@@ -89,6 +90,10 @@ impl Editor {
 
     pub fn find(&mut self) {
         self.open_gadget(Finder::new(self.doc.find_haystacks()));
+    }
+
+    pub fn pick_file(&mut self) {
+        self.open_gadget(Picker::file());
     }
 
     pub fn delete(&mut self) {

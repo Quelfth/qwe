@@ -67,6 +67,7 @@ impl Default for Keymaps {
                 //
                 (Key::char(' '), Mapping::once(Editor::jump)),
                 (Key::char('f'), Mapping::once(Editor::find)),
+                (Key::char('F'), Mapping::once(Editor::pick_file)),
                 //
                 (Key::char('z'), Mapping::once(Editor::undo)),
                 (Key::char('Z'), Mapping::once(Editor::redo)),
@@ -78,7 +79,7 @@ impl Default for Keymaps {
                 //
                 (Key::alt('^'), Mapping::once(Editor::inspect)),
                 (
-                    Key::ctrl('r'),
+                    Key::code(F(5)),
                     Mapping::once(Editor::refresh_semantic_tokens),
                 ),
             ])),
