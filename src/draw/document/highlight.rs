@@ -3,7 +3,6 @@ use std::ops::Range;
 use tree_sitter::{QueryCapture, QueryCursor};
 
 use crate::{
-    aprintln::aprintln,
     document::{Document, diagnostics::Severity},
     ix::{Byte, Ix},
     lang::{Highlights, Zebra},
@@ -44,6 +43,10 @@ impl Scope {
 
     fn zebra() -> Self {
         Self(vec!["zebra".to_owned()])
+    }
+
+    fn zebra_boundary() -> Self {
+        Self(vec!["zebra-boundary".to_owned()])
     }
 }
 
@@ -108,6 +111,15 @@ impl Document {
                                 }
                                 even ^= true;
                                 i = j - Ix::new(1);
+                            }
+                            (Symbol(_), _) => {
+                                if last_char != char {
+                                    highlight_scopes.push(Highlight {
+                                        scope: Scope::zebra_boundary(),
+                                        range: i..j,
+                                    });
+                                    i = j;
+                                }
                             }
                             _ => {
                                 if last_char != char {

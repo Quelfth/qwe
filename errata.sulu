@@ -1,5 +1,6 @@
 
 zebra = d;
+zebra-boundary = d:2;
 
 diagnostic.error = u:curl u.error;
 diagnostic.warning = u:curl u.warning;

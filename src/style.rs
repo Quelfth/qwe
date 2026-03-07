@@ -1,4 +1,4 @@
-use std::{convert::identity, ops::Add};
+use std::ops::Add;
 
 use crossterm::style::{Attribute, Color, ContentStyle, Stylize};
 
@@ -72,7 +72,7 @@ pub struct Style {
     pub bold: Option<bool>,
     pub under: Option<Option<Under>>,
     pub uc: Option<Option<Color>>,
-    pub dark: Option<bool>,
+    pub dark: Option<u8>,
 }
 
 impl Style {
@@ -130,8 +130,8 @@ impl From<Style> for FlatStyle {
             dark,
         } = value;
         let fg = fg.unwrap_or(Color::Reset);
-        let fg = if dark.is_some_and(identity) {
-            darken(fg)
+        let fg = if let Some(dark) = dark {
+            darken(fg, dark)
         } else {
             fg
         };
@@ -206,9 +206,9 @@ impl Style {
         }
     }
 
-    pub fn dark_bool(value: bool) -> Self {
+    pub fn dark(amount: u8) -> Self {
         Self {
-            dark: Some(value),
+            dark: Some(amount),
             ..Default::default()
         }
     }
@@ -243,7 +243,7 @@ impl sulu::Style for Style {
             "i" => Some(Self::italic_bool(value)),
             "b" => Some(Self::bold_bool(value)),
             "u" if !value => Some(Self::no_under()),
-            "d" => Some(Self::dark_bool(value)),
+            "d" => Some(Self::dark(1)),
             _ => None,
         }
     }
@@ -258,6 +258,13 @@ impl sulu::Style for Style {
                 "dashed" => Ok(Under::Dashed.into()),
                 _ => Err(sulu::StyleValueError::Value),
             },
+            "d" => {
+                if let Ok(value) = value.parse::<u8>() {
+                    Ok(Self::dark(value))
+                } else {
+                    Err(sulu::StyleValueError::Value)
+                }
+            }
             _ => Err(sulu::StyleValueError::Name),
         }
     }

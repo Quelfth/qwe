@@ -1,6 +1,9 @@
 use crossterm::style::Color;
 
-pub(crate) fn darken(color: Color) -> Color {
+pub(crate) fn darken(color: Color, amount: u8) -> Color {
+    if amount == 0 {
+        return color;
+    }
     use Color::*;
     match color {
         DarkGrey => Black,
@@ -12,9 +15,10 @@ pub(crate) fn darken(color: Color) -> Color {
         Cyan => DarkCyan,
         White => Grey,
         Rgb { r, g, b } => {
-            fn darken(x: u8) -> u8 {
-                x / 2 + x / 8 + x / 16
-            }
+            let darken = |x: u8| match amount {
+                2 => x / 2,
+                _ => x / 2 + x / 4,
+            };
             Rgb {
                 r: darken(r),
                 g: darken(g),
