@@ -1,6 +1,10 @@
-use std::ops::Add;
+use std::{convert::identity, ops::Add};
 
 use crossterm::style::{Attribute, Color, ContentStyle, Stylize};
+
+use crate::style::darken::darken;
+
+mod darken;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct FlatStyle {
@@ -68,6 +72,7 @@ pub struct Style {
     pub bold: Option<bool>,
     pub under: Option<Option<Under>>,
     pub uc: Option<Option<Color>>,
+    pub dark: Option<bool>,
 }
 
 impl Style {
@@ -108,6 +113,7 @@ impl Add for Style {
             bold: other.bold.or(self.bold),
             under: other.under.or(self.under),
             uc: other.uc.or(self.uc),
+            dark: other.dark.or(self.dark),
         }
     }
 }
@@ -121,9 +127,16 @@ impl From<Style> for FlatStyle {
             bold,
             under,
             uc,
+            dark,
         } = value;
+        let fg = fg.unwrap_or(Color::Reset);
+        let fg = if dark.is_some_and(identity) {
+            darken(fg)
+        } else {
+            fg
+        };
         FlatStyle {
-            fg: fg.unwrap_or(Color::Reset),
+            fg,
             bg: bg.unwrap_or(Color::Reset),
             italic: italic.unwrap_or(false),
             bold: bold.unwrap_or(false),
@@ -192,6 +205,13 @@ impl Style {
             ..Default::default()
         }
     }
+
+    pub fn dark_bool(value: bool) -> Self {
+        Self {
+            dark: Some(value),
+            ..Default::default()
+        }
+    }
 }
 
 impl From<Under> for Style {
@@ -223,6 +243,7 @@ impl sulu::Style for Style {
             "i" => Some(Self::italic_bool(value)),
             "b" => Some(Self::bold_bool(value)),
             "u" if !value => Some(Self::no_under()),
+            "d" => Some(Self::dark_bool(value)),
             _ => None,
         }
     }

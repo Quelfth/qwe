@@ -131,3 +131,28 @@ pub impl<T: Ord + Copy> RangeOverlap for Range<T> {
         self.start.max(other.start) <= self.end.min(other.end)
     }
 }
+
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum CharClass {
+    Lower,
+    Cap,
+    Caseless,
+    Number,
+    Symbol(char),
+}
+
+impl CharClass {
+    pub fn of(char: char) -> Self {
+        if char.is_lowercase() {
+            CharClass::Lower
+        } else if char.is_uppercase() {
+            CharClass::Cap
+        } else if char.is_alphabetic() {
+            CharClass::Caseless
+        } else if char.is_numeric() {
+            CharClass::Number
+        } else {
+            CharClass::Symbol(char)
+        }
+    }
+}

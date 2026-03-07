@@ -61,8 +61,8 @@ impl Language {
     }
 }
 
-query! {
-    Highlights "highlights" {
+queries! {
+     {
         Cpp => "cpp"
         Css => "css"
         Javascript => "js"
@@ -72,6 +72,9 @@ query! {
         Toml => "toml"
         Yaml => "yaml"
     }
+
+    Highlights "highlights"
+    Zebra "zebra"
 }
 
 ts_lang! {
@@ -88,6 +91,15 @@ ts_lang! {
 pub trait LanguageQuery<Q> {
     fn query(self) -> &'static Query;
 }
+
+macro_rules! queries {
+    ($m:tt $($q:ident $file:literal)* ) => { $(
+        query! {
+            $q $file $m
+        }
+    )* }
+}
+use queries;
 
 macro_rules! query {
     ($q:ident $file:literal { $($lang:ident => $dir:literal )* }) => {

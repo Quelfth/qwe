@@ -3,17 +3,48 @@ use std::ops::Range;
 use tree_sitter::{QueryCapture, QueryCursor};
 
 use crate::{
+    aprintln::aprintln,
     document::{Document, diagnostics::Severity},
     ix::{Byte, Ix},
-    lang::Highlights,
-    util::MapBounds,
+    lang::{Highlights, Zebra},
+    util::{CharClass, MapBounds},
 };
 
 pub mod predicate;
 
 pub struct Highlight {
     pub range: Range<Ix<Byte>>,
-    pub scope: Vec<String>,
+    pub scope: Scope,
+}
+
+pub struct Scope(pub Vec<String>);
+
+impl Scope {
+    fn from_capture_name(name: &str) -> Self {
+        let name = if let Some((name, _)) = name.split_once("_") {
+            name
+        } else {
+            name
+        };
+        Self(name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>())
+    }
+
+    fn diagnostic(severity: Severity) -> Self {
+        Self(vec![
+            "diagnostic".to_owned(),
+            match severity {
+                Severity::Err => "error",
+                Severity::Warn => "warning",
+                Severity::Info => "info",
+                Severity::Hint => "hint",
+            }
+            .to_owned(),
+        ])
+    }
+
+    fn zebra() -> Self {
+        Self(vec!["zebra".to_owned()])
+    }
 }
 
 impl Document {
@@ -28,29 +59,80 @@ impl Document {
         }
 
         if let Some(lang) = self.language() {
-            let query = lang.query::<Highlights>();
-            for QueryCapture { node, index } in self.query_captures(qc!(), &cx, query) {
-                let name = query.capture_names()[*index as usize];
+            let hl_query = lang.query::<Highlights>();
+            for QueryCapture { node, index } in self.query_captures(qc!(), &cx, hl_query) {
+                let name = hl_query.capture_names()[*index as usize];
                 let range = node.byte_range().map_bounds(Ix::new);
                 highlight_scopes.push(Highlight {
-                    scope: name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>(),
+                    scope: Scope::from_capture_name(name),
                     range,
                 });
+            }
+            let zebra = lang.query::<Zebra>();
+            for QueryCapture { node, index } in self.query_captures(qc!(), &cx, zebra) {
+                let name = zebra.capture_names()[*index as usize];
+                if name != "zebra" {
+                    continue;
+                }
+                let range = node.byte_range().map_bounds(Ix::<Byte>::new);
+                let mut i = range.start;
+                let mut j = i + Ix::new(1);
+                let char_at =
+                    |i| CharClass::of(self.text().byte_slice(i..).unwrap().chars().next().unwrap());
+                let mut last_char = char_at(i);
+                let mut even = false;
+                while i < range.end {
+                    if j >= range.end {
+                        if even {
+                            highlight_scopes.push(Highlight {
+                                scope: Scope::zebra(),
+                                range: i..j,
+                            });
+                        }
+                        break;
+                    }
+
+                    let char = char_at(j);
+                    'continu: {
+                        use CharClass::*;
+                        match (last_char, char) {
+                            (Cap, Lower) => {
+                                if i == range.start || char_at(i - Ix::new(1)) != Cap {
+                                    break 'continu;
+                                }
+                                if even {
+                                    highlight_scopes.push(Highlight {
+                                        scope: Scope::zebra(),
+                                        range: i..j - Ix::new(1),
+                                    });
+                                }
+                                even ^= true;
+                                i = j - Ix::new(1);
+                            }
+                            _ => {
+                                if last_char != char {
+                                    if even {
+                                        highlight_scopes.push(Highlight {
+                                            scope: Scope::zebra(),
+                                            range: i..j,
+                                        });
+                                    }
+                                    even ^= true;
+                                    i = j;
+                                }
+                            }
+                        }
+                    }
+                    j += Ix::new(1);
+                    last_char = char;
+                }
             }
         }
 
         for (range, diagnostic) in self.diagnostics.ranges() {
-            let severity = match diagnostic.severity {
-                Severity::Err => "error",
-                Severity::Warn => "warning",
-                Severity::Info => "info",
-                Severity::Hint => "hint",
-            }
-            .to_owned();
-
             highlight_scopes.push(Highlight {
                 range: range.clone(),
-                scope: vec!["diagnostic".to_owned(), severity],
+                scope: Scope::diagnostic(diagnostic.severity),
             })
         }
 

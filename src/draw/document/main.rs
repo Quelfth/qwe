@@ -79,9 +79,10 @@ impl Document {
                         .iter()
                         .filter(|Highlight { range, .. }| range.contains(&(byte + line_byte)))
                         .map(|Highlight { scope, .. }| {
-                            scope.iter().map(|s| &**s).collect::<Vec<_>>()
+                            scope.0.iter().map(|s| &**s).collect::<Vec<_>>()
                         })
                         .collect::<Vec<_>>();
+
                     let hl_style = (Style::fg(rgb! {0xcca4a4}) + Style::bg(rgb! {0x200000}))
                         + theme().highlight(&hl_scopes);
                     canvas[(i, j)] = Cell {

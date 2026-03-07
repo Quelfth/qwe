@@ -1,4 +1,6 @@
 
+zebra = d;
+
 diagnostic.error = u:curl u.error;
 diagnostic.warning = u:curl u.warning;
 diagnostic.hint = b.hint-bg;
