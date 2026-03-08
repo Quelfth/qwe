@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::{str::FromStr, ops::Range};
 
 use crate::ix::{Column, Ix, Line, Utf16};
 
@@ -13,6 +13,24 @@ impl Pos {
         line: Ix::new(0),
         column: Ix::new(0),
     };
+}
+
+impl FromStr for Pos {
+    type Err = <usize as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(if let Some((line, col)) = s.split_once(":") {
+            Self {
+                line: Ix::new(line.parse::<usize>()?.saturating_sub(1)),
+                column: Ix::new(col.parse::<usize>()?.saturating_sub(1)),
+            }
+        } else {
+            Self {
+                line: Ix::new(s.parse::<usize>()?.saturating_sub(1)),
+                column: Ix::new(0),
+            }
+        })
+    }
 }
 
 pub enum Region {

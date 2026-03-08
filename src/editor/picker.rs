@@ -28,28 +28,33 @@ pub struct Picker {
 impl Picker {
     fn r#type(&mut self, char: char) {
         self.term.push(char);
+        self.scroll = 0;
     }
 
     fn backspace(&mut self) {
         self.term.pop();
+        self.scroll = 0;
     }
 
     pub fn file() -> Self {
         let mut picks = Vec::new();
         if let Ok(cwd) = &env::current_dir() {
-            for dir in walkdir::WalkDir::new(cwd)
+            for entry in walkdir::WalkDir::new(cwd)
                 .into_iter()
                 .filter_map(|d| d.ok())
             {
-                let string = dir
+                if !entry.file_type().is_file() {
+                    continue;
+                }
+                let string = entry
                     .path()
                     .strip_prefix(cwd)
-                    .unwrap_or(dir.path())
+                    .unwrap_or(entry.path())
                     .to_string_lossy()
                     .to_string();
                 picks.push(Pick {
                     string,
-                    file: dir.path().into(),
+                    file: entry.path().into(),
                     pos: Pos::ZERO,
                 })
             }
@@ -151,14 +156,6 @@ impl Gadget for Picker {
                 self.scroll = self.scroll.saturating_sub(4);
                 xx!(Editor::noop)
             }
-
-            // KeyEvent {
-            //     code: KeyCode::Esc,
-            //     kind: KeyEventKind::Press,
-            //     ..
-            // } => {
-            //     xx!(Editor::close_gadget)
-            // }
             _ => None,
         }
     }

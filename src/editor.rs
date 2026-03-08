@@ -158,10 +158,14 @@ impl Editor {
         Ok(())
     }
 
-    fn jump_to(&mut self, dest: Pos) {
+    pub fn jump_to(&mut self, dest: Pos) {
         self.doc.cursors = Some(CursorState::Select(SelectCursors::one(
             SelectCursor::one_pos(dest),
         )))
+    }
+
+    pub fn scroll_main_cursor_on_screen(&mut self) {
+        self.doc.scroll_main_cursor_on_screen();
     }
 
     fn select_ranges(

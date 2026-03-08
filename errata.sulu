@@ -67,6 +67,7 @@ o.declare.type.enum = f.enum;
 o.declare.type.struct = f.struct;
 o.declare.trait = f.trait;
 o.declare.value = f.key-value;
+o.declare.value.variant = f.variant;
 o.declare.virtual = f.class;
 o.dynamic = f.class;
 o.error = f.exception;

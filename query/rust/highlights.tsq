@@ -128,6 +128,15 @@
 (field_declaration name: (_) @i.value.field)
 (field_declaration ":" @o.type)
 
+; Enum
+
+"enum" @o.declare.type.enum
+(enum_item (type_parameters ["<" "," ">"] @o.declare.type.enum))
+(enum_item (enum_variant_list ["{" "," "}"] @o.declare.type.enum))
+
+(enum_variant (field_declaration_list ["{" "," "}"] @o.declare.value.variant))
+(enum_variant (ordered_field_declaration_list ["(" "," ")"] @o.declare.value.variant))
+
 ; Trait
 
 "trait" @o.declare.trait

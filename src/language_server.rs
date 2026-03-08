@@ -101,7 +101,7 @@ impl LanguageServer {
         }
         let mut line: Ix<Line> = Ix::new(0);
         let mut pos: Ix<Byte> = Ix::new(0);
-        tokens.into_iter().map(
+        tokens.into_iter().filter_map(
             move |lsp_types::SemanticToken {
                       delta_line,
                       delta_start,
@@ -114,13 +114,13 @@ impl LanguageServer {
                 let len: Ix<Utf16> = Ix::new(length as _);
                 line += delta_line;
                 if delta_line > Ix::new(0) {
-                    pos = text.byte_of_line(line).unwrap();
+                    pos = text.byte_of_line(line).unwrap_or(text.byte_len());
                 }
-                let line = text.line(line).unwrap();
-                pos += line.byte_of_utf16_saturating(delta_start);
+                if let Some(line) = text.line(line) {
+                    pos += line.byte_of_utf16_saturating(delta_start);
+                }
                 let len = text
-                    .byte_slice(pos..)
-                    .unwrap()
+                    .byte_slice(pos..)?
                     .byte_of_utf16_saturating(len);
                 let range = pos..pos + len;
 
@@ -132,7 +132,7 @@ impl LanguageServer {
                     .map(|i| legend.mods[i as usize].clone())
                     .collect::<Vec<_>>();
 
-                (range, SemanticToken { r#type, mods })
+                Some((range, SemanticToken { r#type, mods }))
             },
         )
     }

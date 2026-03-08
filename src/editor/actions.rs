@@ -34,6 +34,12 @@ impl Editor {
     pub fn save_file(&mut self) {
         if let Some(path) = self.filepath.as_deref() {
             _ = fs::write(path, self.doc.text().to_string().as_bytes());
+            if let Some(channel) = &self.lsp_send
+                && let Some(lang) = self.doc.language()
+                && let Some(path) = self.filepath.clone()
+            {
+                _ = channel.send(EditorToLspMessage::Save { lang, path });
+            }
         }
     }
 

@@ -38,6 +38,10 @@ pub enum EditorToLspMessage {
     },
     RefreshSemanticTokens,
     Exit,
+    Save {
+        lang: Language,
+        path: Arc<Path>,
+    },
 }
 
 pub struct LspChannels {

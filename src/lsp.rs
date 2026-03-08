@@ -20,17 +20,14 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, Diagnostic, DiagnosticClientCapabilities, DiagnosticRegistrationOptions,
-    DiagnosticServerCapabilities, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    DocumentDiagnosticParams, DocumentDiagnosticReport, DocumentDiagnosticReportKind,
-    DocumentDiagnosticReportPartialResult, DocumentDiagnosticReportResult,
-    FullDocumentDiagnosticReport, InitializeResult, InitializedParams, PublishDiagnosticsParams,
-    RelatedFullDocumentDiagnosticReport, RelatedUnchangedDocumentDiagnosticReport, SemanticToken,
-    SemanticTokens, SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
+    ClientCapabilities, Diagnostic, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
+    DidSaveTextDocumentParams, InitializeResult, InitializedParams,
+    PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, SemanticToken, SemanticTokens,
+    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
     SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
     SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
     SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, TextDocumentClientCapabilities,
-    TextDocumentItem, UnchangedDocumentDiagnosticReport, Url, VersionedTextDocumentIdentifier,
+    TextDocumentIdentifier, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
     WorkspaceClientCapabilities, WorkspaceFolder,
 };
 use tokio::task::JoinHandle;
@@ -69,7 +66,7 @@ struct Server {
 #[derive(Clone, Default)]
 struct ServerCaps {
     semtoks: bool,
-    diagnostics: Option<Option<String>>,
+    //diagnostics: Option<Option<String>>,
 }
 
 impl From<&ServerCapabilities> for ServerCaps {
@@ -90,17 +87,6 @@ impl From<&ServerCapabilities> for ServerCaps {
                             | SemanticTokensFullOptions::Delta { delta: Some(_) }
                     )
                 })
-            }),
-            diagnostics: value.diagnostic_provider.as_ref().map(|d| {
-                let (DiagnosticServerCapabilities::Options(o)
-                | DiagnosticServerCapabilities::RegistrationOptions(
-                    DiagnosticRegistrationOptions {
-                        diagnostic_options: o,
-                        ..
-                    },
-                )) = d;
-
-                o.identifier.clone()
             }),
         }
     }
@@ -168,9 +154,12 @@ impl Server {
                             server_cancel_support: Some(false),
                             augments_syntax_tokens: Some(true),
                         }),
-                        diagnostic: Some(DiagnosticClientCapabilities {
-                            dynamic_registration: Some(false),
-                            related_document_support: Some(false),
+                        publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
+                            related_information: Some(true),
+                            tag_support: None,
+                            version_support: None,
+                            code_description_support: Some(true),
+                            data_support: None,
                         }),
                         ..Default::default()
                     }),
@@ -199,7 +188,7 @@ impl Server {
                     partial_result_params: lsp_types::PartialResultParams {
                         partial_result_token: None,
                     },
-                    text_document: lsp_types::TextDocumentIdentifier { uri: doc_uri },
+                    text_document: TextDocumentIdentifier { uri: doc_uri },
                 })
                 .await?;
             if let Some(semtoks) = semtoks {
@@ -211,83 +200,6 @@ impl Server {
 
         Ok(None)
     }
-
-    pub async fn diagnostics(&mut self, doc_uri: Url) -> async_lsp::Result<Option<Diagnostics>> {
-        if let Some(id) = &self.caps.diagnostics {
-            let mut results = None::<Vec<_>>;
-            let mut relateds = HashMap::new();
-            let diagnostics = self
-                .socket
-                .document_diagnostic(DocumentDiagnosticParams {
-                    text_document: lsp_types::TextDocumentIdentifier { uri: doc_uri },
-                    identifier: id.clone(),
-                    previous_result_id: None,
-                    work_done_progress_params: lsp_types::WorkDoneProgressParams {
-                        work_done_token: None,
-                    },
-                    partial_result_params: lsp_types::PartialResultParams {
-                        partial_result_token: None,
-                    },
-                })
-                .await?;
-
-            let related = match diagnostics {
-                DocumentDiagnosticReportResult::Report(document_diagnostic_report) => {
-                    match document_diagnostic_report {
-                        DocumentDiagnosticReport::Full(RelatedFullDocumentDiagnosticReport {
-                            related_documents,
-                            full_document_diagnostic_report:
-                                FullDocumentDiagnosticReport {
-                                    result_id: _,
-                                    items,
-                                },
-                        }) => {
-                            results.get_or_insert_default().extend(items);
-                            related_documents
-                        }
-                        DocumentDiagnosticReport::Unchanged(
-                            RelatedUnchangedDocumentDiagnosticReport {
-                                related_documents,
-                                unchanged_document_diagnostic_report:
-                                    UnchangedDocumentDiagnosticReport { result_id: _ },
-                            },
-                        ) => related_documents,
-                    }
-                }
-                DocumentDiagnosticReportResult::Partial(
-                    DocumentDiagnosticReportPartialResult { related_documents },
-                ) => related_documents,
-            };
-
-            if let Some(related) = related {
-                for (url, diagnostic) in related {
-                    match diagnostic {
-                        DocumentDiagnosticReportKind::Full(FullDocumentDiagnosticReport {
-                            items,
-                            ..
-                        }) => {
-                            relateds.insert(url, items);
-                        }
-                        DocumentDiagnosticReportKind::Unchanged(
-                            UnchangedDocumentDiagnosticReport { .. },
-                        ) => {}
-                    }
-                }
-            }
-            return Ok(Some(Diagnostics {
-                main: results,
-                related: relateds,
-            }));
-        }
-
-        Ok(None)
-    }
-}
-
-pub struct Diagnostics {
-    pub main: Option<Vec<Diagnostic>>,
-    #[expect(unused)]
-    pub related: HashMap<Url, Vec<Diagnostic>>,
 }
 
 pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
@@ -337,15 +249,6 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                             .outgoing
                             .send(LspToEditorMessage::SemanticTokens { tokens })?;
                     }
-                    if let Some(Diagnostics { main, .. }) =
-                        server.diagnostics(doc_uri.clone()).await?
-                        && let Some(diagnostics) = main
-                    {
-                        channels.outgoing.send(LspToEditorMessage::Diagnostics {
-                            uri: doc_uri.clone(),
-                            diagnostics,
-                        })?;
-                    }
 
                     init_delay_queue.push_back((lang, doc_uri, Instant::now()))
                 }
@@ -357,17 +260,6 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                 channels
                                     .outgoing
                                     .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
-                            }
-
-                            if let Some(Diagnostics {
-                                main: diagnostics, ..
-                            }) = server.diagnostics(doc.clone()).await?
-                                && let Some(diagnostics) = diagnostics
-                            {
-                                channels.outgoing.send(LspToEditorMessage::Diagnostics {
-                                    uri: doc,
-                                    diagnostics,
-                                })?;
                             }
                         }
                     }
@@ -392,15 +284,15 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                 .outgoing
                                 .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
                         }
-                        if let Some(Diagnostics {
-                            main: diagnostics, ..
-                        }) = server.diagnostics(uri.clone()).await?
-                            && let Some(diagnostics) = diagnostics
-                        {
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::Diagnostics { uri, diagnostics })?;
-                        }
+                    }
+                }
+                EditorToLspMessage::Save { lang, path } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        server.socket.did_save(DidSaveTextDocumentParams {
+                            text_document: TextDocumentIdentifier { uri },
+                            text: None,
+                        })?;
                     }
                 }
             }

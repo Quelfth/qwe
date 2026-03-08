@@ -12,21 +12,18 @@ use std::{
     fs, io,
     panic::{self},
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::{Arc, mpsc},
     time::Duration,
 };
 
-use clap::{ArgAction, Parser};
+use clap::{ArgAction::SetTrue, Parser};
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll},
     terminal::{self},
 };
 
 use crate::{
-    aprintln::{aprint, aprintln},
-    editor::Editor,
-    lsp::{channel::EditorToLspMessage, run_lsp_thread},
-    terminal_size::set_terminal_size,
+    aprintln::{aprint, aprintln}, editor::Editor, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, pos::Pos, terminal_size::{set_terminal_size}
 };
 
 mod aprintln;
@@ -53,14 +50,37 @@ mod terminal_size;
 mod theme;
 mod ts;
 mod util;
+mod cli;
 
 #[derive(Parser)]
 struct Args {
     path: Option<PathBuf>,
-    #[clap(short, long, action = ArgAction::SetTrue)]
+    #[arg(
+        short, 
+        long, 
+        action = SetTrue,
+        requires("path"),
+    )]
     new: bool,
-    #[clap(short, long, action = ArgAction::SetTrue)]
+    #[arg(
+        short,
+        long,
+        action = SetTrue,
+        requires("new"),
+    )]
     dirs: bool,
+    #[arg(
+        short,
+        long,
+        num_args(0..),
+        conflicts_with("path"),
+    )]
+    find: Vec<String>,
+    #[arg(
+        short,
+        long,
+    )]
+    line: Option<Pos>,
 }
 
 thread_local! {
@@ -73,7 +93,13 @@ fn is_main_thread() -> bool {
 
 fn main() -> io::Result<()> {
     IS_MAIN_THREAD.set(true);
-    let Args { path, new, dirs } = Args::parse();
+    let Args {
+        path,
+        new,
+        dirs,
+        find,
+        line,
+    } = Args::parse();
 
     let default_hook = panic::take_hook();
     panic::set_hook(Box::new(move |info| {
@@ -97,6 +123,20 @@ fn main() -> io::Result<()> {
         default_hook(info);
     }));
     setup::setup()?;
+    let path = if let Some(path) = path {
+        Some(path)
+    } else {
+        if let Ok(dir) = std::env::current_dir() {
+            walkdir::WalkDir::new(dir)
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .filter(|e| e.file_type().is_file())
+                .map(|e| e.path().to_owned())
+                .find(|e| find.iter().all(|f| e.to_string_lossy().contains(f)))
+        } else {
+            None
+        }
+    };
     let result = try {
         let path = if let Some(path) = path {
             Some(if !new {
@@ -109,7 +149,7 @@ fn main() -> io::Result<()> {
         } else {
             None
         };
-        run(path)?
+        run(path, line)?
     };
     setup::teardown()?;
     result?;
@@ -150,13 +190,13 @@ impl PathedFile {
     }
 }
 
-fn run(file: Option<PathedFile>) -> io::Result<()> {
+fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
     let (width, height) = terminal::size()?;
     set_terminal_size(width, height);
 
     let mut editor = Editor::new();
-    let (send_lsp_to_editor, recv_lsp_to_editor) = std::sync::mpsc::channel();
-    let (send_editor_to_lsp, recv_editor_to_lsp) = std::sync::mpsc::channel();
+    let (send_lsp_to_editor, recv_lsp_to_editor) = mpsc::channel();
+    let (send_editor_to_lsp, recv_editor_to_lsp) = mpsc::channel();
     editor.set_lsp_channels(send_editor_to_lsp, recv_lsp_to_editor);
     if let Some(file) = file {
         editor.open_new_doc(file);
@@ -169,6 +209,11 @@ fn run(file: Option<PathedFile>) -> io::Result<()> {
         incoming: recv_editor_to_lsp,
     })?;
 
+    if let Some(pos) = pos {
+        editor.jump_to(pos);
+        *editor.doc().view_height.lock() = Ix::new(height as _);
+        editor.scroll_main_cursor_on_screen();
+    }
     editor.draw()?;
 
     loop {

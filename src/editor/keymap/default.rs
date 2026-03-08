@@ -77,7 +77,7 @@ impl Default for Keymaps {
                 (Key::char('v'), Mapping::once(Editor::paste)),
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
-                (Key::alt('^'), Mapping::once(Editor::inspect)),
+                (Key::code(F(6)), Mapping::once(Editor::inspect)),
                 (
                     Key::code(F(5)),
                     Mapping::once(Editor::refresh_semantic_tokens),
@@ -121,7 +121,7 @@ impl Default for Keymaps {
                 (Key::char('v'), Mapping::once(Editor::paste)),
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
-                (Key::alt('^'), Mapping::once(Editor::inspect)),
+                (Key::code(F(6)), Mapping::once(Editor::inspect)),
             ])),
         }
     }

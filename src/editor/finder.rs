@@ -4,8 +4,12 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use regex::Regex;
 
 use crate::{
+    color,
+    draw::screen::Canvas,
     editor::{Editor, gadget::Gadget},
+    grapheme::GraphemeExt,
     ix::{Byte, Ix},
+    style::Style,
 };
 
 pub struct Haystack {
@@ -67,6 +71,14 @@ impl Gadget for Finder {
                 xx!(Editor::close_gadget)
             }
             _ => None,
+        }
+    }
+
+    fn draw(&self, mut canvas: Canvas<'_>) {
+        for (i, g) in (0..canvas.width()).zip(self.regex.graphemes()) {
+            let cell = &mut canvas[(0, i)];
+            cell.grapheme = g;
+            cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into()
         }
     }
 }
