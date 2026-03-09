@@ -12,7 +12,7 @@ use std::{
     fs, io,
     panic::{self},
     path::{Path, PathBuf},
-    sync::{Arc, mpsc},
+    sync::{Arc},
     time::Duration,
 };
 
@@ -21,6 +21,8 @@ use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll},
     terminal::{self},
 };
+
+use tokio::sync::mpsc;
 
 use crate::{
     aprintln::{aprint, aprintln}, editor::Editor, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, pos::Pos, terminal_size::{set_terminal_size}
@@ -195,8 +197,8 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
     set_terminal_size(width, height);
 
     let mut editor = Editor::new();
-    let (send_lsp_to_editor, recv_lsp_to_editor) = mpsc::channel();
-    let (send_editor_to_lsp, recv_editor_to_lsp) = mpsc::channel();
+    let (send_lsp_to_editor, recv_lsp_to_editor) = std::sync::mpsc::channel();
+    let (send_editor_to_lsp, recv_editor_to_lsp) = mpsc::unbounded_channel();
     editor.set_lsp_channels(send_editor_to_lsp, recv_lsp_to_editor);
     if let Some(file) = file {
         editor.open_new_doc(file);

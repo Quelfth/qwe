@@ -16,6 +16,14 @@ impl<R, T> Default for RangeSequence<R, T> {
 }
 
 impl<R, T> RangeSequence<R, T> {
+    pub fn from_abs(mut ranges: Vec<(Range<R>, T)>) -> Self
+    where
+        R: Copy + Default + Ord + Sub<Output = R>,
+    {
+        ranges.sort_by_key(|r| r.0.start);
+        Self::from_abs_ordered(ranges)
+    }
+
     pub fn from_abs_ordered(ranges: impl IntoIterator<Item = (Range<R>, T)>) -> Self
     where
         R: Copy + Default + Sub<Output = R>,

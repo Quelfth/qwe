@@ -9,7 +9,6 @@ use std::{
     pin::Pin,
     process::Stdio,
     result::Result,
-    sync::mpsc::{self, Receiver, Sender},
     thread,
     time::{Duration, Instant},
 };
@@ -20,19 +19,29 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, Diagnostic, DidChangeTextDocumentParams, DidOpenTextDocumentParams,
-    DidSaveTextDocumentParams, InitializeResult, InitializedParams,
-    PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, SemanticToken, SemanticTokens,
-    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
-    SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
-    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
-    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, TextDocumentClientCapabilities,
-    TextDocumentIdentifier, TextDocumentItem, Url, VersionedTextDocumentIdentifier,
+    ClientCapabilities, ConfigurationParams, Diagnostic, DiagnosticTag,
+    DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
+    DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+    FileChangeType, FileEvent, InitializeResult, InitializedParams, LogMessageParams,
+    LogTraceParams, PartialResultParams, ProgressParams, PublishDiagnosticsClientCapabilities,
+    PublishDiagnosticsParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities,
+    SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams,
+    SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult,
+    SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities,
+    ServerCapabilities, ShowDocumentParams, ShowDocumentResult, TagSupport,
+    TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem,
+    TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier,
+    WindowClientCapabilities, WorkDoneProgressCreateParams, WorkDoneProgressParams,
     WorkspaceClientCapabilities, WorkspaceFolder,
 };
-use tokio::task::JoinHandle;
+use serde_json as json;
+use tokio::{
+    sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    task::JoinHandle,
+    time::timeout,
+};
 use tower::ServiceBuilder;
-use tracing::Level;
+use tracing::{Level, info};
 
 use crate::{
     aprintln::aprintln,
@@ -45,7 +54,9 @@ use channel::LspChannels;
 pub mod channel;
 
 pub fn run_lsp_thread(channels: LspChannels) -> io::Result<thread::JoinHandle<()>> {
-    let runtime = tokio::runtime::Builder::new_current_thread().build()?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()?;
     let handle = thread::spawn(move || {
         let result = runtime.block_on(lsp_thread(channels));
         if let Err(e) = result {
@@ -58,7 +69,7 @@ struct Server {
     join: JoinHandle<async_lsp::Result<()>>,
     socket: ServerSocket,
     caps: ServerCaps,
-    client_channel: Receiver<ClientMessage>,
+    client_channel: UnboundedReceiver<ClientMessage>,
     docs: Vec<Url>,
     _process: Child,
 }
@@ -66,11 +77,11 @@ struct Server {
 #[derive(Clone, Default)]
 struct ServerCaps {
     semtoks: bool,
-    //diagnostics: Option<Option<String>>,
 }
 
 impl From<&ServerCapabilities> for ServerCaps {
     fn from(value: &ServerCapabilities) -> Self {
+        //aprintln!("Lsp Capabilities:\n{:#?}", value);
         Self {
             semtoks: value.semantic_tokens_provider.as_ref().is_some_and(|s| {
                 let (SemanticTokensServerCapabilities::SemanticTokensOptions(o)
@@ -94,7 +105,7 @@ impl From<&ServerCapabilities> for ServerCaps {
 
 impl Server {
     fn spawn(command: &str) -> anyhow::Result<Self> {
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = tokio::sync::mpsc::unbounded_channel();
         let (r#loop, socket) = async_lsp::MainLoop::new_client(|_| {
             ServiceBuilder::new()
                 .layer(TracingLayer::default())
@@ -137,6 +148,11 @@ impl Server {
                         semantic_tokens: Some(SemanticTokensWorkspaceClientCapabilities {
                             refresh_support: Some(true),
                         }),
+                        configuration: Some(true),
+                        did_change_watched_files: Some(DidChangeWatchedFilesClientCapabilities {
+                            dynamic_registration: None,
+                            relative_pattern_support: None,
+                        }),
                         ..Default::default()
                     }),
                     text_document: Some(TextDocumentClientCapabilities {
@@ -156,11 +172,24 @@ impl Server {
                         }),
                         publish_diagnostics: Some(PublishDiagnosticsClientCapabilities {
                             related_information: Some(true),
-                            tag_support: None,
-                            version_support: None,
+                            version_support: Some(true),
+                            tag_support: Some(TagSupport {
+                                value_set: vec![
+                                    DiagnosticTag::UNNECESSARY,
+                                    DiagnosticTag::DEPRECATED,
+                                ],
+                            }),
                             code_description_support: Some(true),
-                            data_support: None,
+                            ..Default::default()
                         }),
+                        synchronization: Some(TextDocumentSyncClientCapabilities {
+                            did_save: Some(true),
+                            ..Default::default()
+                        }),
+                        ..Default::default()
+                    }),
+                    window: Some(WindowClientCapabilities {
+                        work_done_progress: Some(true),
                         ..Default::default()
                     }),
                     ..Default::default()
@@ -182,10 +211,10 @@ impl Server {
             let semtoks = self
                 .socket
                 .semantic_tokens_full(SemanticTokensParams {
-                    work_done_progress_params: lsp_types::WorkDoneProgressParams {
+                    work_done_progress_params: WorkDoneProgressParams {
                         work_done_token: None,
                     },
-                    partial_result_params: lsp_types::PartialResultParams {
+                    partial_result_params: PartialResultParams {
                         partial_result_token: None,
                     },
                     text_document: TextDocumentIdentifier { uri: doc_uri },
@@ -202,18 +231,19 @@ impl Server {
     }
 }
 
-pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
+pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_max_level(Level::DEBUG)
         .with_ansi(false)
         .with_writer(io::stderr)
         .init();
+    info!("wow!");
 
     let mut servers = HashMap::new();
     let mut init_delay_queue = VecDeque::new();
 
     loop {
-        if let Ok(msg) = channels.incoming.recv_timeout(Duration::from_millis(20)) {
+        if let Ok(Some(msg)) = timeout(Duration::from_millis(20), channels.incoming.recv()).await {
             match msg {
                 EditorToLspMessage::OpenDoc { lang, path, text } => {
                     let Some(LangLspInfo {
@@ -239,7 +269,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                         text_document: TextDocumentItem {
                             uri: doc_uri.clone(),
                             language_id: lang_id.to_owned(),
-                            version: 0,
+                            version: 1,
                             text,
                         },
                     })?;
@@ -290,17 +320,24 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     if let Some(server) = servers.get_mut(&lang) {
                         let uri = Url::from_file_path(path.canonicalize()?).unwrap();
                         server.socket.did_save(DidSaveTextDocumentParams {
-                            text_document: TextDocumentIdentifier { uri },
+                            text_document: TextDocumentIdentifier { uri: uri.clone() },
                             text: None,
                         })?;
+                        server
+                            .socket
+                            .did_change_watched_files(DidChangeWatchedFilesParams {
+                                changes: vec![FileEvent {
+                                    uri,
+                                    typ: FileChangeType::CHANGED,
+                                }],
+                            })?;
                     }
                 }
             }
         }
         for server in servers.values_mut() {
-            if let Ok(msg) = server
-                .client_channel
-                .recv_timeout(Duration::from_millis(20))
+            if let Ok(Some(msg)) =
+                timeout(Duration::from_millis(20), server.client_channel.recv()).await
             {
                 match msg {
                     ClientMessage::SemanticTokensRefresh => {
@@ -324,23 +361,6 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 }
             }
         }
-        const INIT_DELAY: Duration = Duration::from_millis(500);
-        if init_delay_queue
-            .front()
-            .is_some_and(|f| f.2.elapsed() > INIT_DELAY)
-        {
-            let Some((lang, uri, _)) = init_delay_queue.pop_front() else {
-                unreachable!()
-            };
-
-            let server = servers.get_mut(&lang).unwrap();
-
-            if let Some(tokens) = server.semantic_tokens(uri).await? {
-                channels
-                    .outgoing
-                    .send(LspToEditorMessage::SemanticTokens { tokens })?;
-            }
-        }
     }
 
     for server in servers.into_values() {
@@ -359,7 +379,7 @@ enum ClientMessage {
 }
 
 pub struct Client {
-    channel: Sender<ClientMessage>,
+    channel: UnboundedSender<ClientMessage>,
 }
 
 impl Client {
@@ -376,6 +396,8 @@ impl Client {
 
 pub struct Stop;
 
+type Response<T> = Pin<Box<dyn Future<Output = Result<T, ResponseError>> + Send + 'static>>;
+
 impl LanguageClient for Client {
     type Error = ResponseError;
     type NotifyResult = ControlFlow<async_lsp::Result<()>>;
@@ -384,7 +406,6 @@ impl LanguageClient for Client {
         let PublishDiagnosticsParams {
             uri, diagnostics, ..
         } = params;
-
         _ = self
             .channel
             .send(ClientMessage::PublishDiagnostics { uri, diagnostics });
@@ -392,14 +413,42 @@ impl LanguageClient for Client {
         ControlFlow::Continue(())
     }
 
-    fn semantic_tokens_refresh(
-        &mut self,
-        (): (),
-    ) -> Pin<Box<dyn Future<Output = Result<(), Self::Error>> + Send + 'static>> {
+    fn work_done_progress_create(&mut self, _: WorkDoneProgressCreateParams) -> Response<()> {
+        Box::pin(async move {
+
+            Ok(())
+        })
+    }
+
+    fn progress(&mut self, _: ProgressParams) -> Self::NotifyResult {
+        ControlFlow::Continue(())
+    }
+
+    fn semantic_tokens_refresh(&mut self, (): ()) -> Response<()> {
         let channel = self.channel.clone();
         Box::pin(async move {
             channel.send(ClientMessage::SemanticTokensRefresh).unwrap();
             Ok(())
         })
+    }
+
+    fn configuration(&mut self, _: ConfigurationParams) -> Response<Vec<json::Value>> {
+        Box::pin(async { Ok(vec![]) })
+    }
+
+    fn workspace_folders(&mut self, (): ()) -> Response<Option<Vec<WorkspaceFolder>>> {
+        Box::pin(async { Ok(None) })
+    }
+
+    fn show_document(&mut self, _: ShowDocumentParams) -> Response<ShowDocumentResult> {
+        Box::pin(async { Ok(ShowDocumentResult { success: false }) })
+    }
+
+    fn log_message(&mut self, _: LogMessageParams) -> Self::NotifyResult {
+        ControlFlow::Continue(())
+    }
+
+    fn log_trace(&mut self, _: LogTraceParams) -> Self::NotifyResult {
+        ControlFlow::Continue(())
     }
 }

@@ -3,11 +3,10 @@ use std::{
     io,
     ops::Range,
     path::Path,
-    sync::{
-        Arc,
-        mpsc::{Receiver, Sender},
-    },
+    sync::{Arc, mpsc::Receiver},
 };
+
+use tokio::sync::mpsc::UnboundedSender;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use mutx::Mutex;
@@ -52,7 +51,7 @@ pub struct Editor {
     pub gadget: Option<Box<dyn Gadget>>,
     pub clipboard: Clipboard,
     pub lsp_recv: Option<Receiver<LspToEditorMessage>>,
-    pub lsp_send: Option<Sender<EditorToLspMessage>>,
+    pub lsp_send: Option<UnboundedSender<EditorToLspMessage>>,
     pub language_servers: HashMap<Language, Vec<LanguageServer>>,
 }
 
@@ -90,7 +89,7 @@ impl Editor {
 
     pub fn set_lsp_channels(
         &mut self,
-        send: Sender<EditorToLspMessage>,
+        send: UnboundedSender<EditorToLspMessage>,
         recv: Receiver<LspToEditorMessage>,
     ) {
         self.lsp_recv = Some(recv);

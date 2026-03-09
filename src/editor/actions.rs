@@ -34,6 +34,7 @@ impl Editor {
     pub fn save_file(&mut self) {
         if let Some(path) = self.filepath.as_deref() {
             _ = fs::write(path, self.doc.text().to_string().as_bytes());
+            crate::aprintln::aprintln!("saved");
             if let Some(channel) = &self.lsp_send
                 && let Some(lang) = self.doc.language()
                 && let Some(path) = self.filepath.clone()

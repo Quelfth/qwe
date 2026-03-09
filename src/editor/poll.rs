@@ -36,29 +36,32 @@ impl Editor {
                         }) {
                             continue;
                         }
-                        self.doc.diagnostics =
-                            RangeSequence::from_abs_ordered(diagnostics.into_iter().filter_map(
-                                |lsp_types::Diagnostic {
-                                     range: lsp_types::Range { start, end },
-                                     severity,
-                                     message,
-                                     ..
-                                 }| {
-                                    Some((
-                                        self.doc
-                                            .text()
-                                            .byte_of_utf16_pos(Utf16Pos::from_lsp_pos(start))?
-                                            ..self
-                                                .doc
-                                                .text()
-                                                .byte_of_utf16_pos(Utf16Pos::from_lsp_pos(end))?,
-                                        Diagnostic {
-                                            severity: Severity::from_lsp(severity),
-                                            message,
-                                        },
-                                    ))
-                                },
-                            ));
+                        self.doc.diagnostics = RangeSequence::from_abs(
+                            diagnostics
+                                .into_iter()
+                                .map(
+                                    |lsp_types::Diagnostic {
+                                         range: lsp_types::Range { start, end },
+                                         severity,
+                                         message,
+                                         ..
+                                     }| {
+                                        (
+                                            self.doc.text().byte_of_utf16_pos_saturating(
+                                                Utf16Pos::from_lsp_pos(start),
+                                            )
+                                                ..self.doc.text().byte_of_utf16_pos_saturating(
+                                                    Utf16Pos::from_lsp_pos(end),
+                                                ),
+                                            Diagnostic {
+                                                severity: Severity::from_lsp(severity),
+                                                message,
+                                            },
+                                        )
+                                    },
+                                )
+                                .collect(),
+                        );
                         self.draw()?;
                     }
                 }
@@ -73,7 +76,10 @@ impl Editor {
                 lang,
                 path: path.clone(),
                 changes: self.doc.lsp_changes.drain(..).map(Into::into).collect(),
-                version: self.doc.lsp_version,
+                version: {
+                    self.doc.lsp_version += 1;
+                    self.doc.lsp_version
+                },
             });
         }
         Ok(())

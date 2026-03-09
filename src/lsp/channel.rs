@@ -1,12 +1,10 @@
 use std::{
     path::Path,
-    sync::{
-        Arc,
-        mpsc::{Receiver, Sender},
-    },
+    sync::{Arc, mpsc::Sender},
 };
 
 use lsp_types::{Diagnostic, InitializeResult, SemanticToken, TextDocumentContentChangeEvent, Url};
+use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::lang::Language;
 
@@ -45,6 +43,6 @@ pub enum EditorToLspMessage {
 }
 
 pub struct LspChannels {
-    pub incoming: Receiver<EditorToLspMessage>,
+    pub incoming: UnboundedReceiver<EditorToLspMessage>,
     pub outgoing: Sender<LspToEditorMessage>,
 }

@@ -71,7 +71,7 @@ impl Document {
             cursors,
             text,
             lsp_changes: Vec::new(),
-            lsp_version: 0,
+            lsp_version: 1,
             save_prime_instant: None,
         }
     }
@@ -635,16 +635,15 @@ impl Document {
     fn upkeep_delete(&mut self, range: Range<Ix<Byte>>) {
         self.tree_delete(range.clone());
         self.lsp_delete(range.clone());
-        self.semtoks
-            .edit_delete(range.start, range.end - range.start);
-        self.diagnostics
-            .edit_delete(range.start, range.end - range.start);
+        let len = range.end - range.start;
+        self.semtoks.edit_delete(range.start, len);
+        self.diagnostics.edit_delete(range.start, len);
     }
 
     fn upkeep_insert(&mut self, pos: Ix<Byte>, text: String) {
         let len = Ix::new(text.len());
-        self.semtoks.edit_insert(pos, len);
         self.diagnostics.edit_insert(pos, len);
+        self.semtoks.edit_insert(pos, len);
         self.lsp_insert(pos, text);
         self.tree_insert(pos, len);
     }
