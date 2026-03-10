@@ -253,6 +253,16 @@ impl Rope {
         })
     }
 
+    pub fn utf16_pos_of_pos(&self, pos: Pos) -> Option<Utf16Pos> {
+        let line = self.line(pos.line)?;
+        Some(Utf16Pos {
+            line: pos.line,
+            column: line
+                .utf16_of_byte(line.columns_to_bytes(pos.column))
+                .unwrap(),
+        })
+    }
+
     pub fn byte_of_utf16_pos(&self, utf16_pos: Utf16Pos) -> Option<Ix<Byte>> {
         let line_byte = self.byte_of_line(utf16_pos.line)?;
         let line = self.line(utf16_pos.line)?;

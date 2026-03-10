@@ -17,8 +17,14 @@ impl Editor {
         self.doc.insert_return();
     }
 
-    pub fn insert_tab(&mut self) {
-        self.doc.insert_tab()
+    // pub fn insert_tab(&mut self) {
+    //     _ = self.doc.insert_tab();
+    // }
+
+    pub fn insert_tab_else_complete(&mut self) {
+        if self.doc.insert_tab().is_err() {
+            self.complete();
+        }
     }
 
     pub fn tab_out(&mut self) {

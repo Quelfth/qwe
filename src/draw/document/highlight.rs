@@ -100,7 +100,7 @@ impl Document {
                         use CharClass::*;
                         match (last_char, char) {
                             (Cap, Lower) => {
-                                if i == range.start || char_at(i - Ix::new(1)) != Cap {
+                                if j < range.start + Ix::new(2) || char_at(j - Ix::new(2)) != Cap {
                                     break 'continu;
                                 }
                                 if even {

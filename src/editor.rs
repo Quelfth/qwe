@@ -33,12 +33,14 @@ use crate::{
 
 mod actions;
 mod clipboard;
+pub mod completer;
 pub mod cursors;
 pub mod finder;
 pub mod gadget;
 mod inspect;
 pub mod jump_labels;
 mod keymap;
+pub mod markdown_view;
 pub mod picker;
 mod poll;
 

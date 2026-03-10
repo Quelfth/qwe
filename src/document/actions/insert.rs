@@ -36,7 +36,8 @@ impl Document {
         self.do_insert(|doc, pos, _| doc.return_change(pos))
     }
 
-    pub fn insert_tab(&mut self) {
+    pub fn insert_tab(&mut self) -> Result<(), ()> {
+        let mut success = false;
         if let Some(c) = &self.cursors {
             for i in c.indices() {
                 match self.cursors.as_ref().unwrap() {
@@ -45,6 +46,7 @@ impl Document {
                         let line = self.text.line(cursor.pos.line);
                         if line.is_none_or(|l| l.chars().all(char::is_whitespace)) {
                             self.cursors.as_mut().unwrap().assume_insert_mut()[i].tab();
+                            success = true;
                         } else if {
                             let line = line.unwrap();
 
@@ -56,12 +58,15 @@ impl Document {
                             let ind = Ix::new(TAB_WIDTH) - rem;
 
                             self.do_insert_at_index(i, insert_effect(&indent_string(ind)));
+                            success = true;
                         }
                     }
                     _ => todo!(),
                 }
             }
         }
+
+        if success { Ok(()) } else { Err(()) }
     }
 
     pub fn tab_out(&mut self) {

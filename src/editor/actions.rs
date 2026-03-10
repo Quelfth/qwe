@@ -17,6 +17,7 @@ use crate::{
 mod insert;
 mod line_select;
 mod select;
+mod lsp;
 
 impl Editor {
     pub fn scroll_up(&mut self, lines: usize) {

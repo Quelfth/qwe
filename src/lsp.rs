@@ -19,20 +19,22 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, ConfigurationParams, Diagnostic, DiagnosticTag,
+    ClientCapabilities, CompletionClientCapabilities, CompletionList, CompletionParams,
+    CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag,
     DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
     DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-    FileChangeType, FileEvent, InitializeResult, InitializedParams, LogMessageParams,
-    LogTraceParams, PartialResultParams, ProgressParams, PublishDiagnosticsClientCapabilities,
-    PublishDiagnosticsParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities,
-    SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams,
-    SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult,
-    SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities,
-    ServerCapabilities, ShowDocumentParams, ShowDocumentResult, TagSupport,
-    TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem,
-    TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier,
-    WindowClientCapabilities, WorkDoneProgressCreateParams, WorkDoneProgressParams,
-    WorkspaceClientCapabilities, WorkspaceFolder,
+    FileChangeType, FileEvent, Hover, HoverClientCapabilities, HoverContents, HoverParams,
+    InitializeResult, InitializedParams, LanguageString, LogMessageParams, LogTraceParams,
+    MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position, ProgressParams,
+    PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, SemanticToken, SemanticTokens,
+    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
+    SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
+    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
+    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams,
+    ShowDocumentResult, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier,
+    TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url,
+    VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams,
+    WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder,
 };
 use serde_json as json;
 use tokio::{
@@ -47,6 +49,7 @@ use crate::{
     aprintln::aprintln,
     lang::LangLspInfo,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    pos::Utf16Pos,
 };
 
 use channel::LspChannels;
@@ -186,6 +189,13 @@ impl Server {
                             did_save: Some(true),
                             ..Default::default()
                         }),
+                        hover: Some(HoverClientCapabilities {
+                            content_format: Some(vec![MarkupKind::Markdown]),
+                            ..Default::default()
+                        }),
+                        completion: Some(CompletionClientCapabilities {
+                            ..Default::default()
+                        }),
                         ..Default::default()
                     }),
                     window: Some(WindowClientCapabilities {
@@ -291,6 +301,85 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                     .outgoing
                                     .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
                             }
+                        }
+                    }
+                }
+                EditorToLspMessage::Hover {
+                    lang,
+                    path,
+                    pos: Utf16Pos { line, column },
+                } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        if let Some(Hover { contents, .. }) = server
+                            .socket
+                            .hover(HoverParams {
+                                text_document_position_params: TextDocumentPositionParams {
+                                    text_document: TextDocumentIdentifier { uri },
+                                    position: Position {
+                                        line: line.inner() as _,
+                                        character: column.inner() as _,
+                                    },
+                                },
+                                work_done_progress_params: WorkDoneProgressParams {
+                                    work_done_token: None,
+                                },
+                            })
+                            .await?
+                        {
+                            let view = match contents {
+                                HoverContents::Scalar(string) => match string {
+                                    MarkedString::String(string) => string,
+                                    MarkedString::LanguageString(LanguageString {
+                                        value, ..
+                                    }) => value,
+                                },
+                                HoverContents::Array(marked_strings) => marked_strings
+                                    .into_iter()
+                                    .map(|s| match s {
+                                        MarkedString::String(string) => string,
+                                        MarkedString::LanguageString(LanguageString {
+                                            value,
+                                            ..
+                                        }) => value + "\n===\n",
+                                    })
+                                    .collect(),
+                                HoverContents::Markup(MarkupContent { value, .. }) => value,
+                            };
+                            channels.outgoing.send(LspToEditorMessage::Hover { view })?;
+                        }
+                    }
+                }
+                EditorToLspMessage::Completion {
+                    lang,
+                    path,
+                    pos: Utf16Pos { line, column },
+                } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        if let Some(response) = server
+                            .socket
+                            .completion(CompletionParams {
+                                text_document_position: TextDocumentPositionParams {
+                                    text_document: TextDocumentIdentifier { uri },
+                                    position: Position {
+                                        line: line.inner() as _,
+                                        character: column.inner() as _,
+                                    },
+                                },
+                                work_done_progress_params: Default::default(),
+                                partial_result_params: Default::default(),
+                                context: None,
+                            })
+                            .await?
+                        {
+                            let items = match response {
+                                CompletionResponse::Array(items) => items,
+                                CompletionResponse::List(CompletionList { items, .. }) => items,
+                            };
+                            channels
+                                .outgoing
+                                .send(LspToEditorMessage::Completion { items })?;
                         }
                     }
                 }
@@ -414,10 +503,7 @@ impl LanguageClient for Client {
     }
 
     fn work_done_progress_create(&mut self, _: WorkDoneProgressCreateParams) -> Response<()> {
-        Box::pin(async move {
-
-            Ok(())
-        })
+        Box::pin(async move { Ok(()) })
     }
 
     fn progress(&mut self, _: ProgressParams) -> Self::NotifyResult {

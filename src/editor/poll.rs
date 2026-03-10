@@ -2,7 +2,7 @@ use std::io;
 
 use crate::{
     document::diagnostics::{Diagnostic, Severity},
-    editor::Editor,
+    editor::{Editor, completer::Completer, markdown_view::MarkdownGadget},
     language_server::LanguageServer,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     pos::Utf16Pos,
@@ -62,6 +62,14 @@ impl Editor {
                                 )
                                 .collect(),
                         );
+                        self.draw()?;
+                    }
+                    Hover { view } => {
+                        self.gadget = Some(Box::new(MarkdownGadget::new(view)));
+                        self.draw()?;
+                    }
+                    Completion { items } => {
+                        self.gadget = Some(Box::new(Completer::new(items)));
                         self.draw()?;
                     }
                 }

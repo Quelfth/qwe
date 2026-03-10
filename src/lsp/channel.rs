@@ -3,10 +3,13 @@ use std::{
     sync::{Arc, mpsc::Sender},
 };
 
-use lsp_types::{Diagnostic, InitializeResult, SemanticToken, TextDocumentContentChangeEvent, Url};
+use lsp_types::{
+    CompletionItem, Diagnostic, InitializeResult, SemanticToken, TextDocumentContentChangeEvent,
+    Url,
+};
 use tokio::sync::mpsc::UnboundedReceiver;
 
-use crate::lang::Language;
+use crate::{lang::Language, pos::Utf16Pos};
 
 pub enum LspToEditorMessage {
     NewLsp {
@@ -19,6 +22,12 @@ pub enum LspToEditorMessage {
     Diagnostics {
         uri: Url,
         diagnostics: Vec<Diagnostic>,
+    },
+    Hover {
+        view: String,
+    },
+    Completion {
+        items: Vec<CompletionItem>,
     },
 }
 
@@ -35,6 +44,16 @@ pub enum EditorToLspMessage {
         version: i32,
     },
     RefreshSemanticTokens,
+    Hover {
+        lang: Language,
+        path: Arc<Path>,
+        pos: Utf16Pos,
+    },
+    Completion {
+        lang: Language,
+        path: Arc<Path>,
+        pos: Utf16Pos,
+    },
     Exit,
     Save {
         lang: Language,

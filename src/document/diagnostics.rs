@@ -2,13 +2,13 @@ use crossterm::style::Color;
 use culit::culit;
 use lsp_types::DiagnosticSeverity;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum Severity {
-    Err,
+    Hint,
+    Info,
     #[default]
     Warn,
-    Info,
-    Hint,
+    Err,
 }
 
 impl Severity {

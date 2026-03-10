@@ -31,6 +31,12 @@ impl<'a> RopeSlice<'a> {
         Some(())
     }
 
+    #[must_use]
+    fn validate_byte_offset(&self, byte_offset: Ix<Byte>) -> Option<()> {
+        ixto!(byte_offset);
+        (byte_offset <= self.0.byte_len() && self.0.is_char_boundary(byte_offset)).then_some(())
+    }
+
     fn validate_line_range(&self, line_range: &(impl RangeBounds<Ix<Line>> + Clone)) -> Option<()> {
         let (start, end) =
             range_bounds_to_start_end(line_range.clone(), Ix::new(0), self.line_len());
@@ -165,6 +171,11 @@ impl<'a> RopeSlice<'a> {
 
     pub fn raw_lines(&self) -> RawLines<'a> {
         self.0.raw_lines()
+    }
+
+    pub fn utf16_of_byte(&self, byte: Ix<Byte>) -> Option<Ix<Utf16>> {
+        self.validate_byte_offset(byte)?;
+        Some(Ix::new(self.0.utf16_code_unit_of_byte(byte.inner())))
     }
 
     pub fn byte_of_utf16(&self, utf16: Ix<Utf16>) -> Option<Ix<Byte>> {

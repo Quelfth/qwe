@@ -22,7 +22,7 @@ use crate::lang::Language;
 use crate::range_sequence::RangeSequence;
 use crate::rope::{Rope, RopeSlice};
 
-use crate::pos::{Pos, Region};
+use crate::pos::{Pos, Region, Utf16Pos};
 use crate::ts::parse_doc;
 use crate::util::indent_string;
 
@@ -116,13 +116,18 @@ impl Document {
 
     pub fn last_line_diagnostic(&self, line: Ix<Line>) -> Option<(Severity, &str)> {
         let range = self.text.byte_range_of_line(line)?;
-        let mut diag = None::<(Range<Ix<Byte>>, Severity, &str)>;
+        let mut diagnostic = None::<(Range<Ix<Byte>>, Severity, &str)>;
         for (r, d) in self.diagnostics.ranges() {
-            if range.contains(&r.end) && diag.as_ref().is_none_or(|d| r.end >= d.0.end) {
-                diag = Some((r.clone(), d.severity, &d.message));
+            if range.start <= r.end
+                && range.end >= r.end
+                && diagnostic.as_ref().is_none_or(|(range, severity, _)| {
+                    r.end >= range.end && *severity <= d.severity
+                })
+            {
+                diagnostic = Some((r.clone(), d.severity, &d.message));
             }
         }
-        let (_, s, m) = diag?;
+        let (_, s, m) = diagnostic?;
         Some((s, m))
     }
 
@@ -136,6 +141,23 @@ impl Document {
             CursorState::Select(cursors) => cursors.main().start_pos().line,
             CursorState::LineSelect(cursors) => cursors.main().line,
         }
+    }
+
+    pub fn main_cursor_pos(&self) -> Option<Pos> {
+        Some(match self.cursors.as_ref()? {
+            CursorState::MirrorInsert(cursors) => cursors.main().forward,
+            CursorState::Insert(cursors) => cursors.main().pos,
+            CursorState::Select(cursors) => cursors.main().start_pos(),
+            CursorState::LineSelect(cursors) => Pos {
+                line: cursors.main().line,
+                column: Ix::new(0),
+            },
+        })
+    }
+
+    pub fn main_cursor_pos_utf16(&self) -> Option<Utf16Pos> {
+        self.main_cursor_pos()
+            .and_then(|pos| self.text.utf16_pos_of_pos(pos))
     }
 
     pub fn main_cursor_is_visible(&self) -> bool {

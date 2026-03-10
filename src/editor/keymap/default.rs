@@ -28,7 +28,10 @@ impl Default for Keymaps {
                 (Key::code(Esc), Mapping::once(Editor::select)),
                 (Key::code(Backspace), Mapping::rep(Editor::backspace)),
                 (Key::code(Enter), Mapping::rep(Editor::insert_return)),
-                (Key::code(Tab), Mapping::rep(Editor::insert_tab)),
+                (
+                    Key::code(Tab),
+                    Mapping::rep(Editor::insert_tab_else_complete),
+                ),
                 (Key::code(BackTab), Mapping::rep(Editor::tab_out)),
                 (Key::ctrl('z'), Mapping::once(Editor::undo)),
                 (Key::ctrl('v'), Mapping::once(Editor::paste)),
@@ -76,6 +79,8 @@ impl Default for Keymaps {
                 (Key::char('c'), Mapping::once(Editor::copy)),
                 (Key::char('v'), Mapping::once(Editor::paste)),
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
+                //
+                (Key::char('\''), Mapping::once(Editor::hover)),
                 //
                 (Key::code(F(6)), Mapping::once(Editor::inspect)),
                 (
