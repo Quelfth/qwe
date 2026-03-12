@@ -1,6 +1,11 @@
-use std::{str::FromStr, ops::Range};
+use std::{ops::Range, str::FromStr};
 
-use crate::ix::{Column, Ix, Line, Utf16};
+use crate::{
+    ix::{Column, Ix, Line, Utf16},
+    rope::Rope,
+};
+
+pub mod convert;
 
 #[derive(Copy, Clone, Default, PartialOrd, Ord, PartialEq, Eq, Debug)]
 pub struct Pos {

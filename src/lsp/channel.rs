@@ -4,12 +4,20 @@ use std::{
 };
 
 use lsp_types::{
-    CompletionItem, Diagnostic, InitializeResult, SemanticToken, TextDocumentContentChangeEvent,
-    Url,
+    CompletionItem, Diagnostic, InitializeResult, Location, SemanticToken,
+    TextDocumentContentChangeEvent, Url,
 };
 use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::{lang::Language, pos::Utf16Pos};
+
+pub enum GotoKind {
+    Definition,
+    Declaration,
+    Implementation,
+    References,
+    TypeDefinition,
+}
 
 pub enum LspToEditorMessage {
     NewLsp {
@@ -28,6 +36,9 @@ pub enum LspToEditorMessage {
     },
     Completion {
         items: Vec<CompletionItem>,
+    },
+    Goto {
+        locations: Vec<Location>,
     },
 }
 
@@ -53,6 +64,12 @@ pub enum EditorToLspMessage {
         lang: Language,
         path: Arc<Path>,
         pos: Utf16Pos,
+    },
+    Goto {
+        lang: Language,
+        path: Arc<Path>,
+        pos: Utf16Pos,
+        kind: GotoKind,
     },
     Exit,
     Save {

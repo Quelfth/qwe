@@ -276,6 +276,11 @@ impl Rope {
         self.byte_of_utf16_pos(utf16_pos).unwrap_or(self.byte_len())
     }
 
+    pub fn pos_of_utf16_pos_saturating(&self, utf16_pos: Utf16Pos) -> Pos {
+        self.pos_of_byte_pos(self.byte_of_utf16_pos_saturating(utf16_pos))
+            .unwrap()
+    }
+
     pub fn pos_of_byte_pos(&self, byte_pos: Ix<Byte>) -> Option<Pos> {
         let line = self.line_of_byte(byte_pos)?;
         let line_byte = self.byte_of_line(line)?;

@@ -1,8 +1,14 @@
-use crossterm::event::KeyEvent;
+use std::convert::identity;
+
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{CompletionItem, CompletionItemKind};
 
 use crate::{
-    color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::GraphemeExt, style::Style,
+    color,
+    draw::screen::Canvas,
+    editor::{Editor, gadget::Gadget},
+    grapheme::GraphemeExt,
+    style::Style,
 };
 
 pub enum CompletionKind {
@@ -55,6 +61,7 @@ impl From<CompletionItemKind> for CompletionKind {
 
 pub struct CompletionOption {
     label: String,
+    #[allow(unused)]
     kind: CompletionKind,
     text: String,
 }
@@ -78,25 +85,103 @@ impl CompletionOption {
 
 pub struct Completer {
     items: Vec<CompletionOption>,
+    selected: usize,
 }
 
 impl Completer {
-    pub fn new(items: impl IntoIterator<Item = CompletionItem>) -> Self {
+    pub fn new<I>(items: I) -> Self
+    where
+        I: IntoIterator<Item = CompletionItem>,
+        for<'a> &'a I: IntoIterator<Item = &'a CompletionItem>,
+    {
+        let selected = (&items)
+            .into_iter()
+            .enumerate()
+            .find(|(_, i)| i.preselect.is_some_and(identity))
+            .map(|(i, _)| i)
+            .unwrap_or(0);
         Completer {
+            selected,
             items: items.into_iter().map(CompletionOption::from_lsp).collect(),
         }
     }
 }
 
 impl Gadget for Completer {
-    fn on_key(&mut self, _: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
-        None
+    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+        macro_rules! xx {
+            ($($tokens: tt)*) => {
+                Some(Box::new($($tokens)*))
+            };
+        }
+        match event {
+            KeyEvent {
+                code: KeyCode::Char(_),
+                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => None,
+
+            KeyEvent {
+                code: KeyCode::Backspace,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => None,
+
+            KeyEvent {
+                code: KeyCode::Tab,
+                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => {
+                if self.items.is_empty() {
+                    return None;
+                }
+                self.selected = (self.selected + 1) % self.items.len();
+                xx!(Editor::noop)
+            }
+            KeyEvent {
+                code: KeyCode::BackTab,
+                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
+                kind: KeyEventKind::Press | KeyEventKind::Repeat,
+                ..
+            } => {
+                if self.items.is_empty() {
+                    return None;
+                }
+                self.selected = self.selected.wrapping_sub(1) % self.items.len();
+                xx!(Editor::noop)
+            }
+
+            KeyEvent {
+                code: KeyCode::Enter,
+                kind: KeyEventKind::Press,
+                ..
+            } => {
+                let text = self.items[self.selected].text.clone();
+                xx! {
+                    move |e| {
+                        if let Some(pos) = e.doc.main_cursor_pos() {
+                            e.doc.insert_completion(pos, &text);
+                        }
+                        e.close_gadget();
+                    }
+                }
+            }
+
+            _ => None,
+        }
     }
 
     fn draw(&self, mut canvas: Canvas<'_>) {
         let style = (Style::fg(color::FG) + Style::bg(color::BG)).into();
 
         for (i, item) in (0..canvas.height()).zip(&self.items) {
+            let style = if i == self.selected as u16 {
+                (Style::fg(color::FG) + Style::bg(color::LIT_BG)).into()
+            } else {
+                style
+            };
             for (j, g) in (0..canvas.width()).zip(item.label.graphemes()) {
                 let cell = &mut canvas[(i, j)];
                 cell.grapheme = g;

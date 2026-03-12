@@ -28,7 +28,7 @@ use crate::{
     lang::Language,
     language_server::LanguageServer,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
-    pos::Pos,
+    pos::{Pos, convert::TextConvertablePos},
 };
 
 mod actions;
@@ -87,6 +87,12 @@ impl Editor {
                 })
                 .unwrap();
         }
+    }
+
+    pub fn open_new_doc_at(&mut self, doc: PathedFile, pos: impl TextConvertablePos<Pos>) {
+        self.open_new_doc(doc);
+        self.jump_to(pos.convert(self.doc.text()));
+        self.doc.scroll_main_cursor_on_screen();
     }
 
     pub fn set_lsp_channels(

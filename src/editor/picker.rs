@@ -7,7 +7,7 @@ use crate::{
     draw::screen::Canvas,
     editor::{Editor, gadget::Gadget},
     grapheme::GraphemeExt,
-    pos::Pos,
+    pos::{Pos, Utf16Pos, convert::ConvertableToPos},
     style::Style,
 };
 
@@ -16,7 +16,7 @@ use super::gadget::ScreenRegion;
 pub struct Pick {
     string: String,
     file: Arc<Path>,
-    pos: Pos,
+    pos: ConvertableToPos,
 }
 
 pub struct Picker {
@@ -55,12 +55,39 @@ impl Picker {
                 picks.push(Pick {
                     string,
                     file: entry.path().into(),
-                    pos: Pos::ZERO,
+                    pos: Pos::ZERO.into(),
                 })
             }
         }
         Self {
             picks,
+            term: String::new(),
+            scroll: 0,
+        }
+    }
+
+    pub fn locations(locations: &[lsp_types::Location]) -> Self {
+        Self {
+            picks: locations
+                .iter()
+                .filter_map(|lsp_types::Location { uri, range }| {
+                    if uri.scheme() != "file" {
+                        return None;
+                    }
+                    let path: Arc<Path> = uri.to_file_path().ok()?.into();
+                    let pos = Utf16Pos::from_lsp_pos(range.start).into();
+
+                    Some(Pick {
+                        string: path
+                            .strip_prefix(env::current_dir().ok()?)
+                            .ok()?
+                            .to_string_lossy()
+                            .to_string(),
+                        file: path,
+                        pos,
+                    })
+                })
+                .collect(),
             term: String::new(),
             scroll: 0,
         }
@@ -129,9 +156,7 @@ impl Gadget for Picker {
                     let pick = self.picks.remove(0);
                     xx!(move |e| {
                         e.close_gadget();
-                        e.open_new_doc(PathedFile::open(pick.file).unwrap());
-                        e.jump_to(pick.pos);
-                        e.doc.scroll_main_cursor_on_screen();
+                        e.open_new_doc_at(PathedFile::open(pick.file).unwrap(), pick.pos);
                     })
                 } else {
                     xx!(Editor::noop)

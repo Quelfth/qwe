@@ -19,14 +19,16 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, CompletionClientCapabilities, CompletionList, CompletionParams,
-    CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag,
-    DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
-    DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-    FileChangeType, FileEvent, Hover, HoverClientCapabilities, HoverContents, HoverParams,
-    InitializeResult, InitializedParams, LanguageString, LogMessageParams, LogTraceParams,
-    MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position, ProgressParams,
-    PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, SemanticToken, SemanticTokens,
+    ClientCapabilities, CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind,
+    CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse,
+    ConfigurationParams, Diagnostic, DiagnosticTag, DidChangeTextDocumentParams,
+    DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents,
+    HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams,
+    LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position,
+    ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams,
+    ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens,
     SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
     SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
     SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
@@ -194,6 +196,33 @@ impl Server {
                             ..Default::default()
                         }),
                         completion: Some(CompletionClientCapabilities {
+                            completion_item: Some(CompletionItemCapability {
+                                documentation_format: Some(vec![MarkupKind::Markdown]),
+                                ..Default::default()
+                            }),
+                            completion_item_kind: Some(CompletionItemKindCapability {
+                                value_set: Some(vec![
+                                    CompletionItemKind::METHOD,
+                                    CompletionItemKind::FUNCTION,
+                                    CompletionItemKind::CONSTRUCTOR,
+                                    CompletionItemKind::FIELD,
+                                    CompletionItemKind::VARIABLE,
+                                    CompletionItemKind::CLASS,
+                                    CompletionItemKind::INTERFACE,
+                                    CompletionItemKind::MODULE,
+                                    CompletionItemKind::PROPERTY,
+                                    CompletionItemKind::ENUM,
+                                    CompletionItemKind::KEYWORD,
+                                    CompletionItemKind::SNIPPET,
+                                    CompletionItemKind::FILE,
+                                    CompletionItemKind::FOLDER,
+                                    CompletionItemKind::ENUM_MEMBER,
+                                    CompletionItemKind::CONSTANT,
+                                    CompletionItemKind::STRUCT,
+                                    CompletionItemKind::OPERATOR,
+                                    CompletionItemKind::TYPE_PARAMETER,
+                                ]),
+                            }),
                             ..Default::default()
                         }),
                         ..Default::default()
@@ -380,6 +409,59 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             channels
                                 .outgoing
                                 .send(LspToEditorMessage::Completion { items })?;
+                        }
+                    }
+                }
+                EditorToLspMessage::Goto {
+                    lang,
+                    path,
+                    pos: Utf16Pos { line, column },
+                    kind,
+                } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        use channel::GotoKind::*;
+                        let text_document_position_params = TextDocumentPositionParams {
+                            text_document: TextDocumentIdentifier { uri },
+                            position: Position {
+                                line: line.inner() as _,
+                                character: column.inner() as _,
+                            },
+                        };
+                        let params = GotoDefinitionParams {
+                            text_document_position_params: text_document_position_params.clone(),
+                            work_done_progress_params: Default::default(),
+                            partial_result_params: Default::default(),
+                        };
+                        fn locs(goto: Option<GotoDefinitionResponse>) -> Option<Vec<Location>> {
+                            Some(match goto? {
+                                GotoDefinitionResponse::Scalar(location) => vec![location],
+                                GotoDefinitionResponse::Array(locations) => locations,
+                                GotoDefinitionResponse::Link(_) => todo!(),
+                            })
+                        }
+                        if let Some(locations) = match kind {
+                            Definition => locs(server.socket.definition(params).await?),
+                            Declaration => locs(server.socket.declaration(params).await?),
+                            Implementation => locs(server.socket.implementation(params).await?),
+                            TypeDefinition => locs(server.socket.type_definition(params).await?),
+                            References => {
+                                server
+                                    .socket
+                                    .references(ReferenceParams {
+                                        text_document_position: text_document_position_params,
+                                        work_done_progress_params: Default::default(),
+                                        partial_result_params: Default::default(),
+                                        context: ReferenceContext {
+                                            include_declaration: true,
+                                        },
+                                    })
+                                    .await?
+                            }
+                        } {
+                            channels
+                                .outgoing
+                                .send(LspToEditorMessage::Goto { locations })?;
                         }
                     }
                 }

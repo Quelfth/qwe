@@ -2,9 +2,12 @@ use std::sync::LazyLock;
 
 use crossterm::event::KeyCode::*;
 
-use crate::editor::{
-    Editor,
-    keymap::{Key, Keymap, Keymaps, Mapping},
+use crate::{
+    editor::{
+        Editor,
+        keymap::{Key, Keymap, Keymaps, Mapping},
+    },
+    lsp::channel::GotoKind::*,
 };
 
 static UNIVERSAL: LazyLock<&'static [(Key, Mapping)]> = LazyLock::new(|| {
@@ -81,6 +84,11 @@ impl Default for Keymaps {
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
                 (Key::char('\''), Mapping::once(Editor::hover)),
+                (Key::char('*'), Mapping::once(|e| e.goto(Definition))),
+                (Key::alt('8'), Mapping::once(|e| e.goto(Declaration))),
+                (Key::alt('*'), Mapping::once(|e| e.goto(Implementation))),
+                (Key::char('&'), Mapping::once(|e| e.goto(References))),
+                (Key::char('Y'), Mapping::once(|e| e.goto(TypeDefinition))),
                 //
                 (Key::code(F(6)), Mapping::once(Editor::inspect)),
                 (

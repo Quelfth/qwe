@@ -1,8 +1,9 @@
 use std::io;
 
 use crate::{
+    PathedFile,
     document::diagnostics::{Diagnostic, Severity},
-    editor::{Editor, completer::Completer, markdown_view::MarkdownGadget},
+    editor::{Editor, completer::Completer, markdown_view::MarkdownGadget, picker::Picker},
     language_server::LanguageServer,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     pos::Utf16Pos,
@@ -11,6 +12,7 @@ use crate::{
 
 impl Editor {
     pub fn poll(&mut self) -> io::Result<()> {
+        let mut action = None::<Box<dyn FnOnce(&mut Editor) -> io::Result<()>>>;
         if let Some(channel) = &self.lsp_recv {
             while let Ok(msg) = channel.try_recv() {
                 use LspToEditorMessage::*;
@@ -72,8 +74,31 @@ impl Editor {
                         self.gadget = Some(Box::new(Completer::new(items)));
                         self.draw()?;
                     }
+                    Goto { locations } => match &*locations {
+                        [] => (),
+                        [location] => {
+                            let lsp_types::Location { uri, range } = location;
+                            if uri.scheme() == "file"
+                                && let Ok(path) = uri.to_file_path()
+                                && let Ok(file) = PathedFile::open(path.into())
+                            {
+                                let pos = Utf16Pos::from_lsp_pos(range.start);
+                                action = Some(Box::new(move |e: &mut Self| -> Result<(), _> {
+                                    e.open_new_doc_at(file, pos);
+                                    e.draw()
+                                }));
+                            }
+                        }
+                        locations => {
+                            self.gadget = Some(Box::new(Picker::locations(locations)));
+                            self.draw()?
+                        }
+                    },
                 }
             }
+        }
+        if let Some(action) = action {
+            action(self)?
         }
         if let Some(chan) = &self.lsp_send
             && !self.doc.lsp_changes.is_empty()

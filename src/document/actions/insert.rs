@@ -79,6 +79,30 @@ impl Document {
     pub fn direct_insert(&mut self, pos: Pos, text: &str) {
         self.do_change(self.insert_change(pos, text.to_owned()))
     }
+
+    pub fn insert_completion(&mut self, pos: Pos, text: &str) {
+        let mut to_insert = text;
+        for i in 0..text.len() {
+            let Ok(byte_pos) = self.text.byte_pos_of_pos(pos) else {
+                continue;
+            };
+            let Some(prefix) = text.get(0..text.len() - i) else {
+                continue;
+            };
+            if i > byte_pos.inner() {
+                continue;
+            }
+            if self
+                .text
+                .byte_slice(byte_pos - Ix::new(text.len() - i)..byte_pos)
+                .is_some_and(|slice| slice.to_string() == prefix)
+            {
+                to_insert = &text[text.len() - i..];
+                break;
+            }
+        }
+        self.direct_insert(pos, to_insert);
+    }
 }
 
 fn insert_effect(

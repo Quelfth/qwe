@@ -61,6 +61,7 @@
 "use" @o.use
 (use_list ["{" "," "}"] @o.use)
 (use_declaration ";" @o.use)
+(use_as_clause "as" @o.use)
 
 (keyword_scope ["self" "super"] @i.namespace.keyword)
 (keyword_scope ["crate"] @i.namespace.crate.keyword)
@@ -153,6 +154,10 @@
 (where_clause "," @o.implement)
 
 (trait_bounds [":" "+"] @o.implement)
+(higher_ranked_trait_bound 
+    "for" @o.implement
+    (type_parameters ["<" "," ">"] @o.implement)
+)
 
 ; Attributes
 
@@ -188,6 +193,8 @@
 ; Statements
 
 (let_declaration ["let" "=" ";"] @o.declare.value.local)
+(let_declaration ":" @o.type)
+(let_declaration alternative: (block ["{" "}"] @o.branch))
 
 ; Expressions
 
@@ -264,6 +271,8 @@
 (unary_expression "!" @o.logical)
 
 (index_expression ["[" "]"] @o.sequence)
+
+(type_cast_expression "as" @o.type)
 
 ; Type Constructing Expressions
 
