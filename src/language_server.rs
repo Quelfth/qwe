@@ -101,7 +101,7 @@ impl LanguageServer {
         }
         let mut line: Ix<Line> = Ix::new(0);
         let mut pos: Ix<Byte> = Ix::new(0);
-        tokens.into_iter().filter_map(
+        tokens.into_iter().map(
             move |lsp_types::SemanticToken {
                       delta_line,
                       delta_start,
@@ -119,10 +119,8 @@ impl LanguageServer {
                 if let Some(line) = text.line(line) {
                     pos += line.byte_of_utf16_saturating(delta_start);
                 }
-                let len = text
-                    .byte_slice(pos..)?
-                    .byte_of_utf16_saturating(len);
-                let range = pos..pos + len;
+
+                let range = pos..pos + try {text.byte_slice(pos..)?.byte_of_utf16_saturating(len)}.unwrap_or(Ix::new(0));
 
                 let legend = self.semtok_legend.as_ref().unwrap();
 
@@ -132,7 +130,7 @@ impl LanguageServer {
                     .map(|i| legend.mods[i as usize].clone())
                     .collect::<Vec<_>>();
 
-                Some((range, SemanticToken { r#type, mods }))
+                (range, SemanticToken { r#type, mods })
             },
         )
     }

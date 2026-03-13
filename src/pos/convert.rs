@@ -1,5 +1,3 @@
-use dispa::dispatch;
-
 use crate::{
     pos::{Pos, Utf16Pos},
     rope::Rope,

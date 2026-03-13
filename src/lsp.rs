@@ -316,7 +316,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                     if let Some(tokens) = server.semantic_tokens(doc_uri.clone()).await? {
                         channels
                             .outgoing
-                            .send(LspToEditorMessage::SemanticTokens { tokens })?;
+                            .send(LspToEditorMessage::SemanticTokens { uri: doc_uri.clone(), tokens })?;
                     }
 
                     init_delay_queue.push_back((lang, doc_uri, Instant::now()))
@@ -328,7 +328,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             if let Some(semtoks) = server.semantic_tokens(doc.clone()).await? {
                                 channels
                                     .outgoing
-                                    .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
+                                    .send(LspToEditorMessage::SemanticTokens { uri: doc.clone(), tokens: semtoks })?;
                             }
                         }
                     }
@@ -483,7 +483,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                         if let Some(semtoks) = server.semantic_tokens(uri.clone()).await? {
                             channels
                                 .outgoing
-                                .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
+                                .send(LspToEditorMessage::SemanticTokens { uri, tokens: semtoks })?;
                         }
                     }
                 }
@@ -513,13 +513,13 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                 match msg {
                     ClientMessage::SemanticTokensRefresh => {
                         for doc in server.docs.clone() {
-                            let Some(semtoks) = server.semantic_tokens(doc).await? else {
+                            let Some(semtoks) = server.semantic_tokens(doc.clone()).await? else {
                                 continue;
                             };
 
                             channels
                                 .outgoing
-                                .send(LspToEditorMessage::SemanticTokens { tokens: semtoks })?;
+                                .send(LspToEditorMessage::SemanticTokens { uri: doc, tokens: semtoks })?;
                         }
                     }
                     ClientMessage::PublishDiagnostics { uri, diagnostics } => {

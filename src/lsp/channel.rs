@@ -25,6 +25,7 @@ pub enum LspToEditorMessage {
         init_result: InitializeResult,
     },
     SemanticTokens {
+        uri: Url,
         tokens: Vec<SemanticToken>,
     },
     Diagnostics {

@@ -77,7 +77,7 @@ struct Args {
         num_args(0..),
         conflicts_with("path"),
     )]
-    find: Vec<String>,
+    find: Option<Vec<String>>,
     #[arg(
         short,
         long,
@@ -128,12 +128,16 @@ fn main() -> io::Result<()> {
     let path = if let Some(path) = path {
         Some(path)
     } else {
-        if let Ok(dir) = std::env::current_dir() {
-            walkdir::WalkDir::new(dir)
+        if let Some(find) = find && let Ok(dir) = std::env::current_dir() {
+            let mut options = walkdir::WalkDir::new(dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
                 .filter(|e| e.file_type().is_file())
                 .map(|e| e.path().to_owned())
+                .collect::<Vec<_>>();
+            options.sort_by_key(|o| o.as_os_str().len());
+            options
+                .into_iter()
                 .find(|e| find.iter().all(|f| e.to_string_lossy().contains(f)))
         } else {
             None

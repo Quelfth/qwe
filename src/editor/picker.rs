@@ -59,6 +59,7 @@ impl Picker {
                 })
             }
         }
+        picks.sort_by_key(|p| p.string.len());
         Self {
             picks,
             term: String::new(),
@@ -80,8 +81,17 @@ impl Picker {
                     Some(Pick {
                         string: path
                             .strip_prefix(env::current_dir().ok()?)
-                            .ok()?
-                            .to_string_lossy()
+                            .ok().map(|path| path.to_string_lossy())
+                            .or_else(||
+                                path.strip_prefix(env::home_dir()?)
+                                    .ok()
+                                    .map(|path| {
+                                        let mut path = path.to_string_lossy();
+                                        path.to_mut().insert_str(0, "~/");
+                                        path
+                                    })
+                            )
+                            .unwrap_or(path.to_string_lossy())
                             .to_string(),
                         file: path,
                         pos,

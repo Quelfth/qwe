@@ -22,14 +22,16 @@ impl Editor {
                         .entry(lang)
                         .or_default()
                         .push(LanguageServer::new(init_result)),
-                    SemanticTokens { tokens } => {
-                        self.doc.semtoks = RangeSequence::from_abs_ordered(
-                            self.language_servers
-                                .get(&self.doc.language().unwrap())
-                                .unwrap()[0]
-                                .translate_semtoks(tokens, self.doc.text()),
-                        );
-                        self.draw()?;
+                    SemanticTokens { uri, tokens } => {
+                        if uri.scheme() == "file" && uri.to_file_path().is_ok_and(|p| self.filepath.as_ref().is_some_and(|f| &**f == &*p)) {
+                            self.doc.semtoks = RangeSequence::from_abs_ordered(
+                                self.language_servers
+                                    .get(&self.doc.language().unwrap())
+                                    .unwrap()[0]
+                                    .translate_semtoks(tokens, self.doc.text()),
+                            );
+                            self.draw()?;
+                        }
                     }
                     Diagnostics { uri, diagnostics } => {
                         if self.filepath.as_ref().is_none_or(|p| {

@@ -12,6 +12,7 @@ use crate::{
     lsp::channel::EditorToLspMessage,
     terminal_size::terminal_size,
     util::{RangeOverlap, pretty_node},
+    PathedFile,
 };
 
 mod insert;
@@ -35,7 +36,6 @@ impl Editor {
     pub fn save_file(&mut self) {
         if let Some(path) = self.filepath.as_deref() {
             _ = fs::write(path, self.doc.text().to_string().as_bytes());
-            crate::aprintln::aprintln!("saved");
             if let Some(channel) = &self.lsp_send
                 && let Some(lang) = self.doc.language()
                 && let Some(path) = self.filepath.clone()
@@ -165,5 +165,19 @@ impl Editor {
 
     pub fn tab_lines_out(&mut self) {
         self.doc.tab_lines_out();
+    }
+
+    pub fn previous_file(&mut self) {
+        if let Some(file) = self.file_history.pop()
+           && let Ok(file) = PathedFile::open(file) {
+            self.reopen_previous_doc(file);
+        }
+    }
+    
+    pub fn next_file(&mut self) {
+        if let Some(file) = self.file_future.pop()
+           && let Ok(file) = PathedFile::open(file) {
+            self.reopen_doc(file);
+        }
     }
 }

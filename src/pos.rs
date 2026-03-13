@@ -1,8 +1,7 @@
 use std::{ops::Range, str::FromStr};
 
 use crate::{
-    ix::{Column, Ix, Line, Utf16},
-    rope::Rope,
+    ix::{Column, Ix, Line, Utf16}
 };
 
 pub mod convert;

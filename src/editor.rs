@@ -48,6 +48,8 @@ mod poll;
 pub struct Editor {
     filepath: Option<Arc<Path>>,
     doc: Document,
+    file_history: Vec<Arc<Path>>,
+    file_future: Vec<Arc<Path>>,
     pub screen: Mutex<Screen>,
     keymap: Keymaps,
     pub gadget: Option<Box<dyn Gadget>>,
@@ -74,6 +76,9 @@ impl Editor {
             file,
             Some(Default::default()),
         );
+        if let Some(path) = &self.filepath {
+            self.file_history.push(path.clone());
+        }
         self.filepath = Some(path.clone());
 
         if let Some(lsp_send) = &self.lsp_send
@@ -87,6 +92,34 @@ impl Editor {
                 })
                 .unwrap();
         }
+    }
+    
+    pub fn reopen_previous_doc(&mut self, doc: PathedFile) {
+        let PathedFile { path, file } = doc;
+        self.doc = Document::new(
+            path.extension()
+                .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+            file,
+            Some(Default::default()),
+        );
+        if let Some(path) = &self.filepath {
+            self.file_future.push(path.clone());
+        }
+        self.filepath = Some(path.clone());
+    }
+
+    pub fn reopen_doc(&mut self, doc: PathedFile) {
+        let PathedFile { path, file } = doc;
+        self.doc = Document::new(
+            path.extension()
+                .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+            file,
+            Some(Default::default()),
+        );
+        if let Some(path) = &self.filepath {
+            self.file_history.push(path.clone());
+        }
+        self.filepath = Some(path.clone());
     }
 
     pub fn open_new_doc_at(&mut self, doc: PathedFile, pos: impl TextConvertablePos<Pos>) {

@@ -403,6 +403,8 @@
 (unit_type ["(" ")"] @o.tuple)
 (tuple_type ["(" "," ")"] @o.tuple)
 
+(array_type ["[" ";" "]"] @o.construct.list)
+
 ((identifier) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
 ((identifier) @i.type.struct (#semantic? @i.type.struct Struct))
 ((identifier) @i.type.enum (#semantic? @i.type.enum Enum))
