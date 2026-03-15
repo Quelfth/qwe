@@ -19,22 +19,23 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind,
-    CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse,
-    ConfigurationParams, Diagnostic, DiagnosticTag, DidChangeTextDocumentParams,
-    DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent,
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents,
-    HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams,
-    LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position,
-    ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams,
-    ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens,
-    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
-    SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
-    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
-    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams,
-    ShowDocumentResult, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier,
-    TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url,
+    ClientCapabilities, CodeActionContext, CodeActionParams, CompletionClientCapabilities,
+    CompletionItemCapability, CompletionItemKind, CompletionItemKindCapability, CompletionList,
+    CompletionParams, CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag,
+    DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
+    DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
+    FileChangeType, FileEvent, GotoDefinitionParams, GotoDefinitionResponse, Hover,
+    HoverClientCapabilities, HoverContents, HoverParams, InitializeResult, InitializedParams,
+    LanguageString, Location, LogMessageParams, LogTraceParams, MarkedString, MarkupContent,
+    MarkupKind, PartialResultParams, Position, ProgressParams,
+    PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range, ReferenceContext,
+    ReferenceParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities,
+    SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams,
+    SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult,
+    SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities,
+    ServerCapabilities, ShowDocumentParams, ShowDocumentResult, TagSupport,
+    TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem,
+    TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url,
     VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams,
     WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder,
 };
@@ -314,9 +315,10 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                     })?;
                     server.docs.push(doc_uri.clone());
                     if let Some(tokens) = server.semantic_tokens(doc_uri.clone()).await? {
-                        channels
-                            .outgoing
-                            .send(LspToEditorMessage::SemanticTokens { uri: doc_uri.clone(), tokens })?;
+                        channels.outgoing.send(LspToEditorMessage::SemanticTokens {
+                            uri: doc_uri.clone(),
+                            tokens,
+                        })?;
                     }
 
                     init_delay_queue.push_back((lang, doc_uri, Instant::now()))
@@ -326,9 +328,10 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                     for server in servers.values_mut() {
                         for doc in server.docs.clone() {
                             if let Some(semtoks) = server.semantic_tokens(doc.clone()).await? {
-                                channels
-                                    .outgoing
-                                    .send(LspToEditorMessage::SemanticTokens { uri: doc.clone(), tokens: semtoks })?;
+                                channels.outgoing.send(LspToEditorMessage::SemanticTokens {
+                                    uri: doc.clone(),
+                                    tokens: semtoks,
+                                })?;
                             }
                         }
                     }
@@ -465,6 +468,37 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                         }
                     }
                 }
+                EditorToLspMessage::CodeActions {
+                    lang,
+                    path,
+                    pos: Utf16Pos { line, column },
+                } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let pos = Position {
+                            line: line.inner() as _,
+                            character: column.inner() as _,
+                        };
+                        if let Some(_response) = server
+                            .socket
+                            .code_action(CodeActionParams {
+                                text_document: TextDocumentIdentifier { uri },
+                                range: Range {
+                                    start: pos,
+                                    end: pos,
+                                },
+                                context: CodeActionContext {
+                                    ..Default::default()
+                                },
+                                partial_result_params: Default::default(),
+                                work_done_progress_params: Default::default(),
+                            })
+                            .await?
+                        {
+                            todo!()
+                        }
+                    }
+                }
                 EditorToLspMessage::ChangeDoc {
                     lang,
                     path,
@@ -481,9 +515,10 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             content_changes: changes,
                         })?;
                         if let Some(semtoks) = server.semantic_tokens(uri.clone()).await? {
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::SemanticTokens { uri, tokens: semtoks })?;
+                            channels.outgoing.send(LspToEditorMessage::SemanticTokens {
+                                uri,
+                                tokens: semtoks,
+                            })?;
                         }
                     }
                 }
@@ -517,9 +552,10 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                 continue;
                             };
 
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::SemanticTokens { uri: doc, tokens: semtoks })?;
+                            channels.outgoing.send(LspToEditorMessage::SemanticTokens {
+                                uri: doc,
+                                tokens: semtoks,
+                            })?;
                         }
                     }
                     ClientMessage::PublishDiagnostics { uri, diagnostics } => {

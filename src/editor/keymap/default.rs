@@ -86,6 +86,7 @@ impl Default for Keymaps {
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
                 (Key::char('\''), Mapping::once(Editor::hover)),
+                (Key::char('2'), Mapping::once(Editor::code_actions)),
                 (Key::char('*'), Mapping::once(|e| e.goto(Definition))),
                 (Key::alt('8'), Mapping::once(|e| e.goto(Declaration))),
                 (Key::alt('*'), Mapping::once(|e| e.goto(Implementation))),

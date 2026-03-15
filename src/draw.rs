@@ -1,6 +1,7 @@
 use std::{
     io::{self},
     ops::Sub,
+    time::{Duration, Instant},
 };
 
 use crate::{
@@ -98,6 +99,14 @@ impl<T> Rect<T> {
 }
 
 impl Editor {
+    pub fn defer_draw(&self) {
+        const DEFER_DURATION: Duration = Duration::from_millis(50);
+        let time = &mut *self.draw_defer.lock();
+        if time.is_none() {
+            *time = Some(Instant::now() + DEFER_DURATION);
+        }
+    }
+
     pub fn draw(&self) -> io::Result<()> {
         let (width, height) = terminal_size();
         let mut screen = Screen::new(width, height);
@@ -124,6 +133,7 @@ impl Editor {
             *last_screen = screen;
         }
 
+        *self.draw_defer.lock() = None;
         Ok(())
     }
 }

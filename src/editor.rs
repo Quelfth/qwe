@@ -4,6 +4,7 @@ use std::{
     ops::Range,
     path::Path,
     sync::{Arc, mpsc::Receiver},
+    time::Instant,
 };
 
 use tokio::sync::mpsc::UnboundedSender;
@@ -57,6 +58,7 @@ pub struct Editor {
     pub lsp_recv: Option<Receiver<LspToEditorMessage>>,
     pub lsp_send: Option<UnboundedSender<EditorToLspMessage>>,
     pub language_servers: HashMap<Language, Vec<LanguageServer>>,
+    pub draw_defer: Mutex<Option<Instant>>,
 }
 
 impl Editor {
@@ -93,7 +95,7 @@ impl Editor {
                 .unwrap();
         }
     }
-    
+
     pub fn reopen_previous_doc(&mut self, doc: PathedFile) {
         let PathedFile { path, file } = doc;
         self.doc = Document::new(

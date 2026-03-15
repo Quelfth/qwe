@@ -43,3 +43,4 @@ markdown = "1.0.0"
 
 [profile.release]
 debug = true
+lto = "thin"

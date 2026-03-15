@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, time::Instant};
 
 use crate::{
     PathedFile,
@@ -23,14 +23,18 @@ impl Editor {
                         .or_default()
                         .push(LanguageServer::new(init_result)),
                     SemanticTokens { uri, tokens } => {
-                        if uri.scheme() == "file" && uri.to_file_path().is_ok_and(|p| self.filepath.as_ref().is_some_and(|f| &**f == &*p)) {
+                        if uri.scheme() == "file"
+                            && uri
+                                .to_file_path()
+                                .is_ok_and(|p| self.filepath.as_ref().is_some_and(|f| **f == *p))
+                        {
                             self.doc.semtoks = RangeSequence::from_abs_ordered(
                                 self.language_servers
                                     .get(&self.doc.language().unwrap())
                                     .unwrap()[0]
                                     .translate_semtoks(tokens, self.doc.text()),
                             );
-                            self.draw()?;
+                            self.defer_draw();
                         }
                     }
                     Diagnostics { uri, diagnostics } => {
@@ -66,7 +70,7 @@ impl Editor {
                                 )
                                 .collect(),
                         );
-                        self.draw()?;
+                        self.defer_draw();
                     }
                     Hover { view } => {
                         self.gadget = Some(Box::new(MarkdownGadget::new(view)));
@@ -116,6 +120,15 @@ impl Editor {
                     self.doc.lsp_version
                 },
             });
+        }
+        {
+            let guard = self.draw_defer.lock();
+            if let Some(defer) = *guard
+                && defer <= Instant::now()
+            {
+                drop(guard);
+                self.draw()?;
+            }
         }
         Ok(())
     }

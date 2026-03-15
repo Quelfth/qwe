@@ -39,4 +39,14 @@ impl Editor {
             });
         }
     }
+
+    pub fn code_actions(&mut self) {
+        if let Some(tx) = &self.lsp_send
+            && let Some(lang) = self.doc().language()
+            && let Some(path) = self.filepath.clone()
+            && let Some(pos) = self.doc().main_cursor_pos_utf16()
+        {
+            _ = tx.send(EditorToLspMessage::CodeActions { lang, path, pos });
+        }
+    }
 }

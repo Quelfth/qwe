@@ -72,6 +72,11 @@ pub enum EditorToLspMessage {
         pos: Utf16Pos,
         kind: GotoKind,
     },
+    CodeActions {
+        lang: Language,
+        path: Arc<Path>,
+        pos: Utf16Pos,
+    },
     Exit,
     Save {
         lang: Language,
