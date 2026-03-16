@@ -5,7 +5,7 @@ use std::{
 
 use lsp_types::{
     CompletionItem, Diagnostic, InitializeResult, Location, SemanticToken,
-    TextDocumentContentChangeEvent, Url,
+    TextDocumentContentChangeEvent, Url, CodeAction,
 };
 use tokio::sync::mpsc::UnboundedReceiver;
 
@@ -40,6 +40,9 @@ pub enum LspToEditorMessage {
     },
     Goto {
         locations: Vec<Location>,
+    },
+    CodeActions {
+        actions: Vec<CodeAction>,
     },
 }
 

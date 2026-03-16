@@ -1455,7 +1455,7 @@ checksum = "009994f150cc0cd50ff54917d5bc8bffe8cad10ca10d81c34da2ec421ae61782"
 [[package]]
 name = "tree-sitter-rust"
 version = "0.23.2"
-source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#0752291e24e1cc5995cd6d23c3e513e0a58b7366"
+source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#33498f19c03e392957d0431bccd4b633cc0ccd33"
 dependencies = [
  "cc",
  "tree-sitter-language",

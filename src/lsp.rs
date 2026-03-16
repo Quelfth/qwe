@@ -19,23 +19,24 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, CodeActionContext, CodeActionParams, CompletionClientCapabilities,
-    CompletionItemCapability, CompletionItemKind, CompletionItemKindCapability, CompletionList,
-    CompletionParams, CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag,
-    DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
-    DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams,
-    FileChangeType, FileEvent, GotoDefinitionParams, GotoDefinitionResponse, Hover,
-    HoverClientCapabilities, HoverContents, HoverParams, InitializeResult, InitializedParams,
-    LanguageString, Location, LogMessageParams, LogTraceParams, MarkedString, MarkupContent,
-    MarkupKind, PartialResultParams, Position, ProgressParams,
-    PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range, ReferenceContext,
-    ReferenceParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities,
-    SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams,
-    SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult,
-    SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities,
-    ServerCapabilities, ShowDocumentParams, ShowDocumentResult, TagSupport,
-    TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem,
-    TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url,
+    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind,
+    CodeActionKindLiteralSupport, CodeActionLiteralSupport, CodeActionParams,
+    CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind,
+    CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse,
+    ConfigurationParams, Diagnostic, DiagnosticTag, DidChangeTextDocumentParams,
+    DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams,
+    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent,
+    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents,
+    HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams,
+    LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position,
+    ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range,
+    ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens,
+    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
+    SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
+    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
+    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams,
+    ShowDocumentResult, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier,
+    TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url,
     VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams,
     WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder,
 };
@@ -224,6 +225,24 @@ impl Server {
                                     CompletionItemKind::TYPE_PARAMETER,
                                 ]),
                             }),
+                            ..Default::default()
+                        }),
+                        code_action: Some(CodeActionClientCapabilities {
+                            dynamic_registration: None,
+                            code_action_literal_support: Some(CodeActionLiteralSupport {
+                                code_action_kind: CodeActionKindLiteralSupport {
+                                    value_set: [
+                                        CodeActionKind::EMPTY,
+                                        CodeActionKind::QUICKFIX,
+                                        CodeActionKind::REFACTOR,
+                                        CodeActionKind::SOURCE,
+                                    ]
+                                    .into_iter()
+                                    .map(|k| k.as_str().to_owned())
+                                    .collect(),
+                                },
+                            }),
+                            is_preferred_support: Some(true),
                             ..Default::default()
                         }),
                         ..Default::default()
@@ -479,7 +498,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             line: line.inner() as _,
                             character: column.inner() as _,
                         };
-                        if let Some(_response) = server
+                        if let Some(response) = server
                             .socket
                             .code_action(CodeActionParams {
                                 text_document: TextDocumentIdentifier { uri },
@@ -488,14 +507,30 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                     end: pos,
                                 },
                                 context: CodeActionContext {
-                                    ..Default::default()
+                                    diagnostics: vec![],
+                                    only: None,
+                                    trigger_kind: Some(lsp_types::CodeActionTriggerKind::INVOKED),
                                 },
                                 partial_result_params: Default::default(),
                                 work_done_progress_params: Default::default(),
                             })
                             .await?
                         {
-                            todo!()
+                            let mut actions = Vec::new();
+                            for action in response {
+                                use lsp_types::CodeActionOrCommand;
+                                match action {
+                                    CodeActionOrCommand::CodeAction(action) => {
+                                        actions.push(action);
+                                    }
+                                    CodeActionOrCommand::Command(_) => {
+                                        todo!()
+                                    }
+                                }
+                            }
+                            channels
+                                .outgoing
+                                .send(LspToEditorMessage::CodeActions { actions })?;
                         }
                     }
                 }

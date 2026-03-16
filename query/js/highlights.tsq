@@ -14,7 +14,7 @@
 (object ["{" "," "}"] @o.construct.map)
 (pair ":" @o.key-value)
 
-(array ["[" "," "]"] @o.construct.sequence)
+(array ["[" "," "]"] @o.construct.list)
 
 (arrow_function "=>" @o.declare.function)
 

@@ -187,6 +187,32 @@
 
 ; Macros
 
+"macro_rules" @o.declare.macro
+(macro_definition [ "!" "{" ";" "}"] @o.declare.macro)
+
+(macro_rule
+    left: (token_tree_pattern ["(" ")" "[" "]" "{" "}" "," ";"] @o.declare.macro)
+    "=>" @o.declare.macro
+    right: (token_tree ["(" ")" "[" "]" "{" "}" "," ";"] @o.declare.macro)
+)
+
+(metavariable "$" @o.declare.macro-parameter)
+(token_binding_pattern ":" @o.declare.macro-parameter)
+
+(metavariable (name (identifier) @i.macro-parameter))
+
+(token_repetition_pattern ["$" "(" ")"] @o.loop "*" @o.loop)
+(token_repetition_pattern ["$" "(" ")"] @o.loop "+" @o.loop)
+(token_repetition_pattern ["$" "(" ")"] @o.branch "?" @o.branch)
+(token_repetition ["$" "(" ")"] @o.loop "*" @o.loop)
+(token_repetition ["$" "(" ")"] @o.loop "+" @o.loop)
+(token_repetition ["$" "(" ")"] @o.branch "?" @o.branch)
+
+(fragment_specifier [
+    "block" "expr" "expr_2021" "ident" "item" "lifetime" "literal"
+    "meta" "pat" "pat_param" "path" "stmt" "tt" "ty" "vis"
+] @i.macro-pattern)
+
 (macro_invocation (name) @_ (#semantic? @_ Macro) "!" @i.macro.function)
 (macro_invocation (token_tree ["(" ")" "[" "]" "{" "}" "," ";" "=>"] @o.call.macro.function))
 

@@ -34,6 +34,7 @@ use crate::{
 
 mod actions;
 mod clipboard;
+pub mod code_actions;
 pub mod completer;
 pub mod cursors;
 pub mod finder;

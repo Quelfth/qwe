@@ -3,7 +3,13 @@ use std::{io, time::Instant};
 use crate::{
     PathedFile,
     document::diagnostics::{Diagnostic, Severity},
-    editor::{Editor, completer::Completer, markdown_view::MarkdownGadget, picker::Picker},
+    editor::{
+        Editor,
+        code_actions::{CodeAction, CodeActionsGadget},
+        completer::Completer,
+        markdown_view::MarkdownGadget,
+        picker::Picker,
+    },
     language_server::LanguageServer,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     pos::Utf16Pos,
@@ -24,9 +30,14 @@ impl Editor {
                         .push(LanguageServer::new(init_result)),
                     SemanticTokens { uri, tokens } => {
                         if uri.scheme() == "file"
-                            && uri
-                                .to_file_path()
-                                .is_ok_and(|p| self.filepath.as_ref().is_some_and(|f| **f == *p))
+                            && uri.to_file_path().is_ok_and(|p| {
+                                self.filepath
+                                    .as_ref()
+                                    .and_then(|f| {
+                                        Some(f.canonicalize().ok()? == p.canonicalize().ok()?)
+                                    })
+                                    .is_some_and(std::convert::identity)
+                            })
                         {
                             self.doc.semtoks = RangeSequence::from_abs_ordered(
                                 self.language_servers
@@ -100,6 +111,12 @@ impl Editor {
                             self.draw()?
                         }
                     },
+                    CodeActions { actions } => {
+                        self.gadget = Some(Box::new(CodeActionsGadget::new(
+                            actions.into_iter().map(CodeAction::from_lsp).collect(),
+                        )));
+                        self.draw()?
+                    }
                 }
             }
         }

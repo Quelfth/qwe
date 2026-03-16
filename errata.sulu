@@ -60,6 +60,8 @@ o.control.yield = f.coroutine;
 o.coroutine = f.coroutine;
 o.declare.abstract = f.class;
 o.declare.function = f.fn-decl;
+o.declare.macro = f.macro-definition;
+o.declare.macro-parameter = f.metavar-op;
 o.declare.module = f.private;
 o.declare.negative = f.never;
 o.declare.type = f.type-op;
@@ -114,6 +116,8 @@ i.lifetime = i f.type-parameter;
 i.macro.derive = i b f.trait;
 i.macro.attribute = f.attribute-macro;
 i.macro.function = i b f.fn-macro;
+i.macro-parameter = f.metavar;
+i.macro-pattern = f.type-op;
 i.mutable = u:line;  i.async = u:dotted;
 /i.mutable i.async = u:dashed;
 i.namespace = i f.namespace;
@@ -177,6 +181,9 @@ i.function.destructor = b f.never;
 .attribute-macro = #ffdf00;
 .helper-attribute = #8f6f00;
 .macro-definition = #dd4444;
+
+.metavar = #00ff8b;
+.metavar-op = #ff6060;
 
 .invoke = #ff6060;
 
