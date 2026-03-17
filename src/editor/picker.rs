@@ -166,7 +166,7 @@ impl Gadget for Picker {
                     let pick = self.picks.remove(0);
                     xx!(move |e| {
                         e.close_gadget();
-                        e.open_new_doc_at(PathedFile::open(pick.file).unwrap(), pick.pos);
+                        e.open_file_doc_at(pick.file, pick.pos).unwrap();
                     })
                 } else {
                     xx!(Editor::noop)

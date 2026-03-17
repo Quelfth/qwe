@@ -97,11 +97,10 @@ impl Editor {
                             let lsp_types::Location { uri, range } = location;
                             if uri.scheme() == "file"
                                 && let Ok(path) = uri.to_file_path()
-                                && let Ok(file) = PathedFile::open(path.into())
                             {
                                 let pos = Utf16Pos::from_lsp_pos(range.start);
                                 action = Some(Box::new(move |e: &mut Self| -> Result<(), _> {
-                                    e.open_new_doc_at(file, pos);
+                                    _= e.open_file_doc_at(path.into(), pos);
                                     e.draw()
                                 }));
                             }

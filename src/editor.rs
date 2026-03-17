@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     io,
+    mem,
     ops::Range,
     path::Path,
     sync::{Arc, mpsc::Receiver},
@@ -9,7 +10,7 @@ use std::{
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent};
 use mutx::Mutex;
 
 use crate::{
@@ -32,7 +33,10 @@ use crate::{
     pos::{Pos, convert::TextConvertablePos},
 };
 
+use background_docs::BackgroundDocuments;
+
 mod actions;
+pub mod background_docs;
 mod clipboard;
 pub mod code_actions;
 pub mod completer;
@@ -52,6 +56,7 @@ pub struct Editor {
     doc: Document,
     file_history: Vec<Arc<Path>>,
     file_future: Vec<Arc<Path>>,
+    bg_docs: BackgroundDocuments,
     pub screen: Mutex<Screen>,
     keymap: Keymaps,
     pub gadget: Option<Box<dyn Gadget>>,
@@ -67,21 +72,54 @@ impl Editor {
         Self::default()
     }
 
-    pub fn open_scratch_doc(&mut self) {
-        self.doc = Document::new(None, "", Some(Default::default()));
+    pub fn replace_doc(&mut self, new_doc: Document) {
+        let old_doc = mem::replace(&mut self.doc, new_doc);
+        if let Some(fp) = self.filepath.clone() {
+            self.bg_docs.insert_pathed(fp, old_doc);
+        }
     }
 
-    pub fn open_new_doc(&mut self, doc: PathedFile) {
-        let PathedFile { path, file } = doc;
-        self.doc = Document::new(
-            path.extension()
-                .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
-            file,
-            Some(Default::default()),
-        );
-        if let Some(path) = &self.filepath {
-            self.file_history.push(path.clone());
+    pub fn open_scratch_doc(&mut self) {
+        self.replace_doc(Document::new(None, "", Some(Default::default())));
+    }
+
+    pub fn open_file_doc(&mut self, path: Arc<Path>) -> io::Result<()> {
+        if let Some(path) = self.open_file_doc_impl(path)? {
+            self.file_history.push(path);
         }
+        Ok(())
+    }
+    pub fn reopen_file_doc(&mut self, path: Arc<Path>) -> io::Result<()> {
+        if let Some(path) = self.open_file_doc_impl(path)? {
+            self.file_future.push(path);
+        }
+        Ok(())
+    }
+    pub fn open_file_doc_at(&mut self, path: Arc<Path>, pos: impl TextConvertablePos<Pos>) -> io::Result<()> {
+        self.open_file_doc(path)?;
+        self.jump_to(pos.convert(self.doc.text()));
+        self.doc.scroll_main_cursor_on_screen();
+        Ok(())
+    }
+
+    fn open_file_doc_impl(&mut self, path: Arc<Path>) -> io::Result<Option<Arc<Path>>> {
+        let doc = if let Some(doc) = self.bg_docs.extract_by_path(&path) {
+            doc
+        } else {
+            let PathedFile { path, file } = PathedFile::open(path.clone())?;
+            Document::new(
+                path
+                    .extension()
+                    .and_then(|e|
+                        Language::from_file_ext(&e.to_string_lossy())
+                    ),
+                file,
+                Some(Default::default()),
+            )
+        };
+        self.replace_doc(doc);
+
+        let old_path = self.filepath.clone();
         self.filepath = Some(path.clone());
 
         if let Some(lsp_send) = &self.lsp_send
@@ -95,40 +133,8 @@ impl Editor {
                 })
                 .unwrap();
         }
-    }
 
-    pub fn reopen_previous_doc(&mut self, doc: PathedFile) {
-        let PathedFile { path, file } = doc;
-        self.doc = Document::new(
-            path.extension()
-                .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
-            file,
-            Some(Default::default()),
-        );
-        if let Some(path) = &self.filepath {
-            self.file_future.push(path.clone());
-        }
-        self.filepath = Some(path.clone());
-    }
-
-    pub fn reopen_doc(&mut self, doc: PathedFile) {
-        let PathedFile { path, file } = doc;
-        self.doc = Document::new(
-            path.extension()
-                .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
-            file,
-            Some(Default::default()),
-        );
-        if let Some(path) = &self.filepath {
-            self.file_history.push(path.clone());
-        }
-        self.filepath = Some(path.clone());
-    }
-
-    pub fn open_new_doc_at(&mut self, doc: PathedFile, pos: impl TextConvertablePos<Pos>) {
-        self.open_new_doc(doc);
-        self.jump_to(pos.convert(self.doc.text()));
-        self.doc.scroll_main_cursor_on_screen();
+        Ok(old_path)
     }
 
     pub fn set_lsp_channels(
@@ -198,6 +204,16 @@ impl Editor {
             }
         }
 
+        Ok(())
+    }
+
+    pub fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()> {
+        if self.gadget.is_some() { return Ok(()); }
+        match event {
+            
+
+            _ => ()
+        }
         Ok(())
     }
 

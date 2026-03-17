@@ -1,42 +1,59 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, MouseButton, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
 
 mod default;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum InputCode {
+    Key(KeyCode),
+    Mouse(MouseButton),
+    Scroll(ScrollDir),
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub enum ScrollDir {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Key {
-    code: KeyCode,
+    code: InputCode,
     ctrl: bool,
     alt: bool,
 }
 
 pub trait ToKey {
-    fn to_key_code(self) -> KeyCode;
+    fn to_key_code(self) -> InputCode;
 }
 
 impl ToKey for KeyCode {
-    fn to_key_code(self) -> KeyCode {
-        self
+    fn to_key_code(self) -> InputCode {
+        InputCode::Key(self)
     }
 }
 
 impl ToKey for char {
-    fn to_key_code(self) -> KeyCode {
-        KeyCode::Char(self)
+    fn to_key_code(self) -> InputCode {
+        InputCode::Key(KeyCode::Char(self))
+    }
+}
+
+impl ToKey for ScrollDir {
+    fn to_key_code(self) -> InputCode {
+        InputCode::Scroll(self)
     }
 }
 
 impl Key {
-    pub fn code(code: KeyCode) -> Self {
+    pub fn base(key: impl ToKey) -> Self {
         Self {
-            code,
+            code: key.to_key_code(),
             ctrl: false,
             alt: false,
         }
-    }
-
-    pub fn char(char: char) -> Self {
-        Self::code(KeyCode::Char(char))
     }
 
     pub fn alt(key: impl ToKey) -> Self {
@@ -62,7 +79,7 @@ impl Key {
     ) -> Self {
         let ctrl = !modifiers.intersection(KeyModifiers::CONTROL).is_empty();
         let alt = !modifiers.intersection(KeyModifiers::ALT).is_empty();
-        Self { code, ctrl, alt }
+        Self { code: InputCode::Key(code), ctrl, alt }
     }
 }
 

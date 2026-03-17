@@ -168,16 +168,14 @@ impl Editor {
     }
 
     pub fn previous_file(&mut self) {
-        if let Some(file) = self.file_history.pop()
-           && let Ok(file) = PathedFile::open(file) {
-            self.reopen_previous_doc(file);
+        if let Some(file) = self.file_history.pop() {
+            _= self.reopen_file_doc(file);
         }
     }
     
     pub fn next_file(&mut self) {
-        if let Some(file) = self.file_future.pop()
-           && let Ok(file) = PathedFile::open(file) {
-            self.reopen_doc(file);
+        if let Some(file) = self.file_future.pop() {
+            _= self.open_file_doc(file);
         }
     }
 }

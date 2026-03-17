@@ -205,7 +205,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
     let (send_editor_to_lsp, recv_editor_to_lsp) = mpsc::unbounded_channel();
     editor.set_lsp_channels(send_editor_to_lsp, recv_lsp_to_editor);
     if let Some(file) = file {
-        editor.open_new_doc(file);
+        _= editor.open_file_doc(file.path);
     } else {
         editor.open_scratch_doc();
     }
@@ -236,7 +236,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
                     } => break,
                     event => editor.on_key_event(event)?,
                 },
-                Event::Mouse(_) => (),
+                Event::Mouse(event) => editor.on_mouse_event(event)?,
                 Event::Paste(_) => (),
                 Event::Resize(width, height) => {
                     if set_terminal_size(width, height) {
