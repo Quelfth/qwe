@@ -44,6 +44,9 @@ pub enum LspToEditorMessage {
     CodeActions {
         actions: Vec<CodeAction>,
     },
+    WorkspaceDiagnostics {
+        diagnostics: Vec<(Url, Vec<Diagnostic>)>,
+    },
 }
 
 pub enum EditorToLspMessage {
@@ -79,6 +82,9 @@ pub enum EditorToLspMessage {
         lang: Language,
         path: Arc<Path>,
         pos: Utf16Pos,
+    },
+    WorkspaceDiagnostics {
+        lang: Language,
     },
     Exit,
     Save {

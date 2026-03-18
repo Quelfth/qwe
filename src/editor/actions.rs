@@ -12,7 +12,6 @@ use crate::{
     lsp::channel::EditorToLspMessage,
     terminal_size::terminal_size,
     util::{RangeOverlap, pretty_node},
-    PathedFile,
 };
 
 mod insert;

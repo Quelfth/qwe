@@ -10,11 +10,15 @@ use crate::{
     lsp::channel::GotoKind::*,
 };
 
+use super::ScrollDir;
+
 static UNIVERSAL: LazyLock<&'static [(Key, Mapping)]> = LazyLock::new(|| {
     Box::leak(Box::new({
         [
             (Key::ctrl('d'), Mapping::rep(|e| e.scroll_down(4))),
             (Key::ctrl('u'), Mapping::rep(|e| e.scroll_up(4))),
+            (Key::base(ScrollDir::Down), Mapping::rep(|e| e.scroll_down(4))),
+            (Key::base(ScrollDir::Up), Mapping::rep(|e| e.scroll_up(4))),
             (Key::ctrl('y'), Mapping::once(Editor::debug_undo)),
         ]
     }))
@@ -86,6 +90,7 @@ impl Default for Keymaps {
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
                 //
                 (Key::base('\''), Mapping::once(Editor::hover)),
+                //(Key::base('!'), Mapping::once(Editor::workspace_diagnostics)),
                 (Key::base('2'), Mapping::once(Editor::code_actions)),
                 (Key::base('*'), Mapping::once(|e| e.goto(Definition))),
                 (Key::alt('8'), Mapping::once(|e| e.goto(Declaration))),

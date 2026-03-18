@@ -1,20 +1,25 @@
 use std::{env, path::Path, sync::Arc};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use lsp_types::DiagnosticSeverity;
 
 use crate::{
-    PathedFile, color,
-    draw::screen::Canvas,
-    editor::{Editor, gadget::Gadget},
-    grapheme::GraphemeExt,
-    pos::{Pos, Utf16Pos, convert::ConvertableToPos},
-    style::Style,
+    color, document::diagnostics::Severity, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, pos::{Pos, Utf16Pos, convert::ConvertableToPos}, style::Style
 };
 
 use super::gadget::ScreenRegion;
 
+#[derive(Copy, Clone, PartialEq, Eq, Default)]
+pub enum PickStyle {
+    #[default]
+    Default,
+    Warning,
+    Error,
+}
+
 pub struct Pick {
     string: String,
+    style: PickStyle,
     file: Arc<Path>,
     pos: ConvertableToPos,
 }
@@ -23,6 +28,25 @@ pub struct Picker {
     picks: Vec<Pick>,
     term: String,
     scroll: usize,
+}
+
+pub fn display_path(path: &Path) -> Option<String> {
+    Some(
+        path
+            .strip_prefix(env::current_dir().ok()?)
+            .ok().map(|path| path.to_string_lossy())
+            .or_else(||
+                path.strip_prefix(env::home_dir()?)
+                    .ok()
+                    .map(|path| {
+                        let mut path = path.to_string_lossy();
+                        path.to_mut().insert_str(0, "~/");
+                        path
+                    })
+            )
+            .unwrap_or(path.to_string_lossy())
+            .to_string()
+    )
 }
 
 impl Picker {
@@ -36,6 +60,14 @@ impl Picker {
         self.scroll = 0;
     }
 
+    fn new(picks: Vec<Pick>) -> Self {
+        Self {
+            picks,
+            term: String::new(),
+            scroll: 0,
+        }
+    }
+
     pub fn file() -> Self {
         let mut picks = Vec::new();
         if let Ok(cwd) = &env::current_dir() {
@@ -46,61 +78,70 @@ impl Picker {
                 if !entry.file_type().is_file() {
                     continue;
                 }
-                let string = entry
-                    .path()
-                    .strip_prefix(cwd)
-                    .unwrap_or(entry.path())
-                    .to_string_lossy()
-                    .to_string();
+                let Some(string) = display_path(entry.path()) else {continue};
                 picks.push(Pick {
                     string,
+                    style: Default::default(),
                     file: entry.path().into(),
                     pos: Pos::ZERO.into(),
                 })
             }
         }
         picks.sort_by_key(|p| p.string.len());
-        Self {
-            picks,
-            term: String::new(),
-            scroll: 0,
-        }
+        Self::new(picks)
     }
 
     pub fn locations(locations: &[lsp_types::Location]) -> Self {
-        Self {
-            picks: locations
+        let picks = locations
+            .iter()
+            .filter_map(|lsp_types::Location { uri, range }| {
+                if uri.scheme() != "file" {
+                    return None;
+                }
+                let path: Arc<Path> = uri.to_file_path().ok()?.into();
+                let pos = Utf16Pos::from_lsp_pos(range.start).into();
+
+                Some(Pick {
+                    string: display_path(&path)?,
+                    style: Default::default(),
+                    file: path,
+                    pos,
+                })
+            })
+            .collect();
+        Self::new(picks)
+    }
+
+    pub fn diagnostics(diagnostics: &[(lsp_types::Url, Vec<lsp_types::Diagnostic>)]) -> Self {
+        Self::new(
+            diagnostics
                 .iter()
-                .filter_map(|lsp_types::Location { uri, range }| {
+                .filter_map(|(uri, diagnostics)| {
                     if uri.scheme() != "file" {
                         return None;
                     }
                     let path: Arc<Path> = uri.to_file_path().ok()?.into();
+                    Some((path, diagnostics))
+                })
+                .flat_map(|(uri, diagnostics)| {
+                    diagnostics.iter().map(move |diagnostic| (uri.clone(), diagnostic))
+                })
+                .filter_map(|(path, lsp_types::Diagnostic { range, severity, message, .. })| {
                     let pos = Utf16Pos::from_lsp_pos(range.start).into();
 
                     Some(Pick {
-                        string: path
-                            .strip_prefix(env::current_dir().ok()?)
-                            .ok().map(|path| path.to_string_lossy())
-                            .or_else(||
-                                path.strip_prefix(env::home_dir()?)
-                                    .ok()
-                                    .map(|path| {
-                                        let mut path = path.to_string_lossy();
-                                        path.to_mut().insert_str(0, "~/");
-                                        path
-                                    })
-                            )
-                            .unwrap_or(path.to_string_lossy())
-                            .to_string(),
+                        string: message.lines().next().unwrap_or("").to_owned(),
+                        style: match *severity {
+                            Some(DiagnosticSeverity::WARNING) => PickStyle::Warning,
+                            Some(DiagnosticSeverity::ERROR) => PickStyle::Error,
+                            _ => PickStyle::Default,
+                        },
                         file: path,
                         pos,
                     })
                 })
                 .collect(),
-            term: String::new(),
-            scroll: 0,
-        }
+        )
     }
 }
 
@@ -214,7 +255,12 @@ impl Gadget for Picker {
             for (i, g) in (0..canvas.width()).zip(pick.string.graphemes()) {
                 let cell = &mut canvas[(j, i)];
                 cell.grapheme = g;
-                cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into();
+                let fg = match pick.style {
+                    PickStyle::Default => color::FG,
+                    PickStyle::Warning => Severity::Warn.fg(),
+                    PickStyle::Error => Severity::Err.fg(),
+                };
+                cell.style = (Style::fg(fg) + Style::bg(color::BG)).into();
             }
         }
     }

@@ -21,10 +21,6 @@ pub struct BackgroundDocuments {
 }
 
 impl BackgroundDocuments {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
     pub fn insert_pathed(&mut self, path: Arc<Path>, doc: Document) {
         let key = self.docs.insert(doc);
         self.paths.insert(path, key);

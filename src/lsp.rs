@@ -19,26 +19,7 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind,
-    CodeActionKindLiteralSupport, CodeActionLiteralSupport, CodeActionParams,
-    CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind,
-    CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse,
-    ConfigurationParams, Diagnostic, DiagnosticTag, DidChangeTextDocumentParams,
-    DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams,
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent,
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents,
-    HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams,
-    LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position,
-    ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range,
-    ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens,
-    SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests,
-    SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult,
-    SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
-    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams,
-    ShowDocumentResult, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier,
-    TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url,
-    VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams,
-    WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder,
+    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind, CodeActionKindLiteralSupport, CodeActionLiteralSupport, CodeActionParams, CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind, CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag, DiagnosticWorkspaceClientCapabilities, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent, FullDocumentDiagnosticReport, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents, HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams, LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position, ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range, ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams, ShowDocumentResult, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams, WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceDiagnosticParams, WorkspaceDiagnosticReport, WorkspaceDiagnosticReportPartialResult, WorkspaceDiagnosticReportResult, WorkspaceDocumentDiagnosticReport, WorkspaceFolder, WorkspaceFullDocumentDiagnosticReport
 };
 use serde_json as json;
 use tokio::{
@@ -159,6 +140,9 @@ impl Server {
                         did_change_watched_files: Some(DidChangeWatchedFilesClientCapabilities {
                             dynamic_registration: None,
                             relative_pattern_support: None,
+                        }),
+                        diagnostic: Some(DiagnosticWorkspaceClientCapabilities {
+                            refresh_support: Some(false),
                         }),
                         ..Default::default()
                     }),
@@ -534,6 +518,36 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                         }
                     }
                 }
+                EditorToLspMessage::WorkspaceDiagnostics { lang } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let diagnostics = server.socket.workspace_diagnostic(WorkspaceDiagnosticParams {
+                            identifier: None,
+                            previous_result_ids: Default::default(),
+                            work_done_progress_params: Default::default(),
+                            partial_result_params: Default::default(),
+                        }).await?;
+
+                        let (WorkspaceDiagnosticReportResult::Report(WorkspaceDiagnosticReport { items })
+                            | WorkspaceDiagnosticReportResult::Partial(WorkspaceDiagnosticReportPartialResult{ items })
+                        ) = diagnostics;
+
+                        let diagnostics = items.into_iter().map(|report| match report {
+                            WorkspaceDocumentDiagnosticReport::Full(WorkspaceFullDocumentDiagnosticReport {
+                                uri,
+                                full_document_diagnostic_report: FullDocumentDiagnosticReport {
+                                    items,
+                                    ..
+                                },
+                                ..
+                            }) => (uri, items),
+                            WorkspaceDocumentDiagnosticReport::Unchanged(_) => todo!(),
+                        }).collect();
+
+                        channels
+                            .outgoing
+                            .send(LspToEditorMessage::WorkspaceDiagnostics { diagnostics })?;
+                    }
+                },
                 EditorToLspMessage::ChangeDoc {
                     lang,
                     path,

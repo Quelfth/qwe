@@ -214,6 +214,7 @@
 ] @i.macro-pattern)
 
 (macro_invocation (name) @_ (#semantic? @_ Macro) "!" @i.macro.function)
+(macro_invocation (scoped_name name: (name) @_ (#semantic? @_ Macro)) "!" @i.macro.function)
 (macro_invocation (token_tree ["(" ")" "[" "]" "{" "}" "," ";" "=>"] @o.call.macro.function))
 
 ; Statements

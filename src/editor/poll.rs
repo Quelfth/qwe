@@ -1,7 +1,6 @@
-use std::{io, time::Instant};
+use std::{convert::identity, io, time::Instant};
 
 use crate::{
-    PathedFile,
     document::diagnostics::{Diagnostic, Severity},
     editor::{
         Editor,
@@ -36,7 +35,7 @@ impl Editor {
                                     .and_then(|f| {
                                         Some(f.canonicalize().ok()? == p.canonicalize().ok()?)
                                     })
-                                    .is_some_and(std::convert::identity)
+                                    .is_some_and(identity)
                             })
                         {
                             self.doc.semtoks = RangeSequence::from_abs_ordered(
@@ -116,6 +115,10 @@ impl Editor {
                         )));
                         self.draw()?
                     }
+                    WorkspaceDiagnostics { diagnostics } => {
+                        self.gadget = Some(Box::new(Picker::diagnostics(&*diagnostics)));
+                        self.draw()?
+                    },
                 }
             }
         }

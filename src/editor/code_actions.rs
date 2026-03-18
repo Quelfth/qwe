@@ -18,6 +18,7 @@ use crate::{
     },
 };
 
+#[expect(unused)]
 pub enum ActionEdit {
     Change {
         uri: Url,

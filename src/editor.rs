@@ -10,7 +10,7 @@ use std::{
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
 use mutx::Mutex;
 
 use crate::{
