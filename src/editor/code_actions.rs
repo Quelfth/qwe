@@ -190,7 +190,45 @@ impl Gadget for CodeActionsGadget {
                 kind: KeyEventKind::Press,
                 ..
             } => {
-                todo!()
+                let mut action = self.actions.remove(self.selected);
+                Some(Box::new(move |editor| {
+                    if action.command.is_none()
+                        && action.edits.iter().all(|e| {
+                            let ActionEdit::Change { uri, .. } = e else { return false };
+                            uri.scheme() == "file"
+                                && uri
+                                    .to_file_path()
+                                    .is_ok_and(|path|
+                                        editor
+                                            .filepath
+                                            .as_ref()
+                                            .and_then(|f|
+                                                Some(f.canonicalize().ok()? == path.canonicalize().ok()?)
+                                            )
+                                            .is_some_and(std::convert::identity)
+                                    )
+                        }) 
+                    {
+                        action.edits.sort_by_key(|e| {
+                            let ActionEdit::Change{ range, .. } = e else { panic!() };
+                            range.start
+                        });
+                        editor.doc.history.checkpoint();
+                        for edit in action.edits.into_iter().rev() {
+                            let ActionEdit::Change {
+                                range,
+                                text,
+                                ..
+                            } = edit else {continue};
+                            let Some(start) = editor.doc.text().byte_of_utf16_pos(range.start) else {continue};
+                            let Some(end) = editor.doc.text().byte_of_utf16_pos(range.end) else {continue};
+                            let Some(pos) = editor.doc.text().pos_of_byte_pos(start) else {continue};
+                            editor.doc.delete(start..end);
+                            editor.doc.direct_insert(pos, &text);
+                        }
+                        editor.close_gadget();
+                    }
+                }))
             }
 
             _ => None,

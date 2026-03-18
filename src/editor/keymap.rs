@@ -3,6 +3,12 @@ use std::collections::HashMap;
 
 mod default;
 
+#[derive(Copy, Clone)]
+pub enum InputEvent {
+    Event(KeyEvent),
+    Key(Key),
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum InputCode {
     Key(KeyCode),
@@ -27,6 +33,12 @@ pub struct Key {
 
 pub trait ToKey {
     fn to_key_code(self) -> InputCode;
+}
+
+impl ToKey for InputCode {
+    fn to_key_code(self) -> InputCode {
+        self
+    }
 }
 
 impl ToKey for KeyCode {
@@ -69,6 +81,14 @@ impl Key {
             code: key.to_key_code(),
             ctrl: true,
             alt: false,
+        }
+    }
+
+    pub fn ctrl_alt(key: impl ToKey) -> Self {
+        Self {
+            code: key.to_key_code(),
+            ctrl: true,
+            alt: true,
         }
     }
 
@@ -121,9 +141,16 @@ impl Mapping {
 }
 
 impl Keymap {
-    pub fn map_event(&self, event: KeyEvent) -> Option<impl Fn(&mut Editor) + use<>> {
-        let key = Key::from_event(event);
-        let mapping = self.0.get(&key)?;
-        (event.is_press() || event.is_repeat() && mapping.repeatable).then_some(mapping.effect)
+    pub fn map_event(&self, event: InputEvent) -> Option<impl Fn(&mut Editor) + use<>> {
+        match event {
+            InputEvent::Event(event) => {
+                let key = Key::from_event(event);
+                let mapping = self.0.get(&key)?;
+                (event.is_press() || event.is_repeat() && mapping.repeatable).then_some(mapping.effect)
+            }
+            InputEvent::Key(key) => {
+                Some(self.0.get(&key)?.effect)
+            }
+        }
     }
 }

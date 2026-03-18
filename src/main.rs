@@ -234,7 +234,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
                         kind: KeyEventKind::Press,
                         ..
                     } => break,
-                    event => editor.on_key_event(event)?,
+                    event => editor.on_key_event(crate::editor::keymap::InputEvent::Event(event))?,
                 },
                 Event::Mouse(event) => editor.on_mouse_event(event)?,
                 Event::Paste(_) => (),

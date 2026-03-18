@@ -10,7 +10,7 @@ use std::{
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
 use mutx::Mutex;
 
 use crate::{
@@ -34,6 +34,7 @@ use crate::{
 };
 
 use background_docs::BackgroundDocuments;
+use keymap::{InputEvent, InputCode, ScrollDir, Key};
 
 mod actions;
 pub mod background_docs;
@@ -45,7 +46,7 @@ pub mod finder;
 pub mod gadget;
 mod inspect;
 pub mod jump_labels;
-mod keymap;
+pub mod keymap;
 pub mod markdown_view;
 pub mod picker;
 mod poll;
@@ -150,23 +151,24 @@ impl Editor {
         &self.doc
     }
 
-    pub fn on_key_event(&mut self, event: KeyEvent) -> io::Result<()> {
+    pub fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> {
         if let Some(gadget) = &mut self.gadget {
             match event {
-                KeyEvent {
+                InputEvent::Event(KeyEvent {
                     code: KeyCode::Esc,
                     kind: KeyEventKind::Press,
                     ..
-                } => {
+                }) => {
                     self.gadget = None;
                     self.draw()?;
                 }
-                event => {
+                InputEvent::Event(event) => {
                     if let Some(effect) = gadget.on_key(event) {
                         effect(self);
                         self.draw()?;
                     }
                 }
+                _ => ()
             }
             return Ok(());
         }
@@ -178,12 +180,12 @@ impl Editor {
                     if let Some(action) = self.keymap.insert.map_event(event) {
                         action(self);
                         self.draw()?;
-                    } else if let KeyEvent {
+                    } else if let InputEvent::Event(KeyEvent {
                         code: KeyCode::Char(char),
                         modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
                         kind: KeyEventKind::Press | KeyEventKind::Repeat,
                         ..
-                    } = event
+                    }) = event
                     {
                         self.insert(&String::from(char));
                         self.draw()?;
@@ -208,12 +210,21 @@ impl Editor {
     }
 
     pub fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()> {
-        if self.gadget.is_some() { return Ok(()); }
-        match event {
-            
-
-            _ => ()
-        }
+        let MouseEvent { kind, modifiers, .. } = event;
+        let code = match kind {
+            MouseEventKind::Down(button) => InputCode::Mouse(button),
+            MouseEventKind::ScrollDown => InputCode::Scroll(ScrollDir::Down),
+            MouseEventKind::ScrollUp => InputCode::Scroll(ScrollDir::Up),
+            MouseEventKind::ScrollLeft => InputCode::Scroll(ScrollDir::Left),
+            MouseEventKind::ScrollRight => InputCode::Scroll(ScrollDir::Right),
+            _ => return Ok(()),
+        };
+        self.on_key_event(InputEvent::Key(match (modifiers & KeyModifiers::CONTROL != KeyModifiers::NONE, modifiers & KeyModifiers::ALT != KeyModifiers::NONE) {
+            (false, false) => Key::base(code),
+            (true, false) => Key::ctrl(code),
+            (false, true) => Key::alt(code),
+            (true, true) => Key::ctrl_alt(code),
+        }))?;
         Ok(())
     }
 
