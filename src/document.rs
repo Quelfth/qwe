@@ -374,7 +374,7 @@ impl Document {
                         rem
                     }
                 };
-                if !grapheme.is_newline() {
+                if grapheme.is_newline() {
                     return None;
                 }
                 grapheme.len()
@@ -474,10 +474,13 @@ impl Document {
             } else {
                 grapheme.len()
             };
+            let new_whitespace = (in_indent && no_content_before && pos.line > Ix::new(0) && !self.text.line_has_content(pos.line - Ix::new(1))).then(|| {
+                pos.column - self.text.columns_in_line(pos.line - Ix::new(1))
+            }).map(indent_string);
             Some(Change {
                 byte_pos: byte - size,
                 delete: size,
-                insert: "".to_owned(),
+                insert: new_whitespace.unwrap_or_default(),
             })
         });
 
