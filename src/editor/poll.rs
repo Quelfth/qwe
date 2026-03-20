@@ -1,5 +1,7 @@
 use std::{convert::identity, io, time::Instant};
 
+use lsp_types::Url;
+
 use crate::{
     document::diagnostics::{Diagnostic, Severity},
     editor::{
@@ -49,12 +51,21 @@ impl Editor {
                     }
                     Diagnostics { uri, diagnostics } => {
                         if self.filepath.as_ref().is_none_or(|p| {
-                            lsp_types::Url::from_file_path(p.canonicalize().unwrap()).unwrap()
+                            Url::from_file_path(p.canonicalize().unwrap()).unwrap()
                                 != uri
                         }) {
                             continue;
                         }
-                        self.doc.diagnostics = RangeSequence::from_abs(
+                        let Some(path) = self.filepath.clone() else {continue};
+                        let Ok(path) = path.canonicalize() else {continue};
+                        let doc = if let Ok(x) = Url::from_file_path(&path) && x == uri {
+                            self.defer_draw();
+                            &mut self.doc
+                        } else if let Some(doc) = self.bg_docs.by_path_mut(&path) {
+                            doc
+                        } else { continue };
+
+                        doc.diagnostics = RangeSequence::from_abs(
                             diagnostics
                                 .into_iter()
                                 .map(
@@ -65,10 +76,10 @@ impl Editor {
                                          ..
                                      }| {
                                         (
-                                            self.doc.text().byte_of_utf16_pos_saturating(
+                                            doc.text().byte_of_utf16_pos_saturating(
                                                 Utf16Pos::from_lsp_pos(start),
                                             )
-                                                ..self.doc.text().byte_of_utf16_pos_saturating(
+                                                ..doc.text().byte_of_utf16_pos_saturating(
                                                     Utf16Pos::from_lsp_pos(end),
                                                 ),
                                             Diagnostic {
@@ -80,7 +91,6 @@ impl Editor {
                                 )
                                 .collect(),
                         );
-                        self.defer_draw();
                     }
                     Hover { view } => {
                         self.gadget = Some(Box::new(MarkdownGadget::new(view)));
@@ -115,10 +125,6 @@ impl Editor {
                         )));
                         self.draw()?
                     }
-                    WorkspaceDiagnostics { diagnostics } => {
-                        self.gadget = Some(Box::new(Picker::diagnostics(&*diagnostics)));
-                        self.draw()?
-                    },
                 }
             }
         }

@@ -72,8 +72,8 @@ impl Document {
             let len = {
                 write_line_nr(&mut canvas, gi, i);
                 let mut j = gutter_width;
-                for (byte, grapheme) in line.graphemes_with_bytes() {
-                    if j >= width - gutter_width {
+                for (byte, grapheme) in line.graphemes_with_bytes().skip(self.horizontal_scroll.inner()) {
+                    if j >= width {
                         break;
                     }
                     let hl_scopes = highlight_scopes
@@ -90,7 +90,7 @@ impl Document {
                         grapheme,
                         style: {
                             hl_style
-                                + cursor_color(Ix::new((j - gutter_width) as _))
+                                + cursor_color(Ix::new((j - gutter_width) as _) + self.horizontal_scroll)
                                     .map(|c| match c {
                                         CursorStyle::Color(color) => Style::bg(color),
                                         CursorStyle::Underline(color) => {
@@ -121,7 +121,7 @@ impl Document {
             if width > len {
                 for (rj, j) in (len..width).enumerate() {
                     let cell = &mut canvas[(i, j)];
-                    if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize)) {
+                    if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize) + self.horizontal_scroll) {
                         use CursorStyle::*;
                         match style {
                             Color(color) => {
@@ -182,7 +182,7 @@ impl Document {
             write_line_nr(&mut canvas, gi, i);
             for j in gutter_width..width {
                 let cell = &mut canvas[(i, j)];
-                if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize)) {
+                if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize) + self.horizontal_scroll) {
                     use CursorStyle::*;
                     match style {
                         Color(color) => {

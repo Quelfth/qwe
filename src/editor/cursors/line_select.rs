@@ -69,25 +69,40 @@ impl LineCursor {
         let Self { line, .. } = self;
         InsertCursor::forward(Pos {
             line,
-            column: doc.indent_on_line(line),
+            column: doc.context_indent_inc(line),
         })
     }
     fn to_insert_after(self, doc: &Rope) -> InsertCursor {
         let Self { line, height } = self;
-        let line = line + height.max(Ix::new(1)) - Ix::new(1);
+        let line = (line + height).saturating_sub(Ix::new(1));
         InsertCursor::forward(Pos {
             line,
-            column: doc.columns_in_line(line),
+            column: doc.context_columns_in_line(line),
         })
     }
 
     pub fn to_select(self, doc: &Rope) -> SelectCursor {
         let Self { line, height } = self;
+        if height == Ix::new(0) {
+            if line == Ix::new(0) {
+                return SelectCursor {
+                    line,
+                    first_line: RangeCursorLine::point(doc.indent_on_line(Ix::new(0))),
+                    other_lines: Vec::new(),
+                };
+            }
+            return SelectCursor {
+                line: line - Ix::new(1),
+                first_line: RangeCursorLine::point(doc.context_columns_in_line(line - Ix::new(1))),
+                other_lines: vec![RangeCursorLine::point(doc.context_indent_inc(line))],
+            };
+        }
+
         let height = height.max(Ix::new(1));
         let end_line = line + height;
 
         let start = (line..end_line)
-            .map(|l| doc.indent_on_line(l))
+            .map(|l| doc.context_indent_inc(l))
             .min()
             .unwrap();
 
@@ -95,12 +110,12 @@ impl LineCursor {
             line,
             first_line: RangeCursorLine {
                 start,
-                end: doc.columns_in_line(line),
+                end: doc.context_columns_in_line(line),
             },
             other_lines: (line + Ix::new(1)..end_line)
                 .map(|l| RangeCursorLine {
                     start,
-                    end: doc.columns_in_line(l),
+                    end: doc.context_columns_in_line(l),
                 })
                 .collect(),
         }
@@ -194,6 +209,15 @@ impl Cursor for LineCursor {
 
     fn location_cmp(left: &Self, right: &Self) -> std::cmp::Ordering {
         left.line.cmp(&right.line)
+    }
+
+    fn collapse_to_start(&mut self) {
+        self.height = Ix::new(0);
+    }
+
+    fn collapse_to_end(&mut self) {
+        self.line += self.height;
+        self.height = Ix::new(0);
     }
 
     fn line_range(&self) -> Range<Ix<Line>> {

@@ -223,7 +223,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
     editor.draw()?;
 
     loop {
-        if poll(Duration::from_millis(20))? {
+        if poll(Duration::from_millis(2))? {
             match event::read()? {
                 Event::FocusGained => (),
                 Event::FocusLost => (),

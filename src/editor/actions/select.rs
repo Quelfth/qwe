@@ -1,4 +1,4 @@
-use crate::{editor::Editor, ix::Ix};
+use crate::{editor::{Editor, cursors::Cursors}, ix::Ix};
 
 impl Editor {
     pub fn insert_before(&mut self) {
@@ -59,5 +59,16 @@ impl Editor {
 
     pub fn drop_other_selections(&mut self) {
         self.doc.drop_other_selections()
+    }
+
+    pub fn collapse_cursors_to_start(&mut self) {
+        if let Some(cursors) = &mut self.doc.cursors {
+            cursors.collapse_to_start();
+        }
+    }
+    pub fn collapse_cursors_to_end(&mut self) {
+        if let Some(cursors) = &mut self.doc.cursors {
+            cursors.collapse_to_end();
+        }
     }
 }

@@ -1,7 +1,7 @@
 use std::ops::Range;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use regex::Regex;
+use resharp::{Match, Regex};
 
 use crate::{
     color,
@@ -100,17 +100,18 @@ impl Finder {
     }
 
     pub fn find(&self) -> Option<Vec<Range<Ix<Byte>>>> {
-        let re = Regex::new(&self.regex).ok()?;
+        let re = Regex::new(&format!{"({}){}", self.regex, r"&\p{utf8}"}).ok()?;
 
         Some(
             self.haystacks
                 .iter()
-                .flat_map(|Haystack { text, offset }| {
-                    re.find_iter(text).map(move |m| {
-                        let Range { start, end } = m.range();
-                        Ix::new(start + offset)..Ix::new(end + offset)
-                    })
-                })
+                .flat_map(|Haystack { text, offset }|
+                    re.find_all(text.as_bytes()).ok().into_iter().flat_map(move |m|
+                        m.into_iter().map(move |Match { start, end }|
+                            Ix::new(start + offset)..Ix::new(end + offset)
+                        )
+                    )
+                )
                 .collect(),
         )
     }

@@ -28,6 +28,14 @@ impl Editor {
         self.doc.scroll += Ix::new(lines);
     }
 
+    pub fn scroll_left(&mut self, columns: usize) {
+        self.doc.horizontal_scroll = self.doc.horizontal_scroll.saturating_sub(Ix::new(columns));
+    }
+
+    pub fn scroll_right(&mut self, columns: usize) {
+        self.doc.horizontal_scroll += Ix::new(columns);
+    }
+
     pub fn scroll_to_main_cursor(&mut self) {
         self.doc.scroll_to_main_cursor();
     }
@@ -86,6 +94,7 @@ impl Editor {
         self.doc.redo()
     }
 
+    #[allow(unused)]
     pub fn debug_undo(&mut self) {
         aprintln!("{:#?}", self.doc.history);
     }

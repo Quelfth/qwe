@@ -426,6 +426,14 @@ impl Rope {
         line.graphemes().any(|g| !g.is_whitespace())
     }
 
+    pub fn context_columns_in_line(&self, line: Ix<Line>) -> Ix<Column> {
+        if self.line_has_content(line) {
+            self.columns_in_line(line)
+        } else {
+            self.context_indent_inc(line)
+        }
+    }
+
     pub fn graphemes_to_bytes(&self, graphemes: Ix<ix::Grapheme>) -> Option<Ix<Byte>> {
         for (g, (b, _)) in (Ix::new(0)..).zip(self.graphemes_with_bytes()) {
             if graphemes == g {

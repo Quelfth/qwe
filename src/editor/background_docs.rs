@@ -30,4 +30,9 @@ impl BackgroundDocuments {
         let key = self.paths.remove(path)?;
         self.docs.remove(key)
     }
+
+    pub fn by_path_mut(&mut self, path: &Path) -> Option<&mut Document>{
+        let key = *self.paths.get(path)?;
+        self.docs.get_mut(key)
+    }
 }

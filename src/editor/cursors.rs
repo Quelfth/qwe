@@ -44,6 +44,9 @@ pub trait Cursors {
     fn cycle_forward(&mut self);
     fn cycle_backward(&mut self);
 
+    fn collapse_to_start(&mut self);
+    fn collapse_to_end(&mut self);
+
     fn line_range_at(&self, index: CursorIndex) -> Range<Ix<Line>>;
     fn line_ranges(&self) -> impl Iterator<Item = Range<Ix<Line>>>;
 }
@@ -69,6 +72,14 @@ impl<T: Cursor> Cursors for CursorSet<T> {
 
         let next = self.others.pop().unwrap();
         self.others.insert(0, mem::replace(&mut self.main, next))
+    }
+
+    fn collapse_to_start(&mut self) {
+        self.iter_mut().for_each(Cursor::collapse_to_start)
+    }
+
+    fn collapse_to_end(&mut self) {
+        self.iter_mut().for_each(Cursor::collapse_to_end)
     }
 
     fn line_range_at(&self, index: CursorIndex) -> Range<Ix<Line>> {
@@ -394,6 +405,9 @@ impl<T> Index<CursorIndex> for CursorSet<T> {
 pub trait Cursor {
     fn apply_change(&mut self, change: CursorChange, text: &Rope);
     fn location_cmp(left: &Self, right: &Self) -> Ordering;
+
+    fn collapse_to_start(&mut self) {}
+    fn collapse_to_end(&mut self) {}
 
     fn line_range(&self) -> Range<Ix<Line>>;
 }

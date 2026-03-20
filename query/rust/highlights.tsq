@@ -117,6 +117,8 @@
 (type_item (type_parameters ["<" "," ">"] @o.call.type.alias))
 (type_item ["=" ";"] @o.declare.type.alias)
 
+(associated_type ";" @o.declare.type.alias)
+
 ; Struct
 
 "struct" @o.declare.type.struct
@@ -138,10 +140,21 @@
 (enum_variant (field_declaration_list ["{" "," "}"] @o.declare.value.variant))
 (enum_variant (ordered_field_declaration_list ["(" "," ")"] @o.declare.value.variant))
 
+; Const / Static
+
+(const_item ":" @o.type)
+(const_item "=" @o.declare.value)
+(const_item ";" @o.const)
+
+(static_item ":" @o.type)
+(static_item "=" @o.declare.value)
+(static_item ";" @o.declare.value.static)
+
 ; Trait
 
 "trait" @o.declare.trait
 (trait_item (declaration_list ["{" "}"] @o.declare.trait))
+(trait_item (type_parameters ["<" "," ">"] @o.declare.trait))
 
 ; Impl
 
@@ -200,6 +213,8 @@
 (token_binding_pattern ":" @o.declare.macro-parameter)
 
 (metavariable (name (identifier) @i.macro-parameter))
+(metavariable "$" @o.scope "crate" @i.namespace.crate.keyword)
+
 
 (token_repetition_pattern ["$" "(" ")"] @o.loop "*" @o.loop)
 (token_repetition_pattern ["$" "(" ")"] @o.loop "+" @o.loop)
@@ -440,15 +455,15 @@
 ((identifier) @i.type.artifact (#semantic? @i.type.artifact trait TypeAlias))
 ((identifier) @i.type.parameter @_ (#semantic? @_ TypeParameter))
 
-(generic_type type: (type_name) @_ (#semantic? @_ Struct) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
-(generic_type type: (type_name) @_ (#semantic? @_ Enum) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
-(generic_type type: (type_name) @_ (#semantic? @_ Union) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
-(generic_type type: (type_name) @_ (#semantic? @_ "!trait" TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
-(generic_type type: (type_name) @_ (#semantic? @_ trait TypeAlias) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.artifact))
-(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
-(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Enum)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
-(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Union)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
-(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (type_name) @_ (#semantic? @_ Struct) ("::" @o.generics.type.struct)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
+(generic_type type: (type_name) @_ (#semantic? @_ Enum) ("::" @o.generics.type.enum)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
+(generic_type type: (type_name) @_ (#semantic? @_ Union) ("::" @o.generics.type.union)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
+(generic_type type: (type_name) @_ (#semantic? @_ "!trait" TypeAlias) ("::" @o.generics.type.alias)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (type_name) @_ (#semantic? @_ trait TypeAlias) ("::" @o.generics.type.artifact)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.artifact))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) ("::" @o.generics.type.struct)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Enum)) ("::" @o.generics.type.enum)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Union)) ("::" @o.generics.type.union)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) ("::" @o.generics.type.alias)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
 
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 

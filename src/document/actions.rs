@@ -11,6 +11,7 @@ use crate::{
 
 mod insert;
 mod select;
+mod line_select;
 
 impl Document {
     pub fn scroll_to_main_cursor(&mut self) {

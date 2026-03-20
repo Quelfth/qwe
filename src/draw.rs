@@ -101,13 +101,23 @@ impl<T> Rect<T> {
 impl Editor {
     pub fn defer_draw(&self) {
         const DEFER_DURATION: Duration = Duration::from_millis(50);
+        self.defer_draw_to(Instant::now() + DEFER_DURATION);
+    }
+
+    fn defer_draw_to(&self, instant: Instant) {
         let time = &mut *self.draw_defer.lock();
         if time.is_none() {
-            *time = Some(Instant::now() + DEFER_DURATION);
+            *time = Some(instant);
         }
     }
 
     pub fn draw(&self) -> io::Result<()> {
+        const MIN_REDRAW: Duration = Duration::from_millis(8);
+        if let Some(i) = self.last_draw.get() && i.elapsed() < MIN_REDRAW {
+            self.defer_draw_to(i + MIN_REDRAW);
+            return Ok(());
+        }
+
         let (width, height) = terminal_size();
         let mut screen = Screen::new(width, height);
 
@@ -134,6 +144,7 @@ impl Editor {
         }
 
         *self.draw_defer.lock() = None;
+        self.last_draw.set(Some(Instant::now()));
         Ok(())
     }
 }

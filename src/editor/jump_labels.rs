@@ -8,7 +8,7 @@ use crate::{
     draw::screen::Canvas,
     editor::gadget::Gadget,
     grapheme::GraphemeExt,
-    ix::{Ix, Line},
+    ix::{Column, Ix, Line},
     pos::Pos,
     style::FlatStyle,
 };
@@ -17,6 +17,7 @@ use super::{Editor, gadget::ScreenRegion};
 
 pub struct JumpLabels {
     scroll: Ix<Line>,
+    horizontal_scroll: Ix<Column>,
     longest: usize,
     try_rev: bool,
     typed: String,
@@ -66,11 +67,11 @@ impl Gadget for JumpLabels {
                 continue;
             }
             for (i, g) in (0..).zip(label.graphemes()) {
-                let c = pos.column.inner() as u16 + i;
-                if c >= canvas.width() {
-                    break;
-                }
-                let cell = &mut canvas[((pos.line - self.scroll).inner() as u16, c)];
+                if pos.column < self.horizontal_scroll || pos.column > self.horizontal_scroll + Ix::new(canvas.width() as usize) {continue}
+                let cell = &mut canvas[(
+                    (pos.line - self.scroll).inner() as u16, 
+                    (pos.column - self.horizontal_scroll).inner() as u16 + i,
+                )];
                 cell.grapheme = g;
                 cell.style = FlatStyle {
                     fg: rgb! {0xffffff},
@@ -88,10 +89,12 @@ impl JumpLabels {
         labels: impl IntoIterator<Item = (Pos, String)>,
         try_rev: bool,
         scroll: Ix<Line>,
+        horizontal_scroll: Ix<Column>,
     ) -> Self {
         let mut longest = 0;
         Self {
             scroll,
+            horizontal_scroll,
             typed: String::new(),
             labels: labels
                 .into_iter()
@@ -134,7 +137,7 @@ impl JumpLabels {
             _ => panic!(),
         };
 
-        JumpLabels::new(poss.into_iter().zip(label_gen), try_rev, doc.scroll)
+        JumpLabels::new(poss.into_iter().zip(label_gen), try_rev, doc.scroll, doc.horizontal_scroll)
     }
 
     pub fn r#type(&mut self, char: char) {

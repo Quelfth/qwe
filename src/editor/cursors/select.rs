@@ -146,6 +146,17 @@ impl Cursor for SelectCursor {
         left.start_pos().cmp(&right.start_pos())
     }
 
+    fn collapse_to_start(&mut self) {
+        self.other_lines.clear();
+        self.first_line.end = self.first_line.start
+    }
+
+    fn collapse_to_end(&mut self) {
+        self.line += Ix::new(self.other_lines.len());
+        self.first_line = self.last_line();
+        self.first_line.start = self.first_line.end
+    }
+
     fn line_range(&self) -> Range<Ix<Line>> {
         self.line..self.line + Ix::new(self.other_lines.len() + 1)
     }
@@ -162,6 +173,15 @@ pub struct SelectCursor {
 pub struct RangeCursorLine {
     pub start: Ix<Column>,
     pub end: Ix<Column>,
+}
+
+impl RangeCursorLine {
+    pub fn point(column: Ix<Column>) -> Self {
+        Self {
+            start: column,
+            end: column,
+        }
+    }
 }
 
 impl SelectCursor {
@@ -241,7 +261,7 @@ impl SelectCursor {
         let Self { line, .. } = *self;
         InsertCursor::forward(Pos {
             line,
-            column: doc.indent_on_line(line),
+            column: doc.context_indent_inc(line),
         })
     }
 
@@ -249,7 +269,7 @@ impl SelectCursor {
         let line = self.last_line_ix();
         InsertCursor::forward(Pos {
             line,
-            column: doc.columns_in_line(line),
+            column: doc.context_columns_in_line(line),
         })
     }
 

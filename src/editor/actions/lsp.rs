@@ -49,12 +49,4 @@ impl Editor {
             _ = tx.send(EditorToLspMessage::CodeActions { lang, path, pos });
         }
     }
-
-    pub fn workspace_diagnostics(&mut self) {
-        if let Some(tx) = &self.lsp_send
-            && let Some(lang) = self.doc().language()
-        {
-            _ = tx.send(EditorToLspMessage::WorkspaceDiagnostics { lang });
-        }
-    }
 }

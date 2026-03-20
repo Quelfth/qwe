@@ -37,6 +37,7 @@ mod unopened;
 #[derive(Default)]
 pub struct Document {
     pub scroll: Ix<Line>,
+    pub horizontal_scroll: Ix<Column>,
     pub view_height: Mutex<Ix<Line>>,
     pub cursors: Option<CursorState>,
     text: Rope,
@@ -63,6 +64,7 @@ impl Document {
             tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
             language: lang,
             scroll: Ix::new(0),
+            horizontal_scroll: Ix::new(0),
             view_height: Default::default(),
             history: Default::default(),
             future: Default::default(),
@@ -372,6 +374,9 @@ impl Document {
                         rem
                     }
                 };
+                if !grapheme.is_newline() {
+                    return None;
+                }
                 grapheme.len()
                     + graphemes
                         .rev()

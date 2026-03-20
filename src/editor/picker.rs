@@ -9,6 +9,7 @@ use crate::{
 
 use super::gadget::ScreenRegion;
 
+#[allow(unused)]
 #[derive(Copy, Clone, PartialEq, Eq, Default)]
 pub enum PickStyle {
     #[default]
@@ -112,6 +113,7 @@ impl Picker {
         Self::new(picks)
     }
 
+    #[allow(unused)]
     pub fn diagnostics(diagnostics: &[(lsp_types::Url, Vec<lsp_types::Diagnostic>)]) -> Self {
         Self::new(
             diagnostics

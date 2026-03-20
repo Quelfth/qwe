@@ -17,9 +17,13 @@ static UNIVERSAL: LazyLock<&'static [(Key, Mapping)]> = LazyLock::new(|| {
         [
             (Key::ctrl('d'), Mapping::rep(|e| e.scroll_down(4))),
             (Key::ctrl('u'), Mapping::rep(|e| e.scroll_up(4))),
+            (Key::ctrl('r'), Mapping::rep(|e| e.scroll_right(4))),
+            (Key::ctrl('y'), Mapping::rep(|e| e.scroll_left(4))),
             (Key::base(ScrollDir::Down), Mapping::rep(|e| e.scroll_down(4))),
             (Key::base(ScrollDir::Up), Mapping::rep(|e| e.scroll_up(4))),
-            (Key::ctrl('y'), Mapping::once(Editor::debug_undo)),
+            (Key::base(ScrollDir::Left), Mapping::rep(|e| e.scroll_left(4))),
+            (Key::base(ScrollDir::Right), Mapping::rep(|e| e.scroll_right(4))),
+            //(Key::ctrl('y'), Mapping::once(Editor::debug_undo)),
         ]
     }))
 });
@@ -58,6 +62,8 @@ impl Default for Keymaps {
                 (Key::base(';'), Mapping::once(Editor::line_select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),
+                (Key::base('u'), Mapping::once(Editor::collapse_cursors_to_start)),
+                (Key::base('q'), Mapping::once(Editor::collapse_cursors_to_end)),
                 (Key::base('9'), Mapping::rep(Editor::cycle_cursors_backward)),
                 (Key::base('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 (Key::base('8'), Mapping::once(Editor::scroll_to_main_cursor)),
@@ -122,6 +128,8 @@ impl Default for Keymaps {
                 (Key::base(';'), Mapping::once(Editor::select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),
+                (Key::base('u'), Mapping::once(Editor::collapse_cursors_to_start)),
+                (Key::base('q'), Mapping::once(Editor::collapse_cursors_to_end)),
                 (Key::base('9'), Mapping::rep(Editor::cycle_cursors_backward)),
                 (Key::base('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 //

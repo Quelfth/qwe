@@ -1,11 +1,5 @@
 use std::{
-    collections::HashMap,
-    io,
-    mem,
-    ops::Range,
-    path::Path,
-    sync::{Arc, mpsc::Receiver},
-    time::Instant,
+    cell::Cell, collections::HashMap, io, mem, ops::Range, path::Path, sync::{Arc, mpsc::Receiver}, time::Instant
 };
 
 use tokio::sync::mpsc::UnboundedSender;
@@ -65,6 +59,7 @@ pub struct Editor {
     pub lsp_recv: Option<Receiver<LspToEditorMessage>>,
     pub lsp_send: Option<UnboundedSender<EditorToLspMessage>>,
     pub language_servers: HashMap<Language, Vec<LanguageServer>>,
+    pub last_draw: Cell<Option<Instant>>,
     pub draw_defer: Mutex<Option<Instant>>,
 }
 
