@@ -154,6 +154,7 @@ impl Cursor for SelectCursor {
     fn collapse_to_end(&mut self) {
         self.line += Ix::new(self.other_lines.len());
         self.first_line = self.last_line();
+        self.other_lines.clear();
         self.first_line.start = self.first_line.end
     }
 

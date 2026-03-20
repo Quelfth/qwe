@@ -112,7 +112,7 @@ impl Document {
                 yield line.to_owned();
             }
             for line in lines {
-                yield format!("{indent}{line}");
+                yield format!("\n{indent}{line}");
             }
         }
         .collect();
