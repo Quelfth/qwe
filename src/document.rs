@@ -474,13 +474,18 @@ impl Document {
             } else {
                 grapheme.len()
             };
-            let new_whitespace = (in_indent && no_content_before && pos.line > Ix::new(0) && !self.text.line_has_content(pos.line - Ix::new(1))).then(|| {
-                pos.column - self.text.columns_in_line(pos.line - Ix::new(1))
-            }).map(indent_string);
+            let new_whitespace = if in_indent 
+                && no_content_before 
+                && let Some(prev_line) = pos.line.checked_sub(Ix::new(1))
+                && !self.text.line_has_content(prev_line) 
+                && let Some(new_ws) = pos.column.checked_sub(self.text.columns_in_line(prev_line)) 
+            {
+                indent_string(new_ws)
+            } else {String::new()};
             Some(Change {
                 byte_pos: byte - size,
                 delete: size,
-                insert: new_whitespace.unwrap_or_default(),
+                insert: new_whitespace,
             })
         });
 

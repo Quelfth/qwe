@@ -47,7 +47,10 @@
 (pointer_type "const" @o.storage.immutable)
 ";" @o.group
 (parenthesized_expression ["(" ")"] @o.group)
+(parenthesized_pattern ["(" ")"] @o.group)
 (block ["{" "}"] @o.group)
+
+(visibility_modifier "pub" @o.visibility.middle "(" @o.visibility.middle ")" @o.visibility.middle)
 
 ; Modules
 
@@ -372,6 +375,11 @@
 (tuple_struct_pattern type: (name) @_ (#semantic? @_ EnumMember) ["(" "," ")"] @o.call.value.variant)
 (tuple_struct_pattern type: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) ["(" "," ")"] @o.call.value.variant)
 
+(tuple_struct_pattern type: (self_type) ["(" "," ")"] @o.call.type.self)
+
+(tuple_struct_pattern type: (name) @_ (#semantic? @_ Struct) ["(" "," ")"] @o.call.type.struct)
+(tuple_struct_pattern type: (scoped_name name: (name) @_ (#semantic? @_ Struct)) ["(" "," ")"] @o.call.type.struct)
+
 (generic_function
     function: (name) @_ (#semantic? @_ EnumMember)
     "::" @o.call.value.variant
@@ -401,8 +409,7 @@
         (base_field_initializer ".." @o.call.type.self)?
     )
 )
-;(struct_pattern type: (self_type) ["{" "," "}"] @o.call.type.self)
-
+(struct_pattern type: (self_type) ["{" "," "}"] @o.call.type.self)
 
 (struct_expression
     name: (type_name) @_ (#semantic? @_ Struct) 
