@@ -1,26 +1,20 @@
 use {
-    std::{
-        collections::HashMap,
-        path::Path,
-        sync::Arc,
-    },
-    slotmap::{
-        SlotMap,
-    },
     crate::document::Document,
+    slotmap::SlotMap,
+    std::{collections::HashMap, path::Path, sync::Arc},
 };
 
-slotmap::new_key_type!{
+slotmap::new_key_type! {
     pub struct DocKey;
 }
 
 #[derive(Default)]
-pub struct BackgroundDocuments {
+pub struct Documents {
     docs: SlotMap<DocKey, Document>,
     paths: HashMap<Arc<Path>, DocKey>,
 }
 
-impl BackgroundDocuments {
+impl Documents {
     pub fn insert_pathed(&mut self, path: Arc<Path>, doc: Document) {
         let key = self.docs.insert(doc);
         self.paths.insert(path, key);
@@ -31,7 +25,7 @@ impl BackgroundDocuments {
         self.docs.remove(key)
     }
 
-    pub fn by_path_mut(&mut self, path: &Path) -> Option<&mut Document>{
+    pub fn by_path_mut(&mut self, path: &Path) -> Option<&mut Document> {
         let key = *self.paths.get(path)?;
         self.docs.get_mut(key)
     }

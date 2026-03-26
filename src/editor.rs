@@ -1,17 +1,17 @@
 use std::{
-    cell::Cell, collections::HashMap, io, mem, ops::Range, path::Path, sync::{Arc, mpsc::Receiver}, time::Instant
+    collections::HashMap,
+    io, mem,
+    ops::Range,
+    path::Path,
+    sync::{Arc, mpsc::Receiver},
 };
 
 use tokio::sync::mpsc::UnboundedSender;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
-use mutx::Mutex;
 
 use crate::{
-    PathedFile,
-    document::Document,
-    draw::screen::Screen,
-    editor::{
+    PathedFile, document::Document, editor::{
         clipboard::Clipboard,
         cursors::{
             CursorState,
@@ -19,23 +19,18 @@ use crate::{
         },
         gadget::Gadget,
         keymap::Keymaps,
-    },
-    ix::{Byte, Ix},
-    lang::Language,
-    language_server::LanguageServer,
-    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
-    pos::{Pos, convert::TextConvertablePos},
+    }, ix::{Byte, Ix}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}
 };
 
-use background_docs::BackgroundDocuments;
-use keymap::{InputEvent, InputCode, ScrollDir, Key};
+use documents::Documents;
+use keymap::{InputCode, InputEvent, Key, ScrollDir};
 
 mod actions;
-pub mod background_docs;
-mod clipboard;
+pub mod clipboard;
 pub mod code_actions;
 pub mod completer;
 pub mod cursors;
+pub mod documents;
 pub mod finder;
 pub mod gadget;
 mod inspect;
@@ -51,16 +46,12 @@ pub struct Editor {
     doc: Document,
     file_history: Vec<Arc<Path>>,
     file_future: Vec<Arc<Path>>,
-    bg_docs: BackgroundDocuments,
-    pub screen: Mutex<Screen>,
+    bg_docs: Documents,
     keymap: Keymaps,
     pub gadget: Option<Box<dyn Gadget>>,
     pub clipboard: Clipboard,
-    pub lsp_recv: Option<Receiver<LspToEditorMessage>>,
-    pub lsp_send: Option<UnboundedSender<EditorToLspMessage>>,
-    pub language_servers: HashMap<Language, Vec<LanguageServer>>,
-    pub last_draw: Cell<Option<Instant>>,
-    pub draw_defer: Mutex<Option<Instant>>,
+    pub lsp: Option<LspContext>,
+    pub presenter: Presenter,
 }
 
 impl Editor {
@@ -91,7 +82,11 @@ impl Editor {
         }
         Ok(())
     }
-    pub fn open_file_doc_at(&mut self, path: Arc<Path>, pos: impl TextConvertablePos<Pos>) -> io::Result<()> {
+    pub fn open_file_doc_at(
+        &mut self,
+        path: Arc<Path>,
+        pos: impl TextConvertablePos<Pos>,
+    ) -> io::Result<()> {
         self.open_file_doc(path)?;
         self.jump_to(pos.convert(self.doc.text()));
         self.doc.scroll_main_cursor_on_screen();
@@ -104,11 +99,8 @@ impl Editor {
         } else {
             let PathedFile { path, file } = PathedFile::open(path.clone())?;
             Document::new(
-                path
-                    .extension()
-                    .and_then(|e|
-                        Language::from_file_ext(&e.to_string_lossy())
-                    ),
+                path.extension()
+                    .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
                 file,
                 Some(Default::default()),
             )
@@ -118,10 +110,10 @@ impl Editor {
         let old_path = self.filepath.clone();
         self.filepath = Some(path.clone());
 
-        if let Some(lsp_send) = &self.lsp_send
+        if let Some(lsp) = &self.lsp
             && let Some(lang) = self.doc.language()
         {
-            lsp_send
+            lsp.tx
                 .send(EditorToLspMessage::OpenDoc {
                     lang,
                     path,
@@ -138,8 +130,7 @@ impl Editor {
         send: UnboundedSender<EditorToLspMessage>,
         recv: Receiver<LspToEditorMessage>,
     ) {
-        self.lsp_recv = Some(recv);
-        self.lsp_send = Some(send);
+        self.lsp = Some(LspContext::new(recv, send));
     }
 
     pub fn doc(&self) -> &Document {
@@ -163,7 +154,7 @@ impl Editor {
                         self.draw()?;
                     }
                 }
-                _ => ()
+                _ => (),
             }
             return Ok(());
         }
@@ -205,7 +196,9 @@ impl Editor {
     }
 
     pub fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()> {
-        let MouseEvent { kind, modifiers, .. } = event;
+        let MouseEvent {
+            kind, modifiers, ..
+        } = event;
         let code = match kind {
             MouseEventKind::Down(button) => InputCode::Mouse(button),
             MouseEventKind::ScrollDown => InputCode::Scroll(ScrollDir::Down),
@@ -214,12 +207,17 @@ impl Editor {
             MouseEventKind::ScrollRight => InputCode::Scroll(ScrollDir::Right),
             _ => return Ok(()),
         };
-        self.on_key_event(InputEvent::Key(match (modifiers & KeyModifiers::CONTROL != KeyModifiers::NONE, modifiers & KeyModifiers::ALT != KeyModifiers::NONE) {
-            (false, false) => Key::base(code),
-            (true, false) => Key::ctrl(code),
-            (false, true) => Key::alt(code),
-            (true, true) => Key::ctrl_alt(code),
-        }))?;
+        self.on_key_event(InputEvent::Key(
+            match (
+                modifiers & KeyModifiers::CONTROL != KeyModifiers::NONE,
+                modifiers & KeyModifiers::ALT != KeyModifiers::NONE,
+            ) {
+                (false, false) => Key::base(code),
+                (true, false) => Key::ctrl(code),
+                (false, true) => Key::alt(code),
+                (true, true) => Key::ctrl_alt(code),
+            },
+        ))?;
         Ok(())
     }
 
@@ -258,4 +256,14 @@ impl Editor {
     }
 
     fn noop(&mut self) {}
+}
+
+impl Editor {
+    pub fn into_navigator(self) -> Navigator {
+        let Self { filepath, doc, mut bg_docs, keymap, clipboard, lsp, presenter, .. } = self;
+        if let Some(fp) = filepath.clone() {
+            bg_docs.insert_pathed(fp, doc);
+        }
+        Navigator::new(filepath, keymap, clipboard, lsp, presenter)
+    }
 }

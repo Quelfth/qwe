@@ -88,7 +88,11 @@
 
 (scoped_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 (scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
+
+(use_wildcard "::" @o.scope)
+
 (use_wildcard (name) @_ (#semantic? @_ Enum) "::" @o.association.enum)
+(use_wildcard (scoped_name name: (name) @_ (#semantic? @_ Enum)) "::" @o.association.enum)
 
 (use_wildcard "*" @o.wildcard)
 
@@ -152,6 +156,8 @@
 (static_item ":" @o.type)
 (static_item "=" @o.declare.value)
 (static_item ";" @o.declare.value.static)
+
+(const_parameter ":" @o.type)
 
 ; Trait
 
@@ -446,6 +452,7 @@
 ; Type
 
 (reference_type "&" @o.access.reference)
+(pointer_type "*" @o.access.pointer)
 
 (never_type "!" @o.type.never)
 (self_type) @i.type.self
@@ -488,6 +495,7 @@
 ; Value Names
 
 ((identifier) @i.value.constant (#semantic? @i.value.constant Const))
+((identifier) @i.value.constant.parameter @_ (#semantic? @_ ConstParameter))
 
 ((identifier) @i.value.global (#semantic? @i.value.global Static))
 ((identifier) @i.value.local (#semantic? @i.value.local Variable))

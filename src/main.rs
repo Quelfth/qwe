@@ -10,7 +10,6 @@
 use std::{
     cell::Cell,
     fs, io,
-    panic::{self},
     path::{Path, PathBuf},
     sync::{Arc},
     time::Duration,
@@ -25,7 +24,7 @@ use crossterm::{
 use tokio::sync::mpsc;
 
 use crate::{
-    aprintln::{aprint, aprintln}, editor::Editor, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, pos::Pos, terminal_size::{set_terminal_size}
+    editor::Editor, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, pos::Pos, presenter::Present, terminal_size::set_terminal_size
 };
 
 mod aprintln;
@@ -41,8 +40,10 @@ mod ix;
 mod lang;
 mod language_server;
 mod lsp;
+mod navigator;
 mod pos;
 mod pred;
+mod presenter;
 mod range_sequence;
 mod range_tree;
 mod rope;
@@ -102,33 +103,11 @@ fn main() -> io::Result<()> {
         find,
         line,
     } = Args::parse();
-
-    let default_hook = panic::take_hook();
-    panic::set_hook(Box::new(move |info| {
-        if !is_main_thread() {
-            if let Some(location) = info.location() {
-                aprint!(
-                    "[{}:{}|{}] ",
-                    location.file(),
-                    location.line(),
-                    location.column(),
-                );
-            }
-            if let Some(payload) = info.payload_as_str() {
-                aprintln!("Panic: {}", payload);
-            } else {
-                aprintln!("Panic!")
-            }
-            return;
-        }
-        _ = setup::teardown();
-        default_hook(info);
-    }));
-    setup::setup()?;
     let path = if let Some(path) = path {
         Some(path)
     } else {
-        if let Some(find) = find && let Ok(dir) = std::env::current_dir() {
+        if let Some(find) = find {
+            let dir = std::env::current_dir()?;
             let mut options = walkdir::WalkDir::new(dir)
                 .into_iter()
                 .filter_map(|e| e.ok())
@@ -136,28 +115,30 @@ fn main() -> io::Result<()> {
                 .map(|e| e.path().to_owned())
                 .collect::<Vec<_>>();
             options.sort_by_key(|o| o.as_os_str().len());
-            options
+            Some(options
                 .into_iter()
-                .find(|e| find.iter().all(|f| e.to_string_lossy().contains(f)))
+                .find(|e| find.iter().all(|f| e.to_string_lossy().contains(f))).unwrap())
         } else {
             None
         }
     };
-    let result = try {
-        let path = if let Some(path) = path {
-            Some(if !new {
-                PathedFile::open(path.into())?
-            } else if !dirs {
-                PathedFile::create(path.into())?
-            } else {
-                PathedFile::create_with_dirs(path.into())?
-            })
+    let path = if let Some(path) = path {
+        Some(if !new {
+            PathedFile::open(path.into())?
+        } else if !dirs {
+            PathedFile::create(path.into())?
         } else {
-            None
-        };
-        run(path, line)?
+            PathedFile::create_with_dirs(path.into())?
+        })
+    } else {
+        None
     };
+
+    setup::setup_panic_hook();
+    setup::setup()?;
+    let result = run(path, line);
     setup::teardown()?;
+
     result?;
 
     Ok(())
@@ -247,8 +228,8 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
         }
         editor.poll()?;
     }
-    if let Some(channel) = editor.lsp_send {
-        channel.send(EditorToLspMessage::Exit).unwrap();
+    if let Some(cx) = editor.lsp {
+        cx.tx.send(EditorToLspMessage::Exit).unwrap();
     }
 
     Ok(())

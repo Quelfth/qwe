@@ -1,15 +1,14 @@
-use std::{ops::Range, sync::Arc};
+use std::{collections::HashMap, ops::Range, sync::Arc};
 
 use convert_case::{Case, Casing};
 use lsp_types::{
     InitializeResult, SemanticTokensLegend, SemanticTokensOptions,
     SemanticTokensRegistrationOptions, SemanticTokensServerCapabilities,
 };
+use mutx::Mutex;
 
 use crate::{
-    document::semtoks::SemanticToken,
-    ix::{Byte, Ix, Line, Utf16},
-    rope::Rope,
+    document::semtoks::SemanticToken, ix::{Byte, Ix, Line, Utf16}, lang::Language, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, rope::Rope
 };
 
 #[derive(PartialEq, Eq, Default)]
@@ -133,5 +132,25 @@ impl LanguageServer {
                 (range, SemanticToken { r#type, mods })
             },
         )
+    }
+}
+
+
+pub struct LspContext {
+    pub rx: std::sync::mpsc::Receiver<LspToEditorMessage>,
+    pub tx: tokio::sync::mpsc::UnboundedSender<EditorToLspMessage>,
+    pub servers: Mutex<HashMap<Language, Vec<LanguageServer>>>,
+}
+
+impl LspContext {
+    pub fn new(
+        rx: std::sync::mpsc::Receiver<LspToEditorMessage>,
+        tx: tokio::sync::mpsc::UnboundedSender<EditorToLspMessage>
+    ) -> Self {
+        Self {
+            rx,
+            tx,
+            servers: Default::default(),
+        }
     }
 }

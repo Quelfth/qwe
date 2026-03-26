@@ -1,6 +1,5 @@
 use std::{
-    io::{self, stdout},
-    sync::atomic::{AtomicBool, Ordering},
+    io::{self, stdout}, panic, sync::atomic::{AtomicBool, Ordering}
 };
 
 use crossterm::{
@@ -10,7 +9,31 @@ use crossterm::{
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
 
-use crate::aprintln::print_print_stream;
+use crate::{aprintln::{aprint, aprintln, print_print_stream}, is_main_thread};
+
+pub fn setup_panic_hook() {
+    let default_hook = panic::take_hook();
+    panic::set_hook(Box::new(move |info| {
+        if !is_main_thread() {
+            if let Some(location) = info.location() {
+                aprint!(
+                    "[{}:{}|{}] ",
+                    location.file(),
+                    location.line(),
+                    location.column(),
+                );
+            }
+            if let Some(payload) = info.payload_as_str() {
+                aprintln!("Panic: {}", payload);
+            } else {
+                aprintln!("Panic!")
+            }
+            return;
+        }
+        _ = teardown();
+        default_hook(info);
+    }));
+}
 
 static IS_SETUP: AtomicBool = AtomicBool::new(false);
 fn is_setup() -> bool {

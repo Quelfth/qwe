@@ -184,6 +184,21 @@ impl<'s> Canvas<'s> {
             rect: self.rect,
         }
     }
+
+    pub fn region<'a>(&'a mut self, mut rect: Rect<u16>) -> Canvas<'a> {
+        let rs = self.rect.rows.start;
+        let cs = self.rect.cols.start;
+
+        rect.rows.start += rs;
+        rect.rows.end += rs;
+        rect.cols.start += cs;
+        rect.cols.end += cs;
+
+        Canvas {
+            screen: self.screen,
+            rect,
+        }
+    }
 }
 
 impl IndexMut<(u16, u16)> for Canvas<'_> {

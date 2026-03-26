@@ -43,11 +43,11 @@ impl Editor {
     pub fn save_file(&mut self) {
         if let Some(path) = self.filepath.as_deref() {
             _ = fs::write(path, self.doc.text().to_string().as_bytes());
-            if let Some(channel) = &self.lsp_send
+            if let Some(cx) = &self.lsp
                 && let Some(lang) = self.doc.language()
                 && let Some(path) = self.filepath.clone()
             {
-                _ = channel.send(EditorToLspMessage::Save { lang, path });
+                _ = cx.tx.send(EditorToLspMessage::Save { lang, path });
             }
         }
     }
@@ -139,8 +139,8 @@ impl Editor {
     }
 
     pub fn refresh_semantic_tokens(&mut self) {
-        if let Some(send) = &self.lsp_send {
-            send.send(EditorToLspMessage::RefreshSemanticTokens)
+        if let Some(cx) = &self.lsp {
+            cx.tx.send(EditorToLspMessage::RefreshSemanticTokens)
                 .unwrap();
         }
     }

@@ -5,10 +5,7 @@ use std::{
 };
 
 use crate::{
-    draw::{cursor::CursorRange, screen::Screen},
-    editor::{Editor, gadget::ScreenRegion},
-    ix::Ix,
-    terminal_size::terminal_size,
+    draw::{cursor::CursorRange, screen::{Canvas, Screen}}, editor::{Editor, gadget::ScreenRegion}, ix::Ix, presenter::{Present, Presenter}, terminal_size::terminal_size
 };
 
 mod cursor;
@@ -51,15 +48,6 @@ impl<T> From<std::ops::Range<T>> for Range<T> {
     }
 }
 
-// impl Range<usize> {
-//     fn one(pos: usize) -> Self {
-//         Self {
-//             start: pos,
-//             end: pos + 1,
-//         }
-//     }
-// }
-
 impl<U> Range<Ix<U>> {
     fn one(pos: Ix<U>) -> Self {
         Self {
@@ -98,53 +86,69 @@ impl<T> Rect<T> {
     }
 }
 
-impl Editor {
-    pub fn defer_draw(&self) {
-        const DEFER_DURATION: Duration = Duration::from_millis(50);
-        self.defer_draw_to(Instant::now() + DEFER_DURATION);
+impl Present for Editor {
+
+    fn presenter(&self) -> &Presenter {
+        &self.presenter
     }
 
-    fn defer_draw_to(&self, instant: Instant) {
-        let time = &mut *self.draw_defer.lock();
-        if time.is_none() {
-            *time = Some(instant);
-        }
-    }
-
-    pub fn draw(&self) -> io::Result<()> {
-        const MIN_REDRAW: Duration = Duration::from_millis(8);
-        if let Some(i) = self.last_draw.get() && i.elapsed() < MIN_REDRAW {
-            self.defer_draw_to(i + MIN_REDRAW);
-            return Ok(());
-        }
-
-        let (width, height) = terminal_size();
-        let mut screen = Screen::new(width, height);
-
+    fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
+        let width = canvas.width();
+        let height = canvas.height();
         let doc_rect = Rect::new(0..width, 0..height);
-        self.doc().draw(screen.canvas(doc_rect), |i| {
+        self.doc().draw(canvas.reborrow(), |i| {
             self.doc()
                 .cursors
                 .as_ref()
                 .map(|c| c.ranges_for_line(i).collect())
                 .unwrap_or_default()
         });
-
+    
         if let Some(gadget) = &self.gadget {
-            gadget.draw(screen.canvas(match gadget.screen_region() {
+            gadget.draw(canvas.region(match gadget.screen_region() {
                 ScreenRegion::DocOverlay => self.doc().overlay_rect(doc_rect),
-                ScreenRegion::RightPanel => Rect::new(width / 2..width, 0..height),
+                ScreenRegion::RightPanel => Rect::new(canvas.width() / 2..canvas.width(), 0..canvas.height()),
             }))
         }
 
-        {
-            let last_screen = &mut *self.screen.lock();
-            screen.draw_diff(last_screen)?;
-            *last_screen = screen;
-        }
-
-        *self.draw_defer.lock() = None;
-        self.last_draw.set(Some(Instant::now()));
         Ok(())
     }
+
 }
+
+//impl Editor {
+//    pub fn defer_draw(&self) {
+//        const DEFER_DURATION: Duration = Duration::from_millis(50);
+//        self.defer_draw_to(Instant::now() + DEFER_DURATION);
+//    }
+//
+//    fn defer_draw_to(&self, instant: Instant) {
+//        let time = &mut *self.draw_defer.lock();
+//        if time.is_none() {
+//            *time = Some(instant);
+//        }
+//    }
+//
+//    pub fn draw(&self) -> io::Result<()> {
+//
+//        const MIN_REDRAW: Duration = Duration::from_millis(8);
+//        if let Some(i) = self.last_draw.get() && i.elapsed() < MIN_REDRAW {
+//            self.defer_draw_to(i + MIN_REDRAW);
+//            return Ok(());
+//        }
+//
+//        let (width, height) = terminal_size();
+//        let mut screen = Screen::new(width, height);
+//
+//
+//        {
+//            let last_screen = &mut *self.screen.lock();
+//            screen.draw_diff(last_screen)?;
+//            *last_screen = screen;
+//        }
+//
+//        *self.draw_defer.lock() = None;
+//        self.last_draw.set(Some(Instant::now()));
+//        Ok(())
+//    }
+//}

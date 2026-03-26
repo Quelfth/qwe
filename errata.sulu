@@ -23,6 +23,7 @@ o.access = f.access;
 o.access.field = f.key-value;
 o.access.method = f.method-access;
 o.access.method.extension = f.ext-method-access;
+o.access.pointer = f.pointer;
 o.arithmetic = f.arithmetic;
 o.assign = b f.access;
 o.association = f.association;

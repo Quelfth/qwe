@@ -3,32 +3,28 @@ use std::{convert::identity, io, time::Instant};
 use lsp_types::Url;
 
 use crate::{
-    document::diagnostics::{Diagnostic, Severity},
-    editor::{
+    document::diagnostics::{Diagnostic, Severity}, editor::{
         Editor,
         code_actions::{CodeAction, CodeActionsGadget},
         completer::Completer,
         markdown_view::MarkdownGadget,
         picker::Picker,
-    },
-    language_server::LanguageServer,
-    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
-    pos::Utf16Pos,
-    range_sequence::RangeSequence,
+    }, language_server::LanguageServer, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence
 };
 
 impl Editor {
     pub fn poll(&mut self) -> io::Result<()> {
         let mut action = None::<Box<dyn FnOnce(&mut Editor) -> io::Result<()>>>;
-        if let Some(channel) = &self.lsp_recv {
-            while let Ok(msg) = channel.try_recv() {
+        if let Some(cx) = &self.lsp {
+            while let Ok(msg) = cx.rx.try_recv() {
                 use LspToEditorMessage::*;
                 match msg {
-                    NewLsp { lang, init_result } => self
-                        .language_servers
-                        .entry(lang)
-                        .or_default()
-                        .push(LanguageServer::new(init_result)),
+                    NewLsp { lang, init_result } => {
+                        cx.servers.lock()
+                            .entry(lang)
+                            .or_default()
+                            .push(LanguageServer::new(init_result))
+                    },
                     SemanticTokens { uri, tokens } => {
                         if uri.scheme() == "file"
                             && uri.to_file_path().is_ok_and(|p| {
@@ -41,12 +37,12 @@ impl Editor {
                             })
                         {
                             self.doc.semtoks = RangeSequence::from_abs_ordered(
-                                self.language_servers
+                                cx.servers.lock()
                                     .get(&self.doc.language().unwrap())
                                     .unwrap()[0]
                                     .translate_semtoks(tokens, self.doc.text()),
                             );
-                            self.defer_draw();
+                            self.presenter.defer_draw();
                         }
                     }
                     Diagnostics { uri, diagnostics } => {
@@ -59,7 +55,7 @@ impl Editor {
                         let Some(path) = self.filepath.clone() else {continue};
                         let Ok(path) = path.canonicalize() else {continue};
                         let doc = if let Ok(x) = Url::from_file_path(&path) && x == uri {
-                            self.defer_draw();
+                            self.presenter.defer_draw();
                             &mut self.doc
                         } else if let Some(doc) = self.bg_docs.by_path_mut(&path) {
                             doc
@@ -131,12 +127,12 @@ impl Editor {
         if let Some(action) = action {
             action(self)?
         }
-        if let Some(chan) = &self.lsp_send
+        if let Some(cx) = &self.lsp
             && !self.doc.lsp_changes.is_empty()
             && let Some(lang) = self.doc.language()
             && let Some(path) = &self.filepath
         {
-            _ = chan.send(EditorToLspMessage::ChangeDoc {
+            _ = cx.tx.send(EditorToLspMessage::ChangeDoc {
                 lang,
                 path: path.clone(),
                 changes: self.doc.lsp_changes.drain(..).map(Into::into).collect(),
@@ -146,15 +142,7 @@ impl Editor {
                 },
             });
         }
-        {
-            let guard = self.draw_defer.lock();
-            if let Some(defer) = *guard
-                && defer <= Instant::now()
-            {
-                drop(guard);
-                self.draw()?;
-            }
-        }
+        self.poll_draw()?;
         Ok(())
     }
 }
