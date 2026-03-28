@@ -1,19 +1,16 @@
-use std::{convert::identity, io, time::Instant};
+use std::{convert::identity, io};
 
+use crossterm::event::MouseEvent;
 use lsp_types::Url;
 
 use crate::{
-    document::diagnostics::{Diagnostic, Severity}, editor::{
-        Editor,
-        code_actions::{CodeAction, CodeActionsGadget},
-        completer::Completer,
-        markdown_view::MarkdownGadget,
-        picker::Picker,
+    AppState, document::diagnostics::{Diagnostic, Severity}, editor::{
+        Editor, code_actions::{CodeAction, CodeActionsGadget}, completer::Completer, keymap::InputEvent, markdown_view::MarkdownGadget, picker::Picker
     }, language_server::LanguageServer, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence
 };
 
-impl Editor {
-    pub fn poll(&mut self) -> io::Result<()> {
+impl AppState for Editor {
+    fn poll(&mut self) -> io::Result<()> {
         let mut action = None::<Box<dyn FnOnce(&mut Editor) -> io::Result<()>>>;
         if let Some(cx) = &self.lsp {
             while let Ok(msg) = cx.rx.try_recv() {
@@ -144,5 +141,13 @@ impl Editor {
         }
         self.poll_draw()?;
         Ok(())
+    }
+
+    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()>{
+        self.on_key_event(event)
+    }
+
+    fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()>{
+        self.on_mouse_event(event)
     }
 }

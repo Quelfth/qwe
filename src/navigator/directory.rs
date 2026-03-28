@@ -1,9 +1,9 @@
-use std::{ffi::{OsStr, OsString}, fs, path::{Path, PathBuf}};
+use std::{collections::{BTreeMap, HashMap}, ffi::{OsStr, OsString}, fs, path::{Path, PathBuf}};
 
 use crate::editor::documents::DocKey;
 
 pub struct Directory {
-    entries: Vec<Entry>,
+    entries: BTreeMap<OsString, Entry>,
 }
 
 pub enum Entry {
@@ -23,24 +23,40 @@ pub enum FileDocument {
 
 impl Directory {
     pub fn collect(path: &Path) -> Self {
-        let mut results = Vec::new();
+        let mut results = BTreeMap::new();
 
         for entry in fs::read_dir(path).into_iter().flatten() {
             let Ok(entry) = entry else {continue};
             let Ok(r#type) = entry.file_type() else {continue};
             if r#type.is_dir() {
-                results.push(Entry::Directory(Self::collect(&entry.path())));
+                results.insert(entry.file_name(), Entry::Directory(Self::collect(&entry.path())));
             } else if r#type.is_file() {
-                results.push(Entry::File{
+                results.insert(entry.file_name(), Entry::File{
                     name: entry.path().file_name().map(|n| n.to_owned()).unwrap_or_default(),
                     doc: FileDocument::OnDisk,
                 });
             } else if r#type.is_symlink() {
                 let Ok(link) = fs::read_link(entry.path()) else {continue};
-                results.push(Entry::Link(link));
+                results.insert(entry.file_name(), Entry::Link(link));
             }
         }
 
         Self { entries: results }
+    }
+
+    pub fn display_entries(&self) -> impl Iterator<Item = String> {
+        self.entries.iter().map(|(n, e)| {
+            let name = n.to_string_lossy();
+
+            if matches!(e, Entry::Directory(_)) {
+                format!("{name}{}", std::path::MAIN_SEPARATOR)
+            } else {
+                name.into()
+            }
+        })
+    }
+
+    pub fn get(&self, dir: &OsStr) -> Option<&Entry> {
+        self.entries.get(dir)
     }
 }

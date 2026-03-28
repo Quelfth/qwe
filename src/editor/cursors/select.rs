@@ -161,6 +161,26 @@ impl Cursor for SelectCursor {
     fn line_range(&self) -> Range<Ix<Line>> {
         self.line..self.line + Ix::new(self.other_lines.len() + 1)
     }
+
+    fn syntax_extend(&mut self, text: &Rope, tree: &tree_sitter::Tree) {
+        try {
+            let start = self.start_pos();
+            let end = self.end_pos();
+
+            let start_byte = text.byte_pos_of_pos(start).ok()?.inner();
+            let end_byte = text.byte_pos_of_pos(end).ok()?.inner();
+
+            let mut node = tree.root_node().descendant_for_byte_range(start_byte, end_byte)?;
+            while node.range().start_byte == start_byte && node.range().end_byte == end_byte {
+                node = node.parent()?;
+            }
+
+            let new_start = text.pos_of_byte_pos(Ix::new(node.range().start_byte))?;
+            let new_end = text.pos_of_byte_pos(Ix::new(node.range().end_byte))?;
+
+            *self = Self::range(new_start..new_end, text);
+        };
+    }
 }
 
 #[derive(Clone, Default)]

@@ -58,7 +58,7 @@ impl Default for Keymaps {
                 (Key::base(Tab), Mapping::rep(Editor::tab_lines_in)),
                 (Key::base(BackTab), Mapping::rep(Editor::tab_lines_out)),
                 //
-                (Key::base('o'), Mapping::once(Editor::incremental_select)),
+                (Key::base('o'), Mapping::once(Editor::syntax_extend)),
                 (Key::base(';'), Mapping::once(Editor::line_select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),

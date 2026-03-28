@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter, mem,
-    ops::{Index, IndexMut, Range},
+    ops::{DerefMut, Index, IndexMut, Range},
 };
 
 use crate::{
@@ -17,6 +17,7 @@ use dispa::dispatch;
 use insert::InsertCursors;
 use line_select::LineCursors;
 use select::SelectCursors;
+use tree_sitter::Tree;
 
 pub mod insert;
 pub mod line_select;
@@ -46,6 +47,8 @@ pub trait Cursors {
 
     fn collapse_to_start(&mut self);
     fn collapse_to_end(&mut self);
+
+    fn syntax_extend(&mut self, text: &Rope, tree: &tree_sitter::Tree);
 
     fn line_range_at(&self, index: CursorIndex) -> Range<Ix<Line>>;
     fn line_ranges(&self) -> impl Iterator<Item = Range<Ix<Line>>>;
@@ -80,6 +83,10 @@ impl<T: Cursor> Cursors for CursorSet<T> {
 
     fn collapse_to_end(&mut self) {
         self.iter_mut().for_each(Cursor::collapse_to_end)
+    }
+
+    fn syntax_extend(&mut self, text: &Rope, tree: &Tree) {
+        self.iter_mut().for_each(|c| c.syntax_extend(text, tree))
     }
 
     fn line_range_at(&self, index: CursorIndex) -> Range<Ix<Line>> {
@@ -408,6 +415,8 @@ pub trait Cursor {
 
     fn collapse_to_start(&mut self) {}
     fn collapse_to_end(&mut self) {}
+
+    fn syntax_extend(&mut self, text: &Rope, tree: &Tree) {}
 
     fn line_range(&self) -> Range<Ix<Line>>;
 }

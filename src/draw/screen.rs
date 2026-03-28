@@ -6,7 +6,7 @@ use std::{
 use crossterm::{
     QueueableCommand,
     cursor::MoveTo,
-    style::{ContentStyle, PrintStyledContent, StyledContent},
+    style::{Color, ContentStyle, PrintStyledContent, StyledContent},
 };
 use culit::culit;
 
@@ -24,11 +24,11 @@ pub struct Screen {
 }
 
 impl Screen {
-    pub fn new(width: u16, height: u16) -> Self {
+    pub fn new(width: u16, height: u16, bg: Color) -> Self {
         Self {
             width,
             height,
-            cells: vec![Cell::default(); (width * height).into()].into(),
+            cells: vec![Cell::new(bg); (width * height).into()].into(),
         }
     }
 }
@@ -65,6 +65,18 @@ impl Default for Cell {
                 bg: 0x100000rgb,
                 ..Default::default()
             },
+        }
+    }
+}
+
+impl Cell {
+    pub fn new(bg: Color) -> Self {
+        Self {
+            style: FlatStyle {
+                bg,
+                ..Default::default()
+            },
+            ..Default::default()
         }
     }
 }

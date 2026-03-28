@@ -17,14 +17,23 @@ use std::{
 
 use clap::{ArgAction::SetTrue, Parser};
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, poll},
+    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, poll},
     terminal::{self},
+    style::Color,
 };
 
+use dispa::dispatch;
 use tokio::sync::mpsc;
 
 use crate::{
-    editor::Editor, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, pos::Pos, presenter::Present, terminal_size::set_terminal_size
+    editor::{Editor, keymap::InputEvent},
+    ix::Ix, 
+    draw::screen::Canvas,
+    lsp::{channel::EditorToLspMessage, run_lsp_thread},
+    navigator::Navigator,
+    pos::Pos,
+    presenter::{Present, Presenter},
+    terminal_size::set_terminal_size,
 };
 
 mod aprintln;
@@ -203,6 +212,15 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
     }
     editor.draw()?;
 
+    #[dispatch(AppState)]
+    #[dispatch(Present)]
+    enum State {
+        Editor(Editor),
+        Navigator(Navigator),
+    }
+
+    let mut state = State::Editor(editor);
+
     loop {
         if poll(Duration::from_millis(2))? {
             match event::read()? {
@@ -215,22 +233,41 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
                         kind: KeyEventKind::Press,
                         ..
                     } => break,
-                    event => editor.on_key_event(crate::editor::keymap::InputEvent::Event(event))?,
+                    KeyEvent {
+                        code: KeyCode::Char('n'),
+                        modifiers: KeyModifiers::CONTROL,
+                        kind: KeyEventKind::Press,
+                        ..
+                    } if let State::Editor(editor) = state => {
+                        state = State::Navigator(editor.into_navigator());
+                        state.draw()?;
+                    },
+                    event => state.on_key_event(InputEvent::Event(event))?,
                 },
-                Event::Mouse(event) => editor.on_mouse_event(event)?,
+                Event::Mouse(event) => state.on_mouse_event(event)?,
                 Event::Paste(_) => (),
                 Event::Resize(width, height) => {
                     if set_terminal_size(width, height) {
-                        editor.draw()?
+                        state.draw()?
                     }
                 }
             }
         }
-        editor.poll()?;
+        state.poll()?;
     }
-    if let Some(cx) = editor.lsp {
-        cx.tx.send(EditorToLspMessage::Exit).unwrap();
+    if let State::Editor(editor) = state {
+        if let Some(cx) = editor.lsp {
+            cx.tx.send(EditorToLspMessage::Exit).unwrap();
+        }
     }
 
     Ok(())
 }
+
+#[dispatch]
+pub trait AppState {
+    fn poll(&mut self) -> io::Result<()>;
+    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> { Ok(()) }
+    fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()> { Ok(()) }
+}
+

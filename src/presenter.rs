@@ -1,8 +1,10 @@
 use std::{cell::Cell, io, time::{Duration, Instant}};
 
+use crossterm::style::Color;
+use dispa::dispatch;
 use mutx::Mutex;
 
-use crate::{draw::{Rect, screen::{Canvas, Screen}}, terminal_size::terminal_size};
+use crate::{color, draw::{Rect, screen::{Canvas, Screen}}, terminal_size::terminal_size};
 
 #[derive(Default)]
 pub struct Presenter {
@@ -31,7 +33,7 @@ impl Presenter {
         }
 
         let (width, height) = terminal_size();
-        let mut screen = Screen::new(width, height);
+        let mut screen = Screen::new(width, height, layout.bg_color());
 
         _ = layout.present(screen.canvas(Rect { rows: (0..height).into(), cols: (0..width).into() }));
 
@@ -47,10 +49,13 @@ impl Presenter {
     }
 }
 
+#[dispatch]
 pub trait Present {
     fn present(&self, canvas: Canvas<'_>) -> io::Result<()>;
 
     fn presenter(&self) -> &Presenter;
+
+    fn bg_color(&self) -> Color { color::DEEP_BG }
 
     fn draw(&self) -> io::Result<()> {
         self.presenter().draw(self)

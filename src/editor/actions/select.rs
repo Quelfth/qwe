@@ -71,4 +71,8 @@ impl Editor {
             cursors.collapse_to_end();
         }
     }
+
+    pub fn syntax_extend(&mut self) {
+        self.doc.syntax_extend()
+    }
 }

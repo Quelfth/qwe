@@ -139,4 +139,12 @@ impl Document {
     pub fn drop_other_selections(&mut self) {
         force_cursors!(self).drop_others();
     }
+
+    pub fn syntax_extend(&mut self) {
+        if let Some(tree) = &self.tree {
+            if let Some(c) = &mut self.cursors {
+                c.syntax_extend(&self.text, tree)
+            }
+        }
+    }
 }
