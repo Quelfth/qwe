@@ -16,6 +16,8 @@ pub fn leak<T>(value: T) -> &'static T {
     Box::leak(Box::new(value))
 }
 
+pub fn flip<T, U>((t, u): (T, U)) -> (U, T) { (u, t) }
+
 pub fn pretty_node(node: Node<'_>) -> String {
     let mut string = String::new();
     format_node(node, 0, None, &mut string);

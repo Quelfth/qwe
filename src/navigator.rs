@@ -1,6 +1,6 @@
 use std::{io, path::{Path, PathBuf}};
 
-use crate::{AppState, aprintln::aprintln, color, draw::screen::Canvas, editor::{clipboard::Clipboard, keymap::Keymaps}, grapheme::{Grapheme, GraphemeExt}, language_server::LspContext, navigator::directory::Entry, presenter::{Present, Presenter}, style::Style};
+use crate::{AppState, color, draw::screen::Canvas, editor::{clipboard::Clipboard, keymap::Keymaps}, grapheme::{Grapheme, GraphemeExt}, language_server::LspContext, navigator::directory::Entry, presenter::{Present, Presenter}, style::Style, util::flip};
 
 use crossterm::style::Color;
 use directory::Directory;
@@ -90,16 +90,33 @@ impl Present for Navigator {
 
         let rel_path = self.path.strip_prefix(&self.root_path).unwrap_or(&self.path);
         let mut components = rel_path.components();
+
+        let mut alt = true;
         
         let mut prev_margin = margin + 2;
         let mut next_dir = Some(&self.root_dir);
         while let Some(dir) = next_dir {
-            for (j, e) in (0..canvas.height()).zip(dir.display_entries()) {
-                for (i, g) in (prev_margin..canvas.width()).zip(e.graphemes()) {
+            let bg = if alt { color::NAV_BG_ALT } else { color::NAV_BG };
+            let entries = dir.display_entries().collect::<Vec<_>>();
+            let width = entries.iter().map(|e| e.graphemes().count()).max().unwrap_or_default() as u16;
+            let next_margin = prev_margin + width;
+            let mut rows = 0..canvas.height();
+            for (j, e) in entries.into_iter().zip(rows.by_ref()).map(flip) {
+                let mut cols = prev_margin..next_margin;
+                for (i, g) in e.graphemes().zip(cols.by_ref()).map(flip) {
                     let cell = &mut canvas[(j, i)];
                     cell.grapheme = g;
-                    cell.style = (Style::fg(color::NAV_FG) + Style::bg(color::NAV_BG)).into();
-                    margin = i.max(margin);
+                    cell.style = (Style::fg(color::NAV_FG) + Style::bg(bg)).into();
+                }
+                for i in cols {
+                    let cell = &mut canvas[(j, i)];
+                    cell.style.bg = bg;
+                }
+            }
+            for j in rows {
+                for i in prev_margin..next_margin {
+                    let cell = &mut canvas[(j, i)];
+                    cell.style.bg = bg;
                 }
             }
             next_dir = if let Some(component) = components.next() 
@@ -110,7 +127,8 @@ impl Present for Navigator {
             } else {
                 None
             };
-            prev_margin = margin + 2;
+            prev_margin = next_margin + 1;
+            alt ^= true;
         }
 
         Ok(())
