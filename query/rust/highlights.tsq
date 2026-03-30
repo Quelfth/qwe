@@ -274,9 +274,10 @@
 (for_expression body: (block ["{" "}"] @o.loop.for))
 
 "while" @o.loop.while
+(while_expression body: (block ["{" "}"] @o.loop.while))
 
 "loop" @o.loop.infinite
-(loop_expression body: (block ["{" "," "}"] @o.loop.infinite))
+(loop_expression body: (block ["{" "}"] @o.loop.infinite))
 
 (try_expression "?" @o.error.propogate)
 "try" @o.error.try
@@ -309,7 +310,11 @@
 (async_block (block ["{" "}"] @o.async))
 
 (assignment_expression "=" @o.assign)
-(expression_statement (assignment_expression) ";" @o.assign)
+(expression_statement [(assignment_expression) (compound_assignment_expr)] ";" @o.assign)
+
+(compound_assignment_expr ["+=" "-=" "*=" "/=" "%="] @o.arithmetic.assign)
+(compound_assignment_expr ["&=" "|=" "^="] @o.logical.assign)
+(compound_assignment_expr ["<<=" ">>="] @o.sequence.assign)
 
 (let_chain "&&" @o.branch)
 

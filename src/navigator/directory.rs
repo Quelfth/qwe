@@ -1,4 +1,4 @@
-use std::{collections::{BTreeMap, HashMap}, ffi::{OsStr, OsString}, fs, path::{Path, PathBuf}};
+use std::{collections::BTreeMap, ffi::{OsStr, OsString}, fs, path::{Path, PathBuf}};
 
 use crate::editor::documents::DocKey;
 
@@ -44,15 +44,19 @@ impl Directory {
         Self { entries: results }
     }
 
-    pub fn display_entries(&self) -> impl Iterator<Item = String> {
+    pub fn entries(&self) -> &BTreeMap<OsString, Entry> {
+        &self.entries
+    }
+
+    pub fn display_entries(&self) -> impl Iterator<Item = (&OsStr, String)> {
         self.entries.iter().map(|(n, e)| {
             let name = n.to_string_lossy();
 
-            if matches!(e, Entry::Directory(_)) {
+            (&**n, if matches!(e, Entry::Directory(_)) {
                 format!("{name}{}", std::path::MAIN_SEPARATOR)
             } else {
                 name.into()
-            }
+            })
         })
     }
 
