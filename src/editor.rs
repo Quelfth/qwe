@@ -264,6 +264,6 @@ impl Editor {
         if let Some(fp) = filepath.clone() {
             bg_docs.insert_pathed(fp, doc);
         }
-        Navigator::new(filepath, keymap, clipboard, lsp, presenter)
+        Navigator::new(filepath, bg_docs, keymap, clipboard, lsp, presenter)
     }
 }

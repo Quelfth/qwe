@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, ffi::{OsStr, OsString}, fs, path::{Path, PathBuf}};
 
-use crate::editor::documents::DocKey;
+use crate::editor::documents::{DocKey, Documents};
 
 pub struct Directory {
     entries: BTreeMap<OsString, Entry>,
@@ -22,18 +22,22 @@ pub enum FileDocument {
 }
 
 impl Directory {
-    pub fn collect(path: &Path) -> Self {
+    pub fn collect(path: &Path, docs: &Documents) -> Self {
         let mut results = BTreeMap::new();
 
         for entry in fs::read_dir(path).into_iter().flatten() {
             let Ok(entry) = entry else {continue};
             let Ok(r#type) = entry.file_type() else {continue};
             if r#type.is_dir() {
-                results.insert(entry.file_name(), Entry::Directory(Self::collect(&entry.path())));
+                results.insert(entry.file_name(), Entry::Directory(Self::collect(&entry.path(), docs)));
             } else if r#type.is_file() {
                 results.insert(entry.file_name(), Entry::File{
                     name: entry.path().file_name().map(|n| n.to_owned()).unwrap_or_default(),
-                    doc: FileDocument::OnDisk,
+                    doc: if let Some(key) = docs.key_from_path(&entry.path()) {
+                        FileDocument::Text(key)
+                    } else {
+                        FileDocument::OnDisk
+                    },
                 });
             } else if r#type.is_symlink() {
                 let Ok(link) = fs::read_link(entry.path()) else {continue};
@@ -62,5 +66,9 @@ impl Directory {
 
     pub fn get(&self, dir: &OsStr) -> Option<&Entry> {
         self.entries.get(dir)
+    }
+
+    pub fn get_mut(&mut self, dir: &OsStr) -> Option<&mut Entry> {
+        self.entries.get_mut(dir)
     }
 }

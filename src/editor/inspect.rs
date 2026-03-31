@@ -19,13 +19,12 @@ impl Gadget for Inspector {
     fn draw(&self, mut canvas: Canvas<'_>) {
         let sem_len = self.semantics.text().line_len().inner() as u16;
         self.semantics
-            .draw(canvas.take_top(sem_len), |_| Default::default());
+            .draw(canvas.take_top(sem_len));
         self.tree().draw(
             canvas.shrink_top(match sem_len {
                 0 => 0,
                 _ => sem_len + 1,
             }),
-            |_| Default::default(),
         )
     }
 }

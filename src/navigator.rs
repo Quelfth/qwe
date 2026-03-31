@@ -1,6 +1,6 @@
-use std::{ffi::{OsStr, OsString}, io, ops::RangeTo, path::{Path, PathBuf}};
+use std::{ffi::{OsStr, OsString}, io, ops::RangeTo, path::{Path, PathBuf}, sync::Arc};
 
-use crate::{AppState, color, draw::screen::Canvas, editor::{clipboard::Clipboard, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, language_server::LspContext, navigator::directory::Entry, presenter::{Present, Presenter}, style::Style, util::flip};
+use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::LspContext, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, style::Style, util::flip};
 
 use crossterm::{event::{KeyCode, KeyEvent}, style::Color};
 use directory::Directory;
@@ -16,6 +16,8 @@ pub struct Navigator {
 
     path: PathBuf,
 
+    docs: Documents,
+
     keymap: Keymaps,
     clipboard: Clipboard,
     lsp: Option<LspContext>,
@@ -25,6 +27,7 @@ pub struct Navigator {
 impl Navigator {
     pub fn new(
         path: Option<impl AsRef<Path>>,
+        docs: Documents,
         keymap: Keymaps,
         clipboard: Clipboard,
         lsp: Option<LspContext>,
@@ -39,7 +42,7 @@ impl Navigator {
             root_path = parent;
         }
         let root_path = root_path.to_owned();
-        let root_dir = Directory::collect(&root_path);
+        let root_dir = Directory::collect(&root_path, &docs);
 
         Self {
             home,
@@ -48,6 +51,8 @@ impl Navigator {
             root_dir,
 
             path,
+            docs,
+
             keymap,
             clipboard,
             lsp,
@@ -107,6 +112,43 @@ impl Navigator {
         let Some(next) = dir.entries().iter().next() else { return };
         self.path = self.path.join(next.0);
     }
+
+    pub fn open_selected(&mut self) {
+        let mut components = self.rel_path().components().map(|c| c.as_os_str().to_owned()).collect::<Vec<_>>();
+        let mut dir = &mut self.root_dir;
+        let Some(final_component) = components.pop() else { return };
+        for component in components {    
+            dir = if let Some(Entry::Directory(next)) = dir.get_mut(component.as_os_str()) {
+                next
+            } else { return };
+        }
+
+        let Some(entry) = dir.get_mut(&final_component) else { return };
+
+        let Entry::File { doc, .. } = entry else { return };
+        if !matches!(doc, FileDocument::OnDisk) { return };
+
+        let doc_key = self.docs.key_from_path(&self.path).or_else(|| {
+            let path: Arc<Path> = self.path.clone().into();
+            let PathedFile { path, file } = PathedFile::open(path.clone()).ok()?;
+            let new_doc = Document::new(
+                path.extension()
+                    .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+                file,
+                Some(Default::default()),
+            );
+
+            Some(self.docs.insert_pathed(path, new_doc))
+        });
+
+        *doc = if let Some(key) = doc_key { FileDocument::Text(key) } else { FileDocument::Binary };
+    }
+
+    pub fn update_and_draw(&mut self) -> io::Result<()> {
+        self.open_selected();
+        self.draw()?;
+        Ok(())
+    }
 }
 
 impl AppState for Navigator {
@@ -117,13 +159,13 @@ impl AppState for Navigator {
     fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> {
         match event {
             InputEvent::Event(key_event) => match key_event {
-                KeyEvent { code: KeyCode::Char('j'), .. } => {self.navigate_down(); self.draw()?},
-                KeyEvent { code: KeyCode::Char('k'), .. } => {self.navigate_up(); self.draw()?},
-                KeyEvent { code: KeyCode::Char('h'), .. } => {self.navigate_out(); self.draw()?},
-                KeyEvent { code: KeyCode::Char('l'), .. } => {self.navigate_in(); self.draw()?},
+                KeyEvent { code: KeyCode::Char('j'), .. } => {self.navigate_down(); self.update_and_draw()?},
+                KeyEvent { code: KeyCode::Char('k'), .. } => {self.navigate_up(); self.update_and_draw()?},
+                KeyEvent { code: KeyCode::Char('h'), .. } => {self.navigate_out(); self.update_and_draw()?},
+                KeyEvent { code: KeyCode::Char('l'), .. } => {self.navigate_in(); self.update_and_draw()?},
                 _ => (),
             },
-            InputEvent::Key(key) => todo!(),
+            InputEvent::Key(_) => todo!(),
         }
         Ok(())
     }
@@ -162,16 +204,19 @@ impl Present for Navigator {
         let mut alt = true;
         
         let mut prev_margin = margin + 2;
-        let mut next_dir = Some(&self.root_dir);
-        while let Some(dir) = next_dir {
+        let mut next_dir = Ok(&self.root_dir);
+        while let Ok(dir) = next_dir {
             let next_component = components.next();
             next_dir = if let Some(component) = next_component
                 && let Some(entry) = dir.get(component.as_os_str())
-                && let Entry::Directory(dir) = entry
             {
-                Some(dir)
+                match entry {
+                    Entry::Directory(directory) => Ok(directory),
+                    Entry::File { name, doc } => Err(Some((name, doc))),
+                    Entry::Link(_) => Err(None),
+                }
             } else {
-                None
+                Err(None)
             };
             const fn decide_bg(alt: bool) -> Color {
                 if alt {
@@ -210,6 +255,19 @@ impl Present for Navigator {
             }
             prev_margin = next_margin + 1;
             alt ^= true;
+        }
+
+        if let Err(Some((_, doc))) = next_dir {
+            match doc {
+                FileDocument::Text(doc_key) => {
+                    let doc = self.docs.by_key(*doc_key);
+                    if let Some(doc) = doc {
+                        doc.draw(canvas.region(Rect { rows: Range { start: 0, end: canvas.height() }, cols: Range { start: prev_margin, end: canvas.width() } }));
+                    }
+                },
+                FileDocument::Binary => (),
+                FileDocument::OnDisk => (),
+            }
         }
 
         Ok(())
