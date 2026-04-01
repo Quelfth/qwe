@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     io, mem,
     ops::Range,
     path::Path,
@@ -19,7 +18,7 @@ use crate::{
         },
         gadget::Gadget,
         keymap::Keymaps,
-    }, ix::{Byte, Ix}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}
+    }, ix::{Byte, Ix}, lang::Language, language_server::{LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}
 };
 
 use documents::Documents;
@@ -265,5 +264,21 @@ impl Editor {
             bg_docs.insert_pathed(fp, doc);
         }
         Navigator::new(filepath, bg_docs, keymap, clipboard, lsp, presenter)
+    }
+
+    pub fn from_parts(doc: (Option<Arc<Path>>, Document), bg_docs: Documents, keymap: Keymaps, clipboard: Clipboard, lsp: Option<LspContext>, presenter: Presenter) -> Self {
+        let (filepath, doc) = doc;
+        Self {
+            filepath,
+            doc,
+            file_history: Default::default(),
+            file_future: Default::default(),
+            bg_docs,
+            keymap,
+            gadget: None,
+            clipboard,
+            lsp,
+            presenter,
+        }
     }
 }

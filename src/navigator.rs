@@ -1,6 +1,6 @@
-use std::{ffi::{OsStr, OsString}, io, ops::RangeTo, path::{Path, PathBuf}, sync::Arc};
+use std::{ffi::OsStr, io, path::{Path, PathBuf}, sync::Arc};
 
-use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::LspContext, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, style::Style, util::flip};
+use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, util::flip};
 
 use crossterm::{event::{KeyCode, KeyEvent}, style::Color};
 use directory::Directory;
@@ -58,6 +58,22 @@ impl Navigator {
             lsp,
             presenter,
         }
+    }
+
+    pub fn into_editor(self) -> Editor {
+        let Self { path, mut docs, keymap, clipboard, lsp, presenter, .. } = self;
+        let doc = docs.extract_by_path(&path)
+            .map(|d| (Some(path.into()), d))
+            .unwrap_or_default();
+        
+        Editor::from_parts(
+            doc,
+            docs,
+            keymap,
+            clipboard,
+            lsp,
+            presenter,
+        )
     }
 
     fn rel_path(&self) -> &Path {
@@ -142,6 +158,14 @@ impl Navigator {
         });
 
         *doc = if let Some(key) = doc_key { FileDocument::Text(key) } else { FileDocument::Binary };
+        if let Some(lsp) = &self.lsp
+            && let Some(key) = doc_key
+            && let Some(doc) = self.docs.by_key(key)
+            && let Some(lang) = doc.language()
+            && let Some(path) = self.docs.path_from_key(key)
+        {
+            _=lsp.tx.send(EditorToLspMessage::OpenDoc { lang, path, text: doc.text().to_string() });
+        }
     }
 
     pub fn update_and_draw(&mut self) -> io::Result<()> {
@@ -153,6 +177,34 @@ impl Navigator {
 
 impl AppState for Navigator {
     fn poll(&mut self) -> io::Result<()> {
+        if let Some(lsp) = &self.lsp {
+            while let Ok(msg) = lsp.rx.try_recv() {
+                use LspToEditorMessage::*;
+                match msg {
+                    NewLsp { lang, init_result } =>
+                        lsp.servers.lock()
+                            .entry(lang)
+                            .or_default()
+                            .push(LanguageServer::new(init_result)),
+                    SemanticTokens { uri, tokens } => {
+                        if uri.scheme() == "file"
+                            && let Ok(path) = uri.to_file_path()
+                            && let Ok(path) = path.canonicalize()
+                            && let Some(doc) = self.docs.by_path_mut(&path)
+                            && let Some(lang) = doc.language()
+                            && let Some(servers) = lsp.servers.lock().get(&lang)
+                        {
+                            doc.semtoks = RangeSequence::from_abs_ordered(servers[0].translate_semtoks(tokens, doc.text()));
+                            self.presenter.defer_draw();
+                        }
+                    },
+                    Diagnostics { .. } => (),
+                    _ => (),
+                }
+            }
+        }
+
+        self.poll_draw()?;
         Ok(())
     }
 

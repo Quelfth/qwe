@@ -1,7 +1,7 @@
 use std::{
     cmp::Ordering,
     iter, mem,
-    ops::{DerefMut, Index, IndexMut, Range},
+    ops::{Index, IndexMut, Range},
 };
 
 use crate::{
@@ -416,7 +416,7 @@ pub trait Cursor {
     fn collapse_to_start(&mut self) {}
     fn collapse_to_end(&mut self) {}
 
-    fn syntax_extend(&mut self, text: &Rope, tree: &Tree) {}
+    fn syntax_extend(&mut self, #[expect(unused)] text: &Rope, #[expect(unused)] tree: &Tree) {}
 
     fn line_range(&self) -> Range<Ix<Line>>;
 }

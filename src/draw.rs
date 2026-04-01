@@ -1,11 +1,10 @@
 use std::{
     io::{self},
     ops::Sub,
-    time::{Duration, Instant},
 };
 
 use crate::{
-    draw::{cursor::CursorRange, screen::{Canvas, Screen}}, editor::{Editor, gadget::ScreenRegion}, ix::Ix, presenter::{Present, Presenter}, terminal_size::terminal_size
+    draw::{cursor::CursorRange, screen::{Canvas}}, editor::{Editor, gadget::ScreenRegion}, ix::Ix, presenter::{Present, Presenter}
 };
 
 mod cursor;

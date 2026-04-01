@@ -12,6 +12,7 @@ pub enum Entry {
         name: OsString,
         doc: FileDocument,
     },
+    #[expect(unused)]
     Link(PathBuf),
 }
 

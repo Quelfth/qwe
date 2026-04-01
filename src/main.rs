@@ -242,6 +242,15 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
                         state = State::Navigator(editor.into_navigator());
                         state.draw()?;
                     },
+                    KeyEvent {
+                        code: KeyCode::Char('e'),
+                        modifiers: KeyModifiers::CONTROL,
+                        kind: KeyEventKind::Press,
+                        ..
+                    } if let State::Navigator(navigator) = state => {
+                        state = State::Editor(navigator.into_editor());
+                        state.draw()?;
+                    },
                     event => state.on_key_event(InputEvent::Event(event))?,
                 },
                 Event::Mouse(event) => state.on_mouse_event(event)?,
@@ -267,7 +276,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
 #[dispatch]
 pub trait AppState {
     fn poll(&mut self) -> io::Result<()>;
-    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> { Ok(()) }
-    fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()> { Ok(()) }
+    fn on_key_event(&mut self, #[expect(unused)] event: InputEvent) -> io::Result<()> { Ok(()) }
+    fn on_mouse_event(&mut self, #[expect(unused)] event: MouseEvent) -> io::Result<()> { Ok(()) }
 }
 

@@ -1,7 +1,5 @@
 use {
-    crate::document::Document,
-    slotmap::SlotMap,
-    std::{collections::HashMap, path::Path, sync::Arc},
+    crate::document::Document, bimap::BiMap, slotmap::SlotMap, std::{path::Path, sync::Arc}
 };
 
 slotmap::new_key_type! {
@@ -11,7 +9,7 @@ slotmap::new_key_type! {
 #[derive(Default)]
 pub struct Documents {
     docs: SlotMap<DocKey, Document>,
-    paths: HashMap<Arc<Path>, DocKey>,
+    paths: BiMap<Arc<Path>, DocKey>,
 }
 
 impl Documents {
@@ -22,17 +20,18 @@ impl Documents {
     }
 
     pub fn extract_by_path(&mut self, path: &Path) -> Option<Document> {
-        let key = self.paths.remove(path)?;
+        let (_, key) = self.paths.remove_by_left(path)?;
         self.docs.remove(key)
     }
 
+    #[expect(unused)]
     pub fn by_path(&self, path: &Path) -> Option<&Document> {
-        let key = *self.paths.get(path)?;
+        let key = *self.paths.get_by_left(path)?;
         self.docs.get(key)
     }
 
     pub fn by_path_mut(&mut self, path: &Path) -> Option<&mut Document> {
-        let key = *self.paths.get(path)?;
+        let key = *self.paths.get_by_left(path)?;
         self.docs.get_mut(key)
     }
 
@@ -41,6 +40,10 @@ impl Documents {
     }
 
     pub fn key_from_path(&self, path: &Path) -> Option<DocKey> {
-        Some(*self.paths.get(path)?)
+        Some(*self.paths.get_by_left(path)?)
+    }
+
+    pub fn path_from_key(&self, key: DocKey) -> Option<Arc<Path>> {
+        Some(self.paths.get_by_right(&key)?.clone())
     }
 }
