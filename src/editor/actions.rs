@@ -96,7 +96,7 @@ impl Editor {
 
     #[allow(unused)]
     pub fn debug_undo(&mut self) {
-        aprintln!("{:#?}", self.doc.history);
+        aprintln!("{:#?}", self.doc.timeline);
     }
 
     pub fn jump(&mut self) {
@@ -129,7 +129,7 @@ impl Editor {
     }
 
     pub fn paste(&mut self) {
-        self.doc.history.checkpoint();
+        self.doc.timeline.history.checkpoint();
         if let Some(cursors) = &self.doc.cursors {
             for cursor in cursors.indices() {
                 let text = self.clipboard.next_clip_elt();

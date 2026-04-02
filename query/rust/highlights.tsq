@@ -181,6 +181,8 @@
     (type_parameters ["<" "," ">"] @o.implement)
 )
 
+(use_bound ["use" "<" "," ">"] @o.implement)
+
 ; Attributes
 
 (attribute_item ["#" "["] @o.macro.attribute (attribute_macro) "]" @o.macro.attribute)

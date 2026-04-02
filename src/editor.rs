@@ -18,7 +18,7 @@ use crate::{
         },
         gadget::Gadget,
         keymap::Keymaps,
-    }, ix::{Byte, Ix}, lang::Language, language_server::{LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}
+    }, ix::{Byte, Ix}, lang::Language, language_server::LspContext, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}, timeline::{Timeline, global::GlobalEvent}
 };
 
 use documents::Documents;
@@ -45,6 +45,7 @@ pub struct Editor {
     doc: Document,
     file_history: Vec<Arc<Path>>,
     file_future: Vec<Arc<Path>>,
+    global_timeline: Timeline<GlobalEvent>,
     bg_docs: Documents,
     keymap: Keymaps,
     pub gadget: Option<Box<dyn Gadget>>,
@@ -259,20 +260,21 @@ impl Editor {
 
 impl Editor {
     pub fn into_navigator(self) -> Navigator {
-        let Self { filepath, doc, mut bg_docs, keymap, clipboard, lsp, presenter, .. } = self;
+        let Self { filepath, doc, mut bg_docs, global_timeline, keymap, clipboard, lsp, presenter, .. } = self;
         if let Some(fp) = filepath.clone() {
             bg_docs.insert_pathed(fp, doc);
         }
-        Navigator::new(filepath, bg_docs, keymap, clipboard, lsp, presenter)
+        Navigator::new(filepath, bg_docs, global_timeline, keymap, clipboard, lsp, presenter)
     }
 
-    pub fn from_parts(doc: (Option<Arc<Path>>, Document), bg_docs: Documents, keymap: Keymaps, clipboard: Clipboard, lsp: Option<LspContext>, presenter: Presenter) -> Self {
+    pub fn from_parts(doc: (Option<Arc<Path>>, Document), bg_docs: Documents, global_timeline: Timeline<GlobalEvent>, keymap: Keymaps, clipboard: Clipboard, lsp: Option<LspContext>, presenter: Presenter) -> Self {
         let (filepath, doc) = doc;
         Self {
             filepath,
             doc,
             file_history: Default::default(),
             file_future: Default::default(),
+            global_timeline,
             bg_docs,
             keymap,
             gadget: None,

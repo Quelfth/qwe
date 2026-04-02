@@ -60,6 +60,7 @@ mod setup;
 mod style;
 mod terminal_size;
 mod theme;
+mod timeline;
 mod ts;
 mod util;
 mod cli;

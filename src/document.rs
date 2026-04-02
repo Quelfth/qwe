@@ -9,7 +9,6 @@ use tree_sitter::{InputEdit, Tree};
 use crate::aprintln::aprintln;
 use crate::constants::TAB_WIDTH;
 use crate::document::diagnostics::{Diagnostic, Severity};
-use crate::document::history::History;
 use crate::document::lsp_change::LspChange;
 use crate::document::semtoks::SemanticToken;
 use crate::draw::Rect;
@@ -23,13 +22,14 @@ use crate::range_sequence::RangeSequence;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::{Pos, Region, Utf16Pos};
+use crate::timeline::Timeline;
+use crate::timeline::document::DocumentEvent;
 use crate::ts::parse_doc;
 use crate::util::indent_string;
 
 mod actions;
 pub mod diagnostics;
 mod find;
-mod history;
 mod lsp_change;
 pub mod semtoks;
 mod unopened;
@@ -41,8 +41,7 @@ pub struct Document {
     pub view_height: Mutex<Ix<Line>>,
     pub cursors: Option<CursorState>,
     text: Rope,
-    pub history: History,
-    pub future: History,
+    pub timeline: Timeline<DocumentEvent>,
     language: Option<Language>,
     tree: Option<Tree>,
     pub semtoks: RangeSequence<Ix<Byte>, SemanticToken>,
@@ -66,8 +65,7 @@ impl Document {
             scroll: Ix::new(0),
             horizontal_scroll: Ix::new(0),
             view_height: Default::default(),
-            history: Default::default(),
-            future: Default::default(),
+            timeline: Default::default(),
             semtoks: Default::default(),
             diagnostics: Default::default(),
             cursors,
@@ -773,20 +771,20 @@ impl Document {
         }
         if let Some(change) = change {
             let reverse = self.change(change.clone());
-            self.history.push(reverse);
+            self.timeline.history.push(reverse);
         }
     }
 
     pub fn undo(&mut self) {
         let mut changes = Vec::<CursorChange>::new();
 
-        self.future.checkpoint();
-        for change in self.history.pop().collect::<Vec<_>>().into_iter() {
+        self.timeline.future.checkpoint();
+        for change in self.timeline.history.pop().collect::<Vec<_>>().into_iter() {
             if let Some(change) = self.text.cursor_change(&change) {
                 changes.push(change);
             }
             let reverse = self.change(change);
-            self.future.push(reverse);
+            self.timeline.future.push(reverse);
         }
 
         if let Some(cursors) = &mut self.cursors {
@@ -799,13 +797,13 @@ impl Document {
     pub fn redo(&mut self) {
         let mut changes = Vec::<CursorChange>::new();
 
-        self.history.checkpoint();
-        for change in self.future.pop().collect::<Vec<_>>().into_iter() {
+        self.timeline.history.checkpoint();
+        for change in self.timeline.future.pop().collect::<Vec<_>>().into_iter() {
             if let Some(change) = self.text.cursor_change(&change) {
                 changes.push(change);
             }
             let reverse = self.change(change);
-            self.history.push(reverse);
+            self.timeline.history.push(reverse);
         }
 
         if let Some(cursors) = &mut self.cursors {
@@ -816,7 +814,7 @@ impl Document {
     }
 
     pub fn do_delete(&mut self) {
-        self.history.checkpoint();
+        self.timeline.history.checkpoint();
         if let Some(cursors) = &self.cursors {
             let mut ranges = cursors.delete_ranges(&self.text).collect::<Vec<_>>();
             ranges.sort_unstable_by_key(|r| r.start);
@@ -833,7 +831,7 @@ impl Document {
         let change = Change::delete(range.start, range.end - range.start);
         let cursor_change = self.text.cursor_change(&change);
         let reverse = self.change(change);
-        self.history.push(reverse);
+        self.timeline.history.push(reverse);
 
         if let Some(cursors) = &mut self.cursors
             && let Some(change) = cursor_change

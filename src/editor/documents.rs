@@ -39,6 +39,10 @@ impl Documents {
         self.docs.get(key)
     }
 
+    pub fn by_key_mut(&mut self, key: DocKey) -> Option<&mut Document> {
+        self.docs.get_mut(key)
+    }
+
     pub fn key_from_path(&self, path: &Path) -> Option<DocKey> {
         Some(*self.paths.get_by_left(path)?)
     }

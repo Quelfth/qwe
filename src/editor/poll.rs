@@ -43,12 +43,6 @@ impl AppState for Editor {
                         }
                     }
                     Diagnostics { uri, diagnostics } => {
-                        if self.filepath.as_ref().is_none_or(|p| {
-                            Url::from_file_path(p.canonicalize().unwrap()).unwrap()
-                                != uri
-                        }) {
-                            continue;
-                        }
                         let Some(path) = self.filepath.clone() else {continue};
                         let Ok(path) = path.canonicalize() else {continue};
                         let doc = if let Ok(x) = Url::from_file_path(&path) && x == uri {

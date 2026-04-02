@@ -6,7 +6,7 @@ use crate::{
 
 impl Document {
     pub fn insert_before(&mut self) {
-        self.history.checkpoint();
+        self.timeline.history.checkpoint();
         if let Some(c) = &self.cursors {
             use CursorState::*;
             match c {
@@ -20,7 +20,7 @@ impl Document {
         }
     }
     pub fn insert_after(&mut self) {
-        self.history.checkpoint();
+        self.timeline.history.checkpoint();
         if let Some(c) = &self.cursors {
             use CursorState::*;
             match c {
@@ -34,7 +34,7 @@ impl Document {
         }
     }
     pub fn insert_before_line(&mut self) {
-        self.history.checkpoint();
+        self.timeline.history.checkpoint();
         if let Some(c) = &self.cursors {
             use CursorState::*;
             match c {
@@ -50,7 +50,7 @@ impl Document {
         }
     }
     pub fn insert_after_line(&mut self) {
-        self.history.checkpoint();
+        self.timeline.history.checkpoint();
         if let Some(c) = &self.cursors {
             use CursorState::*;
             match c {

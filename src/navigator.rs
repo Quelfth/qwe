@@ -1,6 +1,6 @@
 use std::{ffi::OsStr, io, path::{Path, PathBuf}, sync::Arc};
 
-use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, util::flip};
+use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
 
 use crossterm::{event::{KeyCode, KeyEvent}, style::Color};
 use directory::Directory;
@@ -18,6 +18,7 @@ pub struct Navigator {
 
     docs: Documents,
 
+    global_timeline: Timeline<GlobalEvent>,
     keymap: Keymaps,
     clipboard: Clipboard,
     lsp: Option<LspContext>,
@@ -28,6 +29,7 @@ impl Navigator {
     pub fn new(
         path: Option<impl AsRef<Path>>,
         docs: Documents,
+        global_timeline: Timeline<GlobalEvent>,
         keymap: Keymaps,
         clipboard: Clipboard,
         lsp: Option<LspContext>,
@@ -53,6 +55,7 @@ impl Navigator {
             path,
             docs,
 
+            global_timeline,
             keymap,
             clipboard,
             lsp,
@@ -61,7 +64,7 @@ impl Navigator {
     }
 
     pub fn into_editor(self) -> Editor {
-        let Self { path, mut docs, keymap, clipboard, lsp, presenter, .. } = self;
+        let Self { path, mut docs, global_timeline, keymap, clipboard, lsp, presenter, .. } = self;
         let doc = docs.extract_by_path(&path)
             .map(|d| (Some(path.into()), d))
             .unwrap_or_default();
@@ -69,6 +72,7 @@ impl Navigator {
         Editor::from_parts(
             doc,
             docs,
+            global_timeline,
             keymap,
             clipboard,
             lsp,
