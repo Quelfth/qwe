@@ -1,0 +1,37 @@
+(comment) @comment
+
+"def" @o.declare.function
+
+(decl_def
+    body: (block
+        ["{" "}"] @o.declare.function
+    )
+)
+
+(val_closure ["{" "}"] @o.declare.function)
+
+(parameter_bracks ["[" "," "]"] @o.call)
+
+["$\"" "\"" "'"] @l.source.quote
+(expr_interpolated ["(" ")"] @l.source.quote) 
+
+"env" @o.variable
+
+(path "." @o.key-value)
+
+(assignment "=" @o.assign)
+"|" @o.pipe
+
+(stmt_let ["let" "="] @o.declare.value.variable)
+
+(val_variable "$" @o.variable)
+(val_variable (identifier) @i.value.local)
+
+["true" "false"] @i.value.boolean
+"in" @i.value.receiver
+
+["if" "else"] @o.branch
+(ctrl_if then_branch: (block ["{" "}"] @o.branch) )
+(ctrl_if else_block: (block ["{" "}"] @o.branch))
+
+(expr_parenthesized ["(" ")"] @o.group)

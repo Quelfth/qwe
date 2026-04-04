@@ -36,6 +36,7 @@ dispa.git = "https://github.com/Quelfth/dispa"
 tree-sitter-javascript = "0.25.0"
 tree-sitter-cpp.git = "https://github.com/Quelfth/tree-sitter-cpp"
 adot-tree-sitter-toml = "0.1.0"
+tree-sitter-nu.git = "https://github.com/nushell/tree-sitter-nu"
 include_optional = { version = "1.1.1", features = ["nightly"] }
 concat-into.git = "https://github.com/Quelfth/concat-into"
 walkdir = "2.5.0"

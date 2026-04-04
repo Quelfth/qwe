@@ -22,8 +22,9 @@ use crate::range_sequence::RangeSequence;
 use crate::rope::{Rope, RopeSlice};
 
 use crate::pos::{Pos, Region, Utf16Pos};
-use crate::timeline::Timeline;
-use crate::timeline::document::DocumentEvent;
+use crate::timeline::global::GlobalCheckpoint;
+use crate::timeline::{TimeDirection, Timeline};
+use crate::timeline::document::{DocumentEvent, TimeStackPop};
 use crate::ts::parse_doc;
 use crate::util::indent_string;
 
@@ -774,19 +775,39 @@ impl Document {
             self.timeline.history.push(reverse);
         }
     }
+    
+    pub fn unredo(&mut self, direction: TimeDirection) -> Result<(), GlobalCheckpoint> {
+        match self.timeline[direction].pop() {
+            TimeStackPop::Local(popped) => {
+                self.local_unredo(direction, None, popped);
+                Ok(())
+            },
+            TimeStackPop::Global(cp) => {
+                Err(cp)
+            },
+            TimeStackPop::Empty => Ok(()),
+        }
+    }
 
-    pub fn undo(&mut self) {
+    fn local_unredo(&mut self, dir: TimeDirection, global: Option<GlobalCheckpoint>, to_do: Vec<Change>) {
         let mut changes = Vec::<CursorChange>::new();
-
-        self.timeline.future.checkpoint();
-        for change in self.timeline.history.pop().collect::<Vec<_>>().into_iter() {
+        
+        if global.is_some() {
+            self.timeline[dir.rev()].global_checkpoint();
+        } else {
+            self.timeline[dir.rev()].checkpoint();
+        }
+        for change in to_do {
             if let Some(change) = self.text.cursor_change(&change) {
                 changes.push(change);
             }
             let reverse = self.change(change);
-            self.timeline.future.push(reverse);
+            self.timeline[dir.rev()].push(reverse);
         }
-
+        if let Some(cp) = global {
+            self.timeline[dir.rev()].push_global_jump(cp);
+        }
+    
         if let Some(cursors) = &mut self.cursors {
             for change in changes {
                 cursors.apply_change(change, &self.text);
@@ -794,23 +815,9 @@ impl Document {
         }
     }
 
-    pub fn redo(&mut self) {
-        let mut changes = Vec::<CursorChange>::new();
-
-        self.timeline.history.checkpoint();
-        for change in self.timeline.future.pop().collect::<Vec<_>>().into_iter() {
-            if let Some(change) = self.text.cursor_change(&change) {
-                changes.push(change);
-            }
-            let reverse = self.change(change);
-            self.timeline.history.push(reverse);
-        }
-
-        if let Some(cursors) = &mut self.cursors {
-            for change in changes {
-                cursors.apply_change(change, &self.text);
-            }
-        }
+    pub fn global_unredo(&mut self, dir: TimeDirection, cp: GlobalCheckpoint, count: u32) {
+        let changes = self.timeline[dir].pop_global(count);
+        self.local_unredo(dir, Some(cp), changes);
     }
 
     pub fn do_delete(&mut self) {

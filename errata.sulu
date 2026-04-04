@@ -11,6 +11,7 @@ l.number = f.number;
 l.number.affix = f.number-affix;
 l.string = f.string;
 l.string.quote = f.quote;
+l.source.quote = f.dark;
 
 comment = f.comment;
 
@@ -89,6 +90,7 @@ o.loop = f.loop;
 o.macro.attribute = f.attribute-macro;
 o.pattern = f.case;
 o.pattern.disjunct = f.enum;
+o.pipe = f.method-access;
 o.range = f.range;
 o.scope = f.scope;
 o.sequence = f.sequence;

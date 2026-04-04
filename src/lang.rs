@@ -12,6 +12,7 @@ pub enum Language {
     Cpp,
     Css,
     Javascript,
+    Nu,
     Query,
     Rust,
     Sulu,
@@ -30,6 +31,7 @@ impl Language {
             "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
             "css" => Self::Css,
             "js" => Self::Javascript,
+            "nu" => Self::Nu,
             "tsq" => Self::Query,
             "rs" => Self::Rust,
             "sulu" => Self::Sulu,
@@ -66,6 +68,7 @@ queries! {
         Cpp => "cpp"
         Css => "css"
         Javascript => "js"
+        Nu => "nu"
         Query => "query"
         Rust => "rust"
         Sulu => "sulu"
@@ -81,6 +84,7 @@ ts_lang! {
     Cpp => tree_sitter_cpp
     Css => tree_sitter_css_orchard
     Javascript => tree_sitter_javascript
+    Nu => tree_sitter_nu
     Query => tree_sitter_tsquery
     Rust => tree_sitter_rust
     Sulu => tree_sitter_sulu

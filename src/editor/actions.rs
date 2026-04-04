@@ -1,17 +1,10 @@
-use std::{fs, iter};
+use std::{collections::HashMap, fs, iter};
 
 use crate::{
-    aprintln::aprintln,
-    document::Document,
-    editor::{
+    aprintln::aprintln, document::Document, editor::{
         Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels,
         picker::Picker,
-    },
-    ix::Ix,
-    lang::Language,
-    lsp::channel::EditorToLspMessage,
-    terminal_size::terminal_size,
-    util::{RangeOverlap, pretty_node},
+    }, ix::Ix, lang::Language, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
 };
 
 mod insert;
@@ -86,12 +79,37 @@ impl Editor {
         ))
     }
 
+    fn unredo(&mut self, dir: TimeDirection) {
+        let Err(cp) = self.doc.unredo(dir) else {return};
+        let docs = self.global_timeline[dir].pop(cp);
+
+        let cp = self.global_timeline[dir.rev()].checkpoint();
+
+        let mut doc_counts = HashMap::<_, u32>::new();
+
+        for doc in docs {
+            *doc_counts.entry(doc).or_default() += 1;
+        }
+
+        for (doc, count) in doc_counts {
+            let Ok(doc) = doc.canonicalize() else {continue};
+            self.global_timeline[dir.rev()].push_doc_change((&doc).to_owned().into());
+            if self.filepath.as_ref().and_then(|f| f.canonicalize().ok()).is_some_and(|f| &f == &doc) {
+                self.doc.global_unredo(dir, cp, count);
+            }
+
+            if let Some(doc) = self.bg_docs.by_path_mut(&doc) {
+                doc.global_unredo(dir, cp, count);
+            }
+        }
+    }
+
     pub fn undo(&mut self) {
-        self.doc.undo()
+        self.unredo(TimeDirection::History)
     }
 
     pub fn redo(&mut self) {
-        self.doc.redo()
+        self.unredo(TimeDirection::Future)
     }
 
     #[allow(unused)]
