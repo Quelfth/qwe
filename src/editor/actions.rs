@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fs, iter};
+use std::{collections::HashMap, fs, iter, path::Path, sync::Arc};
 
 use crate::{
     aprintln::aprintln, document::Document, editor::{
         Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels,
         picker::Picker,
-    }, ix::Ix, lang::Language, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
+    }, ix::Ix, lang::Language, language_server::LspContext, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
 };
 
 mod insert;
@@ -34,14 +34,23 @@ impl Editor {
     }
 
     pub fn save_file(&mut self) {
-        if let Some(path) = self.filepath.as_deref() {
-            _ = fs::write(path, self.doc.text().to_string().as_bytes());
-            if let Some(cx) = &self.lsp
-                && let Some(lang) = self.doc.language()
-                && let Some(path) = self.filepath.clone()
+        fn save_doc(path: Arc<Path>, doc: &Document, lsp: Option<&LspContext>) {
+            _ = fs::write(&path, doc.text().to_string().as_bytes());
+            if let Some(cx) = &lsp
+                && let Some(lang) = doc.language()
             {
                 _ = cx.tx.send(EditorToLspMessage::Save { lang, path });
             }
+        }
+
+        if let Some(path) = self.filepath.clone() {
+            save_doc(path, &self.doc, self.lsp.as_ref());
+        }
+
+        for doc in self.bg_docs.take_save_list() {
+            let path = self.bg_docs.path_from_key(doc).unwrap();
+            let doc = self.bg_docs.by_key(doc).unwrap();
+            save_doc(path, doc, self.lsp.as_ref());
         }
     }
 

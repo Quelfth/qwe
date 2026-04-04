@@ -1,5 +1,5 @@
 use {
-    crate::document::Document, bimap::BiMap, slotmap::SlotMap, std::{path::Path, sync::Arc}
+    crate::document::Document, bimap::BiMap, slotmap::SlotMap, std::{mem, path::Path, sync::Arc}
 };
 
 slotmap::new_key_type! {
@@ -10,6 +10,7 @@ slotmap::new_key_type! {
 pub struct Documents {
     docs: SlotMap<DocKey, Document>,
     paths: BiMap<Arc<Path>, DocKey>,
+    save_list: Vec<DocKey>,
 }
 
 impl Documents {
@@ -50,4 +51,14 @@ impl Documents {
     pub fn path_from_key(&self, key: DocKey) -> Option<Arc<Path>> {
         Some(self.paths.get_by_right(&key)?.clone())
     }
+
+    pub fn push_save(&mut self, key: DocKey) {
+        self.save_list.push(key);
+    }
+
+    pub fn take_save_list(&mut self) -> Vec<DocKey> {
+        mem::take(&mut self.save_list)
+    }
+
+
 }

@@ -259,6 +259,7 @@ impl Gadget for CodeActionsGadget {
                         }
                         for doc in bg_docs_edited {
                             editor.bg_docs.by_key_mut(doc).unwrap().timeline.history.push_global_jump(cp);
+                            editor.bg_docs.push_save(doc);
                         }
                     }
                     editor.close_gadget();

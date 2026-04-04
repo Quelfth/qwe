@@ -94,6 +94,14 @@ impl Editor {
     }
 
     fn open_file_doc_impl(&mut self, path: Arc<Path>) -> io::Result<Option<Arc<Path>>> {
+        if let Some(fp) = self.filepath.as_ref()
+            && let Ok(fp) = fp.canonicalize()
+            && let Ok(path) = path.canonicalize()
+            && fp == path
+        {
+            return Ok(None);
+        }
+
         let doc = if let Some(doc) = self.bg_docs.extract_by_path(&path) {
             doc
         } else {
