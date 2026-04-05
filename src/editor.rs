@@ -169,9 +169,10 @@ impl Editor {
 
         if let Some(cursors) = &self.doc.cursors {
             use CursorState::*;
-            match cursors {
+            match cursors {    
                 MirrorInsert(_) | Insert(_) => {
-                    if let Some(action) = self.keymap.insert.map_event(event) {
+                    let keymap = if matches!(cursors, MirrorInsert(_)) { &self.keymap.mirror_insert } else { &self.keymap.insert };
+                    if let Some(action) = keymap.map_event(event) {
                         action(self);
                         self.draw()?;
                     } else if let InputEvent::Event(KeyEvent {

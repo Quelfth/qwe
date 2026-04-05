@@ -1,4 +1,4 @@
-use std::convert::identity;
+use std::{convert::identity, sync::Arc};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{CompletionItem, CompletionItemKind};
@@ -60,10 +60,10 @@ impl From<CompletionItemKind> for CompletionKind {
 }
 
 pub struct CompletionOption {
-    label: String,
+    label: Arc<str>,
     #[allow(unused)]
     kind: CompletionKind,
-    text: String,
+    text: Arc<str>,
 }
 
 impl CompletionOption {
@@ -73,10 +73,16 @@ impl CompletionOption {
             kind,
             insert_text,
             ..
-        }: CompletionItem = item;
+        } = item;
+
+        let label: Arc<str> = label.into();
+
+        let or_label = |input: Option<String>| -> Arc<str> {
+            input.map(Into::into).unwrap_or_else(|| label.clone())
+        };
 
         Self {
-            text: insert_text.unwrap_or_else(|| label.clone()),
+            text: or_label(insert_text),
             label,
             kind: kind.map(|k| k.into()).unwrap_or(CompletionKind::Other),
         }
@@ -89,13 +95,10 @@ pub struct Completer {
 }
 
 impl Completer {
-    pub fn new<I>(items: I) -> Self
-    where
-        I: IntoIterator<Item = CompletionItem>,
-        for<'a> &'a I: IntoIterator<Item = &'a CompletionItem>,
-    {
-        let selected = (&items)
-            .into_iter()
+    pub fn new(mut items: Vec<CompletionItem>) -> Self {
+        items.sort_unstable_by(|a, b| a.sort_text.cmp(&b.sort_text));
+        let selected = items
+            .iter()
             .enumerate()
             .find(|(_, i)| i.preselect.is_some_and(identity))
             .map(|(i, _)| i)

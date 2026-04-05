@@ -570,37 +570,49 @@ impl Document {
         )
     }
 
+    fn insert_change_inner(&self, pos: Pos, text: String) -> Change {
+        match self.text.byte_pos_of_pos(pos) {
+            Ok(byte_pos) => Change {
+                byte_pos,
+                delete: Ix::new(0),
+                insert: text,
+            },
+            Err(e) => match e {
+                PosError::BadLine { len } => Change {
+                    byte_pos: self.text.byte_len(),
+                    delete: Ix::new(0),
+                    insert: iter::repeat_n("\n", (pos.line - len).inner())
+                        .chain(iter::repeat_n(" ", (pos.column).inner()))
+                        .chain(iter::once(&*text))
+                        .collect(),
+                },
+                PosError::BadColumn {
+                    byte_of_line,
+                    bytes_in_line: len,
+                    columns_in_line,
+                } => Change {
+                    byte_pos: byte_of_line + len,
+                    delete: Ix::new(0),
+                    insert: iter::repeat_n(" ", (pos.column - columns_in_line).inner())
+                        .chain(iter::once(&*text))
+                        .collect(),
+                },
+            },
+        }
+    }
+
     pub fn insert_change(&self, pos: Pos, text: String) -> (Option<Change>, Option<CursorChange>) {
         let cursor_change = CursorChange::insert(pos, &text);
         (
-            Some(match self.text.byte_pos_of_pos(pos) {
-                Ok(byte_pos) => Change {
-                    byte_pos,
-                    delete: Ix::new(0),
-                    insert: text,
-                },
-                Err(e) => match e {
-                    PosError::BadLine { len } => Change {
-                        byte_pos: self.text.byte_len(),
-                        delete: Ix::new(0),
-                        insert: iter::repeat_n("\n", (pos.line - len).inner())
-                            .chain(iter::repeat_n(" ", (pos.column).inner()))
-                            .chain(iter::once(&*text))
-                            .collect(),
-                    },
-                    PosError::BadColumn {
-                        byte_of_line,
-                        bytes_in_line: len,
-                        columns_in_line,
-                    } => Change {
-                        byte_pos: byte_of_line + len,
-                        delete: Ix::new(0),
-                        insert: iter::repeat_n(" ", (pos.column - columns_in_line).inner())
-                            .chain(iter::once(&*text))
-                            .collect(),
-                    },
-                },
-            }),
+            Some(self.insert_change_inner(pos, text)),
+            cursor_change,
+        )
+    }
+
+    pub fn insert_pair_change(&self, pos: Pos, left: String, right: String) -> (Option<Change>, Option<CursorChange>) {
+        let cursor_change = CursorChange::insert(pos, &left);
+        (
+            Some(self.insert_change_inner(pos, left + &right)),
             cursor_change,
         )
     }

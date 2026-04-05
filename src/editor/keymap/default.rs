@@ -19,10 +19,19 @@ static UNIVERSAL: LazyLock<&'static [(Key, Mapping)]> = LazyLock::new(|| {
             (Key::ctrl('u'), Mapping::rep(|e| e.scroll_up(4))),
             (Key::ctrl('r'), Mapping::rep(|e| e.scroll_right(4))),
             (Key::ctrl('y'), Mapping::rep(|e| e.scroll_left(4))),
-            (Key::base(ScrollDir::Down), Mapping::rep(|e| e.scroll_down(4))),
+            (
+                Key::base(ScrollDir::Down),
+                Mapping::rep(|e| e.scroll_down(4)),
+            ),
             (Key::base(ScrollDir::Up), Mapping::rep(|e| e.scroll_up(4))),
-            (Key::base(ScrollDir::Left), Mapping::rep(|e| e.scroll_left(4))),
-            (Key::base(ScrollDir::Right), Mapping::rep(|e| e.scroll_right(4))),
+            (
+                Key::base(ScrollDir::Left),
+                Mapping::rep(|e| e.scroll_left(4)),
+            ),
+            (
+                Key::base(ScrollDir::Right),
+                Mapping::rep(|e| e.scroll_right(4)),
+            ),
             //(Key::ctrl('y'), Mapping::once(Editor::debug_undo)),
         ]
     }))
@@ -31,21 +40,32 @@ static UNIVERSAL: LazyLock<&'static [(Key, Mapping)]> = LazyLock::new(|| {
 fn universal() -> impl Iterator<Item = (Key, Mapping)> {
     UNIVERSAL.iter().copied()
 }
+static COMMON_INSERT: LazyLock<&'static [(Key, Mapping)]> = LazyLock::new(|| {
+    Box::leak(Box::new({
+        [
+            (Key::base(Esc), Mapping::once(Editor::select)),
+            (Key::base(Backspace), Mapping::rep(Editor::backspace)),
+            (Key::base(Enter), Mapping::rep(Editor::insert_return)),
+            (Key::base(Tab), Mapping::rep(Editor::insert_tab_else_complete)),
+            (Key::base(BackTab), Mapping::rep(Editor::tab_out)),
+            (Key::ctrl('z'), Mapping::once(Editor::undo)),
+            (Key::ctrl('v'), Mapping::once(Editor::paste)),
+        ]
+    }))
+});
+
+fn common_insert() -> impl Iterator<Item = (Key, Mapping)> {
+    COMMON_INSERT.iter().copied()
+}
 
 impl Default for Keymaps {
     fn default() -> Self {
         Self {
-            insert: Keymap::from_iter(universal().chain([
-                (Key::base(Esc), Mapping::once(Editor::select)),
-                (Key::base(Backspace), Mapping::rep(Editor::backspace)),
-                (Key::base(Enter), Mapping::rep(Editor::insert_return)),
-                (
-                    Key::base(Tab),
-                    Mapping::rep(Editor::insert_tab_else_complete),
-                ),
-                (Key::base(BackTab), Mapping::rep(Editor::tab_out)),
-                (Key::ctrl('z'), Mapping::once(Editor::undo)),
-                (Key::ctrl('v'), Mapping::once(Editor::paste)),
+            mirror_insert: Keymap::from_iter(universal().chain(common_insert())),
+            insert: Keymap::from_iter(universal().chain(common_insert()).chain([
+                (Key::base('('), Mapping::once(|e| e.insert_pair("(", ")"))),
+                (Key::base('['), Mapping::once(|e| e.insert_pair("[", "]"))),
+                (Key::base('{'), Mapping::once(|e| e.insert_pair("{", "}"))),
             ])),
             select: Keymap::from_iter(universal().chain([
                 (Key::base('i'), Mapping::once(Editor::insert_before)),
@@ -63,8 +83,14 @@ impl Default for Keymaps {
                 (Key::base(';'), Mapping::once(Editor::line_select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),
-                (Key::base('u'), Mapping::once(Editor::collapse_cursors_to_start)),
-                (Key::base('q'), Mapping::once(Editor::collapse_cursors_to_end)),
+                (
+                    Key::base('u'),
+                    Mapping::once(Editor::collapse_cursors_to_start),
+                ),
+                (
+                    Key::base('q'),
+                    Mapping::once(Editor::collapse_cursors_to_end),
+                ),
                 (Key::base('9'), Mapping::rep(Editor::cycle_cursors_backward)),
                 (Key::base('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 (Key::base('8'), Mapping::once(Editor::scroll_to_main_cursor)),
@@ -128,8 +154,14 @@ impl Default for Keymaps {
                 (Key::base(';'), Mapping::once(Editor::select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),
-                (Key::base('u'), Mapping::once(Editor::collapse_cursors_to_start)),
-                (Key::base('q'), Mapping::once(Editor::collapse_cursors_to_end)),
+                (
+                    Key::base('u'),
+                    Mapping::once(Editor::collapse_cursors_to_start),
+                ),
+                (
+                    Key::base('q'),
+                    Mapping::once(Editor::collapse_cursors_to_end),
+                ),
                 (Key::base('9'), Mapping::rep(Editor::cycle_cursors_backward)),
                 (Key::base('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 //

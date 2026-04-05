@@ -19,21 +19,7 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind,
-    CodeActionKindLiteralSupport, CodeActionLiteralSupport, CodeActionParams, CompletionClientCapabilities,
-    CompletionItemCapability, CompletionItemKind, CompletionItemKindCapability, CompletionList, CompletionParams, 
-    CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag, DiagnosticWorkspaceClientCapabilities, 
-    DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams, 
-    DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent, 
-    GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents, HoverParams, 
-    InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams, LogTraceParams, MarkedString, 
-    MarkupContent, MarkupKind, PartialResultParams, Position, ProgressParams, PublishDiagnosticsClientCapabilities, 
-    PublishDiagnosticsParams, Range, ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities, 
-    SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult, SemanticTokensRegistrationOptions, 
-    SemanticTokensResult, SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, 
-    ShowDocumentParams, ShowDocumentResult, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem, 
-    TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, 
-    WorkDoneProgressCreateParams, WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder,
+    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind, CodeActionKindLiteralSupport, CodeActionLiteralSupport, CodeActionParams, CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind, CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag, DiagnosticWorkspaceClientCapabilities, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents, HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams, LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position, ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range, ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams, ShowDocumentResult, ShowMessageParams, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams, WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder
 };
 use serde_json as json;
 use tokio::{
@@ -649,6 +635,10 @@ impl LanguageClient for Client {
             .channel
             .send(ClientMessage::PublishDiagnostics { uri, diagnostics });
 
+        ControlFlow::Continue(())
+    }
+
+    fn show_message(&mut self, _: ShowMessageParams) -> Self::NotifyResult {
         ControlFlow::Continue(())
     }
 

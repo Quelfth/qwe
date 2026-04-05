@@ -106,6 +106,7 @@ impl Key {
 use crate::editor::Editor;
 
 pub struct Keymaps {
+    pub mirror_insert: Keymap,
     pub insert: Keymap,
     pub select: Keymap,
     pub line_select: Keymap,

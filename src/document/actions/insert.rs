@@ -32,6 +32,10 @@ impl Document {
         self.do_insert(insert_effect(str))
     }
 
+    pub fn insert_pair(&mut self, left: &str, right: &str) {
+        self.do_insert(|doc, pos, _| doc.insert_pair_change(pos, left.to_owned(), right.to_owned()))
+    }
+
     pub fn insert_return(&mut self) {
         self.do_insert(|doc, pos, _| doc.return_change(pos))
     }
@@ -116,3 +120,4 @@ fn insert_effect(
         doc.insert_change(pos, text)
     }
 }
+
