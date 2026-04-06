@@ -1,4 +1,4 @@
-use {
+use 
     crate::{
         constants::TAB_WIDTH,
         document::{
@@ -11,8 +11,8 @@ use {
         ix::Ix,
         pos::Pos,
         util::{auto_removal_char, indent_string},
-    },
-};
+    }
+;
 
 impl Document {
     pub fn backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
@@ -40,7 +40,7 @@ impl Document {
             let mut graphemes = self.text.byte_slice(..byte).unwrap().graphemes();
             let grapheme = graphemes.next_back()?;
             let (size, extra) = if grapheme.is_whitespace() {
-                (if in_indent {
+                if in_indent {
                     let mut sum = grapheme.len();
                     if !grapheme.is_newline() {
                         while let Some(g) = graphemes.next_back() {
@@ -54,7 +54,21 @@ impl Document {
                             }
                         }
                     }
-                    sum
+                    let mut extra = Ix::new(0);
+                    if let Some(r_delim) = graphemes.next_back().and_then(|g| auto_removal_char(g.as_str())) {
+                        let mut rest = self.text.byte_slice(byte..).unwrap().graphemes();
+                        if rest.next().is_some_and(|n| n.is_newline()) {
+                            for g in rest {
+                                extra += g.len();
+                                if g.as_str() == r_delim { break }
+                                if !g.is_whitespace() {
+                                    extra = Ix::new(0);
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    (sum, extra)
                 } else if no_content_before {
                     let to_remove = {
                         let rem = pos.column % TAB_WIDTH;
@@ -64,15 +78,18 @@ impl Document {
                             rem
                         }
                     };
-                    grapheme.len()
-                        + graphemes
-                            .rev()
-                            .take(to_remove.inner() - 1)
-                            .map(|g| g.len())
-                            .sum()
+                    (
+                        grapheme.len()
+                            + graphemes
+                                .rev()
+                                .take(to_remove.inner() - 1)
+                                .map(|g| g.len())
+                                .sum(),
+                        Ix::new(0),
+                    )
                 } else {
-                    grapheme.len()
-                }, Ix::new(0))
+                    (grapheme.len(), Ix::new(0))
+                }
             } else {
                 let mut extra = Ix::new(0);
                 if let Some(char) = auto_removal_char(grapheme.as_str()) {
