@@ -63,12 +63,19 @@ impl Default for Keymaps {
         Self {
             mirror_insert: Keymap::from_iter(universal().chain(common_insert())),
             insert: Keymap::from_iter(universal().chain(common_insert()).chain([
-                (Key::base('('), Mapping::once(|e| e.insert_pair("(", ")"))),
-                (Key::base('['), Mapping::once(|e| e.insert_pair("[", "]"))),
-                (Key::base('{'), Mapping::once(|e| e.insert_pair("{", "}"))),
-                (Key::base(')'), Mapping::once(|e| e.insert_reluctant(")"))),
-                (Key::base(']'), Mapping::once(|e| e.insert_reluctant("]"))),
-                (Key::base('}'), Mapping::once(|e| e.insert_reluctant("}"))),
+                (Key::base('('), Mapping::rep(|e| e.insert_pair("(", ")"))),
+                (Key::base('['), Mapping::rep(|e| e.insert_pair("[", "]"))),
+                (Key::base('{'), Mapping::rep(|e| e.insert_pair("{", "}"))),
+                (Key::base(')'), Mapping::rep(|e| e.insert_reluctant(")"))),
+                (Key::base(']'), Mapping::rep(|e| e.insert_reluctant("]"))),
+                (Key::base('}'), Mapping::rep(|e| e.insert_reluctant("}"))),
+
+                (Key::alt('<'), Mapping::rep(|e| e.insert_pair("<", ">"))),
+                (Key::alt('"'), Mapping::rep(|e| e.insert_pair("\"", "\""))),
+                (Key::alt('\''), Mapping::rep(|e| e.insert_pair("'", "'"))),
+                (Key::alt('`'), Mapping::rep(|e| e.insert_pair("`", "`"))),
+                (Key::alt('|'), Mapping::rep(|e| e.insert_pair("|", "|"))),
+                (Key::alt('/'), Mapping::rep(|e| e.insert_pair("/", "/"))),
             ])),
             select: Keymap::from_iter(universal().chain([
                 (Key::base('i'), Mapping::once(Editor::insert_before)),
