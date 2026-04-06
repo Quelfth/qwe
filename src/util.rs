@@ -9,7 +9,7 @@ use tree_sitter::Node;
 
 use crate::{
     grapheme::GraphemeExt,
-    ix::{Column, Ix},
+    ix::{Column, Ix, Line},
 };
 
 pub fn leak<T>(value: T) -> &'static T {
@@ -157,4 +157,36 @@ impl CharClass {
             CharClass::Symbol(char)
         }
     }
+}
+
+#[extension_trait]
+pub impl LinesColumnsExt for str {
+    fn lines_columns(&self) -> (Ix<Line>, Ix<Column>) {
+        let lines = Ix::new(self.chars().filter(|&c| c == '\n').count());
+        let columns = if !self.ends_with("\n")
+            && let Some(line) = self.lines().next_back()
+        {
+            line.graphemes().map(|g| g.columns()).sum()
+        } else {
+            Ix::new(0)
+        };
+        (lines, columns)
+    }
+}
+
+pub fn auto_removal_char(left: &str) -> Option<&'static str> {
+    Some(match left {
+        "(" => ")",
+        "[" => "]",
+        "{" => "}",
+        "<" => ">",
+        "\"" => "\"",
+        "'" => "'",
+        "|" => "|",
+        _ => None::<!>?,
+    })
+}
+
+pub fn is_right_delimiter(delimiter: &str) -> bool {
+    matches!(delimiter, ")" | "]" | "}" | ">")
 }

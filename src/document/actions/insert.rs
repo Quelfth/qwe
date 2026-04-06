@@ -36,6 +36,10 @@ impl Document {
         self.do_insert(|doc, pos, _| doc.insert_pair_change(pos, left.to_owned(), right.to_owned()))
     }
 
+    pub fn insert_reluctant(&mut self, str: &str) {
+        self.do_insert(|doc, pos, _| doc.insert_reluctant_change(pos, str.to_owned()))
+    }
+
     pub fn insert_return(&mut self) {
         self.do_insert(|doc, pos, _| doc.return_change(pos))
     }

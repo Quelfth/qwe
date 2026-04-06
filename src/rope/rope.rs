@@ -4,7 +4,7 @@ use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
     document::{Change, CursorChange, CursorChangeKind, PosError},
-    grapheme::{Grapheme, GraphemeExt},
+    grapheme::Grapheme,
     ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
     pos::{Pos, Utf16Pos},
     rope::iter::{Graphemes, Lines},
@@ -361,20 +361,10 @@ impl Rope {
                 })
             }
             Equal => None,
-            Greater => Some(CursorChange {
-                pos: self.pos_of_byte_pos(*byte_pos + *delete).unwrap(),
-                kind: CursorChangeKind::Insert,
-                lines: Ix::new(ins.chars().filter(|&c| c == '\n').count()),
-                columns: if !ins.ends_with('\n')
-                    && let Some(line) = ins.lines().next_back()
-                {
-                    line.graphemes().map(|g| g.columns()).sum()
-                } else {
-                    Ix::new(0)
-                },
-            }),
+            Greater => CursorChange::insert_end(self.pos_of_byte_pos(*byte_pos + *delete).unwrap(), ins),
         }
     }
+
     pub fn context_indent(&self, line: Ix<Line>) -> Ix<Column> {
         let mut line = line;
         while line > Ix::new(0) {

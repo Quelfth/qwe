@@ -66,6 +66,9 @@ impl Default for Keymaps {
                 (Key::base('('), Mapping::once(|e| e.insert_pair("(", ")"))),
                 (Key::base('['), Mapping::once(|e| e.insert_pair("[", "]"))),
                 (Key::base('{'), Mapping::once(|e| e.insert_pair("{", "}"))),
+                (Key::base(')'), Mapping::once(|e| e.insert_reluctant(")"))),
+                (Key::base(']'), Mapping::once(|e| e.insert_reluctant("]"))),
+                (Key::base('}'), Mapping::once(|e| e.insert_reluctant("}"))),
             ])),
             select: Keymap::from_iter(universal().chain([
                 (Key::base('i'), Mapping::once(Editor::insert_before)),

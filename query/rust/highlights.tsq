@@ -89,7 +89,7 @@
 (scoped_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 (scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 
-(use_wildcard "::" @o.scope)
+(use_wildcard (name) @_ (#semantic? @_ "!Enum") "::" @o.scope)
 
 (use_wildcard (name) @_ (#semantic? @_ Enum) "::" @o.association.enum)
 (use_wildcard (scoped_name name: (name) @_ (#semantic? @_ Enum)) "::" @o.association.enum)

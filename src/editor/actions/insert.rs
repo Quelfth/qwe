@@ -27,6 +27,10 @@ impl Editor {
         self.doc.insert_pair(left, right);
     }
 
+    pub fn insert_reluctant(&mut self, text: &str) {
+        self.doc.insert_reluctant(text);
+    }
+
     pub fn tab_out(&mut self) {
         self.doc.tab_out()
     }

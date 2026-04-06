@@ -17,6 +17,17 @@ impl Pos {
         line: Ix::new(0),
         column: Ix::new(0),
     };
+
+    pub fn offset(self, lines: Ix<Line>, columns: Ix<Column>) -> Self {
+        Pos{
+            line: self.line + lines,
+            column: if lines == Ix::ZERO {
+                self.column + columns
+            } else {
+                columns
+            }
+        }
+    }
 }
 
 impl FromStr for Pos {
