@@ -1017,6 +1017,7 @@ dependencies = [
  "tree-sitter-cpp",
  "tree-sitter-css-orchard",
  "tree-sitter-javascript",
+ "tree-sitter-mona",
  "tree-sitter-nu",
  "tree-sitter-rust",
  "tree-sitter-sulu",
@@ -1476,7 +1477,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-cpp"
 version = "0.1.0"
-source = "git+https://github.com/Quelfth/tree-sitter-cpp#5d24e6e57b4a340714283db415013641f2b624b7"
+source = "git+https://github.com/Quelfth/tree-sitter-cpp#fcbe0883cd3f19b7efff7991a52981ce1ad608ec"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1507,6 +1508,14 @@ name = "tree-sitter-language"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "009994f150cc0cd50ff54917d5bc8bffe8cad10ca10d81c34da2ec421ae61782"
+
+[[package]]
+name = "tree-sitter-mona"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
 
 [[package]]
 name = "tree-sitter-nu"

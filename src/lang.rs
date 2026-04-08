@@ -12,6 +12,7 @@ pub enum Language {
     Cpp,
     Css,
     Javascript,
+    Mona,
     Nu,
     Query,
     Rust,
@@ -28,9 +29,10 @@ pub struct LangLspInfo {
 impl Language {
     pub fn from_file_ext(ext: &str) -> Option<Self> {
         Some(match ext {
-            "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
+            "c" | "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
             "css" => Self::Css,
             "js" => Self::Javascript,
+            "mn" => Self::Mona,
             "nu" => Self::Nu,
             "tsq" => Self::Query,
             "rs" => Self::Rust,
@@ -68,6 +70,7 @@ queries! {
         Cpp => "cpp"
         Css => "css"
         Javascript => "js"
+        Mona => "mona"
         Nu => "nu"
         Query => "query"
         Rust => "rust"
@@ -84,6 +87,7 @@ ts_lang! {
     Cpp => tree_sitter_cpp
     Css => tree_sitter_css_orchard
     Javascript => tree_sitter_javascript
+    Mona => tree_sitter_mona
     Nu => tree_sitter_nu
     Query => tree_sitter_tsquery
     Rust => tree_sitter_rust

@@ -1,0 +1,7 @@
+
+(digits) @l.number
+
+(integer ["-" "0x" "0b" "0o" "0z"] @l.number.affix)
+(integer (literal_suffix) @l.number.affix)
+
+(parenthetical ["(" ")"] @o.group)

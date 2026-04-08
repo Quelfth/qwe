@@ -149,7 +149,7 @@ impl Document {
                                 rem
                             }
                         };
-    
+
                         Some(CursorChange {
                             pos: Pos {
                                 line: pos.line,
