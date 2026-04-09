@@ -39,6 +39,10 @@ impl LineCursors {
         todo!()
     }
 
+    pub fn to_block_select(&self, text: &Rope) -> SelectCursors {
+        self.map_to(|c| c.to_block_select(text))
+    }
+
     pub fn delete_ranges(&self, doc: &Rope) -> impl Iterator<Item = Range<Ix<Byte>>> {
         self.iter().filter_map(|c| c.text_range(doc))
     }
@@ -118,6 +122,29 @@ impl LineCursor {
                     end: doc.context_columns_in_line(l),
                 })
                 .collect(),
+        }
+    }
+
+    pub fn to_block_select(self, text: &Rope) -> SelectCursor {
+        let mut start = None;
+        let mut end = None;
+        for line in self.lines() {
+            let indent = text.context_indent_inc(line);
+            let cols = text.columns_in_line(line);
+            if start.is_none_or(|s| indent < s) {
+                start = Some(indent);
+            }
+            if end.is_none_or(|e| cols > e) {
+                end = Some(cols);
+            }
+        }
+        let start = start.unwrap_or(Ix::ZERO);
+        let line = RangeCursorLine { start, end: end.unwrap_or(start) };
+
+        SelectCursor {
+            line: self.line,
+            first_line: line,
+            other_lines: vec![line; self.height.inner().saturating_sub(1)],
         }
     }
 

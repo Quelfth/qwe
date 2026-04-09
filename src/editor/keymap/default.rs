@@ -92,15 +92,11 @@ impl Default for Keymaps {
                 (Key::base('w'), Mapping::once(Editor::incremental_select)),
                 (Key::base(';'), Mapping::once(Editor::line_select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
+                (Key::base('\\'), Mapping::once(Editor::text_select)),
+                (Key::base('|'), Mapping::once(Editor::block_select)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),
-                (
-                    Key::base('u'),
-                    Mapping::once(Editor::collapse_cursors_to_start),
-                ),
-                (
-                    Key::base('q'),
-                    Mapping::once(Editor::collapse_cursors_to_end),
-                ),
+                (Key::base('u'), Mapping::once(Editor::collapse_cursors_to_start)),
+                (Key::base('q'), Mapping::once(Editor::collapse_cursors_to_end)),
                 (Key::base('9'), Mapping::rep(Editor::cycle_cursors_backward)),
                 (Key::base('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 (Key::base('8'), Mapping::once(Editor::scroll_to_main_cursor)),
@@ -141,20 +137,11 @@ impl Default for Keymaps {
                 (Key::base('Y'), Mapping::once(|e| e.goto(TypeDefinition))),
                 //
                 (Key::base(F(6)), Mapping::once(Editor::inspect)),
-                (
-                    Key::base(F(5)),
-                    Mapping::once(Editor::refresh_semantic_tokens),
-                ),
+                (Key::base(F(5)), Mapping::once(Editor::refresh_semantic_tokens)),
             ])),
             line_select: Keymap::from_iter(universal().chain([
-                (
-                    Key::base('i'),
-                    Mapping::once(Editor::insert_on_newline_before),
-                ),
-                (
-                    Key::base('a'),
-                    Mapping::once(Editor::insert_on_newline_after),
-                ),
+                (Key::base('i'), Mapping::once(Editor::insert_on_newline_before)),
+                (Key::base('a'), Mapping::once(Editor::insert_on_newline_after)),
                 (Key::base('I'), Mapping::once(Editor::insert_before)),
                 (Key::base('A'), Mapping::once(Editor::insert_after)),
                 //
@@ -163,15 +150,11 @@ impl Default for Keymaps {
                 //
                 (Key::base(';'), Mapping::once(Editor::select)),
                 (Key::base(':'), Mapping::once(Editor::cursor_line_split)),
+                (Key::base('\\'), Mapping::once(Editor::text_select)),
+                (Key::base('|'), Mapping::once(Editor::block_select)),
                 (Key::base(Esc), Mapping::once(Editor::drop_other_selections)),
-                (
-                    Key::base('u'),
-                    Mapping::once(Editor::collapse_cursors_to_start),
-                ),
-                (
-                    Key::base('q'),
-                    Mapping::once(Editor::collapse_cursors_to_end),
-                ),
+                (Key::base('u'), Mapping::once(Editor::collapse_cursors_to_start)),
+                (Key::base('q'), Mapping::once(Editor::collapse_cursors_to_end)),
                 (Key::base('9'), Mapping::rep(Editor::cycle_cursors_backward)),
                 (Key::base('0'), Mapping::rep(Editor::cycle_cursors_forward)),
                 //

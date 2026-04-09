@@ -23,6 +23,14 @@ impl Editor {
         self.doc.insert_around_out()
     }
 
+    pub fn block_select(&mut self) {
+        self.doc.block_select()
+    }
+
+    pub fn text_select(&mut self) {
+        self.doc.text_select()
+    }
+
     pub fn move_x(&mut self, columns: isize) {
         self.doc.move_x(Ix::new(columns));
     }

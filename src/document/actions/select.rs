@@ -100,6 +100,30 @@ impl Document {
         }
     }
 
+    pub fn block_select(&mut self) {
+        if let Some(c) = &mut self.cursors {
+            use CursorState::*;
+            match c {
+                MirrorInsert(_) => (),
+                Insert(_) => (),
+                Select(c) => c.block_select(),
+                LineSelect(c) => self.cursors = Some(c.to_block_select(&self.text).into()),
+            }
+        }
+    }
+
+    pub fn text_select(&mut self) {
+        if let Some(c) = &mut self.cursors {
+            use CursorState::*;
+            match c {
+                MirrorInsert(_) => (),
+                Insert(_) => (),
+                Select(c) => c.text_select(&self.text),
+                LineSelect(c) => self.cursors = Some(c.to_select(&self.text).into()),
+            }
+        }
+    }
+
     pub fn move_x(&mut self, columns: Ix<Column, isize>) {
         if let Some(c) = &mut self.cursors {
             c.move_x(columns)

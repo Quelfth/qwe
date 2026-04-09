@@ -44,6 +44,14 @@ impl SelectCursors {
         self.map_to(SelectCursor::to_mirror_insert_out)
     }
 
+    pub fn block_select(&mut self) {
+        self.iter_mut().for_each(|s| s.block_select())
+    }
+
+    pub fn text_select(&mut self, text: &Rope) {
+        self.iter_mut().for_each(|s| s.text_select(text))
+    }
+
     pub fn move_x(&mut self, columns: Ix<Column, isize>) {
         for cursor in self.iter_mut() {
             cursor.move_x(columns);
@@ -364,6 +372,41 @@ impl SelectCursor {
 
     fn lines_mut(&mut self) -> impl Iterator<Item = &mut RangeCursorLine> {
         iter::once(&mut self.first_line).chain(&mut self.other_lines)
+    }
+
+    pub fn block_select(&mut self) {
+        let a = self.first_line.start;
+        let b = self.last_line().end;
+
+        let range = RangeCursorLine {
+            start: a.min(b),
+            end: a.max(b)
+        };
+        for line in self.lines_mut() {
+            *line = range;
+        }
+    }
+
+    pub fn text_select(&mut self, text: &Rope) {
+        let line_range = self.line_range();
+        let indent = line_range.clone().map(|line| text.context_indent_inc(line)).min().unwrap_or(Ix::ZERO);
+        if self.first_line.start < indent {
+            self.first_line.start = indent;
+        }
+        for line in &mut self.other_lines {
+            line.start = indent;
+        }
+
+        let last_line = self.last_line_mut();
+
+        let last_line_len = text.columns_in_line(line_range.end.saturating_sub(Ix::new(1)));
+        if last_line.end > last_line_len {
+            last_line.end = last_line_len;
+        }
+        let other_lines_len = self.other_lines.len();
+        for (line, i) in self.lines_mut().zip(line_range).take(other_lines_len) {
+            line.end = text.columns_in_line(i);
+        }
     }
 
     pub fn move_x(&mut self, columns: Ix<Column, isize>) {

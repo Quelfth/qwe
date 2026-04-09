@@ -5,3 +5,6 @@
 (integer (literal_suffix) @l.number.affix)
 
 (parenthetical ["(" ")"] @o.group)
+
+(object "{" @o.call.type.struct (field_item) "}" @o.call.type.struct)
+(object "{" @o.call.type.enum (variants_item) "}" @o.call.type.enum)
