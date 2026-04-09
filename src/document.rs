@@ -6,27 +6,34 @@ use mutx::Mutex;
 use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
-use crate::aprintln::aprintln;
-use crate::constants::TAB_WIDTH;
-use crate::document::diagnostics::{Diagnostic, Severity};
-use crate::document::lsp_change::LspChange;
-use crate::document::semtoks::SemanticToken;
-use crate::draw::Rect;
-use crate::editor::cursors::mirror_insert::InsertDirection;
-use crate::editor::cursors::select::{SelectCursor, SelectCursors};
-use crate::editor::cursors::{CursorIndex, CursorState};
-use crate::grapheme::GraphemeExt;
-use crate::ix::{Byte, Column, Ix, Line};
-use crate::lang::Language;
-use crate::range_sequence::RangeSequence;
-use crate::rope::{Rope, RopeSlice};
-
-use crate::pos::{Pos, Region, Utf16Pos};
-use crate::timeline::global::GlobalCheckpoint;
-use crate::timeline::{TimeDirection, Timeline};
-use crate::timeline::document::{DocumentEvent, TimeStackPop};
-use crate::ts::parse_doc;
-use crate::util::{LinesColumnsExt, indent_string, is_right_delimiter};
+use crate::{
+    aprintln::aprintln,
+    constants::TAB_WIDTH,
+    document::{
+        diagnostics::{Diagnostic, Severity},
+        lsp_change::LspChange,
+        semtoks::SemanticToken,
+    },
+    draw::Rect,
+    editor::cursors::{
+        mirror_insert::InsertDirection,
+        select::{SelectCursor, SelectCursors},
+        CursorIndex, CursorState,
+    },
+    grapheme::GraphemeExt,
+    ix::{Byte, Column, Ix, Line},
+    lang::Language,
+    range_sequence::RangeSequence,
+    rope::{Rope, RopeSlice},
+    pos::{Pos, Region, Utf16Pos},
+    timeline::{
+        global::GlobalCheckpoint,
+        TimeDirection, Timeline,
+        document::{DocumentEvent, TimeStackPop},
+    },
+    ts::parse_doc,
+    util::{LinesColumnsExt, indent_string, is_right_delimiter},
+};
 
 mod actions;
 pub mod diagnostics;
@@ -170,6 +177,10 @@ impl Document {
         if !self.main_cursor_is_visible() {
             self.scroll_to_main_cursor();
         }
+    }
+
+    pub fn screen_line_range(&self) -> Range<Ix<Line>> {
+        self.scroll..self.scroll + *self.view_height.lock()
     }
 }
 

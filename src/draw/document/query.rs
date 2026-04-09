@@ -1,12 +1,12 @@
-use std::{collections::HashMap, iter};
+use std::{collections::HashMap, iter, ops::Range};
 
 use tree_sitter::{Query, QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
 use crate::{
     document::{Document, semtoks::SemanticToken},
-    ix::{Byte, Ix},
+    ix::{Byte, Ix, Line},
     range_tree::RangeTree,
-    util::MapBounds,
+    util::{MapBounds, RangeOverlap},
 };
 
 use super::highlight::predicate;
@@ -14,12 +14,14 @@ use predicate::Predicate;
 
 pub struct QueryCaptureContext<'s> {
     semtoks: RangeTree<Ix<Byte>, &'s SemanticToken>,
+    screen_lines: Range<Ix<Line>>,
 }
 
 impl Document {
     pub fn query_capture_context(&self) -> QueryCaptureContext<'_> {
         QueryCaptureContext {
             semtoks: self.semtoks.ranges().collect::<RangeTree<_, _>>(),
+            screen_lines: self.screen_line_range(),
         }
     }
 
@@ -53,6 +55,14 @@ impl Document {
                     ..
                 }) = matches.next()
                 {
+                    if !captures.iter().any(|QueryCapture { node, .. }| {
+                        let start = Ix::new(node.start_position().row);
+                        let end = Ix::new(node.end_position().row);
+                        (start..end).overlaps(&context.screen_lines)
+                    }) {
+                        continue
+                    }
+
                     let preds = query
                         .general_predicates(*pattern_index)
                         .iter()

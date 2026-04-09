@@ -44,7 +44,7 @@ markdown = "1.0.0"
 slotmap = "1.1.1"
 resharp = "0.3.7"
 bimap = "0.6.3"
-tree-sitter-mona.path = "../tree-sitter-mona"
+tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
 
 [profile.release]
 debug = true
