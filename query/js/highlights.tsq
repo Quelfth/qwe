@@ -2,6 +2,11 @@
 
 (string_fragment) @l.string
 (string ["\"" "'"] @l.string.quote)
+(regex ["/"] @l.string.quote)
+
+"function" @o.declare.function
+(function_declaration body: (statement_block ["{" "}"] @o.declare.function))
+(formal_parameters ["(" "," ")"] @o.call)
 
 ; Expression
 
@@ -18,10 +23,14 @@
 
 (arrow_function "=>" @o.declare.function)
 
+"return" @o.control.return
+
 ; Names
 
 (call_expression
     function: (identifier) @i.function
 )
+
+(function_declaration name: (identifier) @i.function)
 
 (property_identifier) @i.value.field

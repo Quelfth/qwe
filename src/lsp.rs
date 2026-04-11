@@ -19,7 +19,20 @@ use async_lsp::{
 };
 use async_process::Child;
 use lsp_types::{
-    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind, CodeActionKindLiteralSupport, CodeActionLiteralSupport, CodeActionParams, CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind, CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse, ConfigurationParams, Diagnostic, DiagnosticTag, DiagnosticWorkspaceClientCapabilities, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities, DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent, GotoDefinitionParams, GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents, HoverParams, InitializeResult, InitializedParams, LanguageString, Location, LogMessageParams, LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position, ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range, ReferenceContext, ReferenceParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions, SemanticTokensParams, SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities, SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams, ShowDocumentResult, ShowMessageParams, TagSupport, TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities, Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams, WorkDoneProgressParams, WorkspaceClientCapabilities, WorkspaceFolder
+    ClientCapabilities, CodeActionClientCapabilities, CodeActionContext, CodeActionKind, CodeActionKindLiteralSupport,
+    CodeActionLiteralSupport, CodeActionParams, CompletionClientCapabilities, CompletionItemCapability, CompletionItemKind,
+    CompletionItemKindCapability, CompletionList, CompletionParams, CompletionResponse, ConfigurationParams, Diagnostic,
+    DiagnosticTag, DiagnosticWorkspaceClientCapabilities, DidChangeTextDocumentParams, DidChangeWatchedFilesClientCapabilities,
+    DidChangeWatchedFilesParams, DidOpenTextDocumentParams, DidSaveTextDocumentParams, FileChangeType, FileEvent, GotoDefinitionParams,
+    GotoDefinitionResponse, Hover, HoverClientCapabilities, HoverContents, HoverParams, InitializeResult, InitializedParams, LanguageString,
+    Location, LogMessageParams, LogTraceParams, MarkedString, MarkupContent, MarkupKind, PartialResultParams, Position, PrepareRenameResponse,
+    ProgressParams, PublishDiagnosticsClientCapabilities, PublishDiagnosticsParams, Range, ReferenceContext, ReferenceParams, RenameClientCapabilities,
+    RenameParams, SemanticToken, SemanticTokens, SemanticTokensClientCapabilities, SemanticTokensClientCapabilitiesRequests, SemanticTokensFullOptions,
+    SemanticTokensParams, SemanticTokensPartialResult, SemanticTokensRegistrationOptions, SemanticTokensResult, SemanticTokensServerCapabilities,
+    SemanticTokensWorkspaceClientCapabilities, ServerCapabilities, ShowDocumentParams, ShowDocumentResult, ShowMessageParams, TagSupport,
+    TextDocumentClientCapabilities, TextDocumentIdentifier, TextDocumentItem, TextDocumentPositionParams, TextDocumentSyncClientCapabilities,
+    Url, VersionedTextDocumentIdentifier, WindowClientCapabilities, WorkDoneProgressCreateParams, WorkDoneProgressParams, WorkspaceClientCapabilities,
+    WorkspaceFolder
 };
 use serde_json as json;
 use tokio::{
@@ -227,6 +240,10 @@ impl Server {
                                 },
                             }),
                             is_preferred_support: Some(true),
+                            ..Default::default()
+                        }),
+                        rename: Some(RenameClientCapabilities {
+                            prepare_support: Some(true),
                             ..Default::default()
                         }),
                         ..Default::default()
@@ -517,6 +534,50 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                         }
                     }
                 }
+                EditorToLspMessage::Rename {
+                    lang,
+                    path,
+                    pos: Utf16Pos { line, column },
+                } => {
+                    if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        if let Some(response) = server.socket.prepare_rename(TextDocumentPositionParams {
+                            text_document: TextDocumentIdentifier { uri },
+                            position: Position {
+                                line: line.inner() as _,
+                                character: column.inner() as _,
+                            },
+                        }).await? {
+                            let (range, text) = match response {
+                                PrepareRenameResponse::Range(range) => (Some(range), None),
+                                PrepareRenameResponse::RangeWithPlaceholder { range, placeholder } => (Some(range), Some(placeholder)),
+                                PrepareRenameResponse::DefaultBehavior { .. } => (None, None),
+                            };
+
+                            let range = range.map(|Range { start, end }| Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end));
+
+                            channels.outgoing.send(LspToEditorMessage::PrepareRename { range, text })?;
+                        }
+                    }
+                }
+                EditorToLspMessage::CompleteRename { lang, path, pos: Utf16Pos { line, column }, name } => {
+                     if let Some(server) = servers.get_mut(&lang) {
+                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        if let Some(edit) = server.socket.rename(RenameParams{ 
+                            text_document_position: TextDocumentPositionParams {
+                                text_document: TextDocumentIdentifier { uri },
+                                position: Position {
+                                    line: line.inner() as _,
+                                    character: column.inner() as _,
+                                },
+                            },
+                            new_name: name,
+                            work_done_progress_params: Default::default(),
+                        }).await? {
+                            channels.outgoing.send(LspToEditorMessage::Rename { edit })?;
+                        }
+                    }
+                },
                 EditorToLspMessage::ChangeDoc {
                     lang,
                     path,

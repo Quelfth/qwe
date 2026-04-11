@@ -25,12 +25,6 @@ pub struct MarkdownGadget {
 }
 
 impl MarkdownGadget {
-    pub fn empty() -> Self {
-        Self {
-            view: MarkdownView::new(String::new()),
-        }
-    }
-
     pub fn new(view: String) -> Self {
         Self {
             view: MarkdownView::new(view),

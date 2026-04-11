@@ -326,6 +326,7 @@
 (binary_expression ["<<" ">>"] @o.sequence)
 (binary_expression ["&&" "||"] @o.branch)
 
+(unary_expression "-" @o.arithmetic)
 (unary_expression "!" @o.logical)
 
 (index_expression ["[" "]"] @o.sequence)

@@ -6,5 +6,12 @@
 
 (parenthetical ["(" ")"] @o.group)
 
+(function ["{" "}"] @o.declare.function)
 (object "{" @o.call.type.struct (field_item) "}" @o.call.type.struct)
-(object "{" @o.call.type.enum (variants_item) "}" @o.call.type.enum)
+
+(binary_expression ["+" "-" "*" "/"] @o.arithmetic)
+
+(function_item ["fn" "->" "{" "}"] @o.declare.function)
+
+(simple_parameter ["(" ")"] @o.call)
+(named_parameters ["{" "," "}"] @o.call)

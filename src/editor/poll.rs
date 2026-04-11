@@ -4,9 +4,9 @@ use crossterm::event::MouseEvent;
 use lsp_types::Url;
 
 use crate::{
-    AppState, document::diagnostics::{Diagnostic, Severity}, editor::{
-        Editor, code_actions::{CodeAction, CodeActionsGadget}, completer::Completer, keymap::InputEvent, markdown_view::MarkdownGadget, picker::Picker
-    }, language_server::LanguageServer, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence
+    AppState, aprintln::aprintln, document::diagnostics::{Diagnostic, Severity}, editor::{
+        Editor, code_actions::{CodeAction, CodeActionsGadget}, completer::Completer, keymap::InputEvent, markdown_view::MarkdownGadget, picker::Picker, renamer::Renamer
+    }, language_server::LanguageServer, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::MapBounds
 };
 
 impl AppState for Editor {
@@ -112,6 +112,22 @@ impl AppState for Editor {
                         )));
                         self.draw()?
                     }
+                    PrepareRename { range, text } => {
+                        let name = if let Some(range) = range {
+                            let range = range.map_bounds(|b| self.doc().text().byte_of_utf16_pos_saturating(b));
+                            
+                            self.doc().text().byte_slice(range).map(|s| s.to_string())
+                        } else { None };
+                        self.gadget = Some(Box::new(Renamer::new(
+                            text
+                                .or_else(|| name)
+                                .unwrap_or_default()
+                        )));
+                        self.draw()?
+                    },
+                    Rename { edit } => {
+                        aprintln!("{:?}", edit);
+                    },
                 }
             }
         }

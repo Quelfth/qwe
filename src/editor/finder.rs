@@ -63,13 +63,6 @@ impl Gadget for Finder {
                 x
             }),
 
-            KeyEvent {
-                code: KeyCode::Esc,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
-                xx!(Editor::close_gadget)
-            }
             _ => None,
         }
     }

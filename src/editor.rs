@@ -38,6 +38,7 @@ pub mod keymap;
 pub mod markdown_view;
 pub mod picker;
 mod poll;
+pub mod renamer;
 
 #[derive(Default)]
 pub struct Editor {

@@ -1,11 +1,9 @@
 use std::{
-    path::Path,
-    sync::{Arc, mpsc::Sender},
+    ops::Range, path::Path, sync::{Arc, mpsc::Sender}
 };
 
 use lsp_types::{
-    CompletionItem, Diagnostic, InitializeResult, Location, SemanticToken,
-    TextDocumentContentChangeEvent, Url, CodeAction,
+    CodeAction, CompletionItem, Diagnostic, InitializeResult, Location, SemanticToken, TextDocumentContentChangeEvent, Url, WorkspaceEdit
 };
 use tokio::sync::mpsc::UnboundedReceiver;
 
@@ -44,6 +42,13 @@ pub enum LspToEditorMessage {
     CodeActions {
         actions: Vec<CodeAction>,
     },
+    PrepareRename {
+        range: Option<Range<Utf16Pos>>,
+        text: Option<String>,
+    },
+    Rename {
+        edit: WorkspaceEdit,
+    },
 }
 
 pub enum EditorToLspMessage {
@@ -79,6 +84,17 @@ pub enum EditorToLspMessage {
         lang: Language,
         path: Arc<Path>,
         pos: Utf16Pos,
+    },
+    Rename {
+        lang: Language,
+        path: Arc<Path>,
+        pos: Utf16Pos,
+    },
+    CompleteRename {
+        lang: Language,
+        path: Arc<Path>,
+        pos: Utf16Pos,
+        name: String,
     },
     Exit,
     Save {
