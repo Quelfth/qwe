@@ -62,7 +62,7 @@ impl Editor {
             if uri.scheme() != "file" {return};
             let Ok(path) = uri.to_file_path() else {return};
             if global {continue}
-            if self
+            if !self
                 .filepath
                 .as_ref()
                 .and_then(|f|

@@ -1,10 +1,10 @@
-use std::{convert::identity, io};
+use std::{io, path::Path, sync::Arc};
 
 use crossterm::event::MouseEvent;
 use lsp_types::Url;
 
 use crate::{
-    AppState, document::diagnostics::{Diagnostic, Severity}, editor::{
+    AppState, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
         Editor,
         code_actions::{ActionEdit, CodeAction, CodeActionsGadget},
         completer::Completer,
@@ -18,7 +18,7 @@ use crate::{
     pos::Utf16Pos,
     presenter::Present,
     range_sequence::RangeSequence,
-    util::MapBounds,
+    util::{MapBounds, uri_to_canon_path},
 };
 
 impl AppState for Editor {
@@ -35,15 +35,13 @@ impl AppState for Editor {
                             .push(LanguageServer::new(init_result))
                     }
                     SemanticTokens { uri, tokens } => {
-                        if uri.scheme() == "file"
-                            && uri.to_file_path().is_ok_and(|p| {
-                                self.filepath
-                                    .as_ref()
-                                    .and_then(|f| {
-                                        Some(f.canonicalize().ok()? == p.canonicalize().ok()?)
-                                    })
-                                    .is_some_and(identity)
-                            })
+                        let Some(path) = uri_to_canon_path(uri) else {continue};
+                        if self.filepath
+                            .as_deref()
+                            .is_some_and(|p|
+                                p.canonicalize()
+                                    .is_ok_and(|p| p == &*path)
+                            )
                         {
                             self.doc.semtoks = RangeSequence::from_abs_ordered(
                                 cx.servers.lock()
@@ -126,7 +124,12 @@ impl AppState for Editor {
                     }
                     PrepareRename { range, text } => {
                         let name = if let Some(range) = range {
-                            let range = range.map_bounds(|b| self.doc().text().byte_of_utf16_pos_saturating(b));
+                            let range = range.map_bounds(|b|
+                                self
+                                    .doc()
+                                    .text()
+                                    .byte_of_utf16_pos_saturating(b)
+                            );
 
                             self.doc().text().byte_slice(range).map(|s| s.to_string())
                         } else { None };
@@ -150,21 +153,29 @@ impl AppState for Editor {
         if let Some(action) = action {
             action(self)?
         }
-        if let Some(cx) = &self.lsp
-            && !self.doc.lsp_changes.is_empty()
-            && let Some(lang) = self.doc.language()
-            && let Some(path) = &self.filepath
-        {
-            _ = cx.tx.send(EditorToLspMessage::ChangeDoc {
-                lang,
-                path: path.clone(),
-                changes: self.doc.lsp_changes.drain(..).map(Into::into).collect(),
-                version: {
-                    self.doc.lsp_version += 1;
-                    self.doc.lsp_version
-                },
-            });
+        if let Some(lsp) = &self.lsp {
+            let send_doc_updates = |path: Arc<Path>, doc: &mut Document| {
+                if !doc.lsp_changes.is_empty()
+                    && let Some(lang) = doc.language() {
+                    _ = lsp.tx.send(EditorToLspMessage::ChangeDoc {
+                        lang,
+                        path: path.clone(),
+                        changes: doc.lsp_changes.drain(..).map(Into::into).collect(),
+                        version: {
+                            doc.lsp_version += 1;
+                            doc.lsp_version
+                        },
+                    });
+                }
+            };
+            if let Some(path) = &self.filepath {
+                send_doc_updates(path.clone(), &mut self.doc);
+            }
+            for (path, doc) in self.bg_docs.pathed_mut() {
+                send_doc_updates(path, doc);
+            }
         }
+
         self.poll_draw()?;
         Ok(())
     }

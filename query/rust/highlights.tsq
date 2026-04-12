@@ -308,6 +308,7 @@
 "move" @o.storage.move
 (closure_parameters ["|" ","] @o.call.function.closure)
 (closure_expression body: (block ["{" "}"] @o.declare.function))
+(closure_expression "->" @o.declare.function)
 "async" @o.async
 (async_block (block ["{" "}"] @o.async))
 
@@ -468,6 +469,8 @@
 (tuple_type ["(" "," ")"] @o.tuple)
 
 (array_type ["[" ";" "]"] @o.construct.list)
+
+(function_type "->" @o.declare.function)
 
 ((identifier) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
 ((identifier) @i.type.struct (#semantic? @i.type.struct Struct))

@@ -14,6 +14,10 @@ pub struct Documents {
 }
 
 impl Documents {
+    pub fn pathed_mut(&mut self) -> impl Iterator<Item = (Arc<Path>, &mut Document)> {
+        self.docs.iter_mut().filter_map(|(k, v)| Some((self.paths.get_by_right(&k)?.clone(), v)))
+    }
+
     pub fn insert_pathed(&mut self, path: Arc<Path>, doc: Document) -> DocKey {
         let key = self.docs.insert(doc);
         self.paths.insert(path, key);
@@ -23,10 +27,6 @@ impl Documents {
     pub fn extract_by_path(&mut self, path: &Path) -> Option<Document> {
         let (_, key) = self.paths.remove_by_left(path)?;
         self.docs.remove(key)
-    }
-
-    pub fn contains_path(&self, path: &Path) -> bool {
-        self.paths.contains_left(path)
     }
 
     #[expect(unused)]
