@@ -1,4 +1,4 @@
-use std::{collections::HashSet, convert::identity, ops::Range};
+use std::ops::Range;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{
@@ -8,7 +8,7 @@ use lsp_types::{
 };
 
 use crate::{
-    color, draw::screen::Canvas, editor::{Editor, documents::DocKey, gadget::Gadget}, grapheme::GraphemeExt, pos::Utf16Pos, style::Style
+    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, pos::Utf16Pos, style::Style
 };
 
 #[expect(unused)]
@@ -52,6 +52,58 @@ impl ActionEdit {
             }
         }
     }
+
+    pub fn from_workspace_edit(edit: WorkspaceEdit) -> Vec<Self> {
+        let mut edits = Vec::new();
+        let WorkspaceEdit {
+            changes,
+            document_changes,
+            ..
+        } = edit; 
+        if let Some(changes) = changes {
+            for (uri, changes) in changes {
+                for edit in changes {
+                    edits.push(ActionEdit::from_text_edit(uri.clone(), edit));
+                }
+            }
+        }
+
+        if let Some(changes) = document_changes {
+            use DocumentChanges::*;
+            match changes {
+                Edits(changes) => {
+                    for edit in changes {
+                        edits.extend(ActionEdit::from_text_document_edit(edit));
+                    }
+                },
+                Operations(ops) => {
+                    for op in ops {
+                        use lsp_types::DocumentChangeOperation::*;
+                        match op {
+                            Op(op) => {
+                                use ResourceOp::*;
+                                match op {
+                                    Create(CreateFile{ uri, .. }) => {
+                                        edits.push(ActionEdit::Create { uri });
+                                    },
+                                    Rename(RenameFile { old_uri, new_uri, .. }) => {
+                                        edits.push(ActionEdit::Move { uri: old_uri, new_uri });
+                                    },
+                                    Delete(DeleteFile { uri, .. }) => {
+                                        edits.push(ActionEdit::Delete { uri });
+                                    },
+                                }
+                            },
+                            Edit(edit) => {
+                                edits.extend(ActionEdit::from_text_document_edit(edit));
+                            },
+                        }
+                    }
+                },
+            }
+        }
+        edits
+    }
 }
 
 pub struct CodeAction {
@@ -63,54 +115,9 @@ pub struct CodeAction {
 impl CodeAction {
     pub fn from_lsp(action: LspCodeAction) -> Self {
         let LspCodeAction { title, edit, command, .. } = action;
-        let mut edits = Vec::new();
-        if let Some(WorkspaceEdit {
-            changes,
-            document_changes,
-            ..
-        }) = edit {
-            if let Some(changes) = changes {
-                for (uri, changes) in changes {
-                    for edit in changes {
-                        edits.push(ActionEdit::from_text_edit(uri.clone(), edit));
-                    }
-                }
-            }
-            if let Some(changes) = document_changes {
-                use DocumentChanges::*;
-                match changes {
-                    Edits(changes) => {
-                        for edit in changes {
-                            edits.extend(ActionEdit::from_text_document_edit(edit));
-                        }
-                    },
-                    Operations(ops) => {
-                        for op in ops {
-                            use lsp_types::DocumentChangeOperation::*;
-                            match op {
-                                Op(op) => {
-                                    use ResourceOp::*;
-                                    match op {
-                                        Create(CreateFile{ uri, .. }) => {
-                                            edits.push(ActionEdit::Create { uri });
-                                        },
-                                        Rename(RenameFile { old_uri, new_uri, .. }) => {
-                                            edits.push(ActionEdit::Move { uri: old_uri, new_uri });
-                                        },
-                                        Delete(DeleteFile { uri, .. }) => {
-                                            edits.push(ActionEdit::Delete { uri });
-                                        },
-                                    }
-                                },
-                                Edit(edit) => {
-                                    edits.extend(ActionEdit::from_text_document_edit(edit));
-                                },
-                            }
-                        }
-                    },
-                }
-            }
-        }
+        let edits = edit
+            .map(|edit| ActionEdit::from_workspace_edit(edit))
+            .unwrap_or_default();
         Self {
             title,
             edits,
@@ -186,82 +193,8 @@ impl Gadget for CodeActionsGadget {
             } => {
                 let action = self.actions.remove(self.selected);
                 Some(Box::new(move |editor| {
-                    let CodeAction { mut edits, command: None, .. } = action else {return};
-                    let mut global = false;
-                    for edit in &edits {
-                        let ActionEdit::Change { uri, .. } = edit else {return};
-                        if uri.scheme() != "file" {return};
-                        let Ok(path) = uri.to_file_path() else {return};
-                        if global {continue}
-                        if !editor
-                            .filepath
-                            .as_ref()
-                            .and_then(|f|
-                                Some(f.canonicalize().ok()? == path.canonicalize().ok()?)
-                            )
-                            .is_some_and(identity)
-                        {
-                            global = true;
-                        }
-                    }
-
-                    edits.sort_by_key(|e| {
-                        let ActionEdit::Change{ range, .. } = e else { panic!() };
-                        range.start
-                    });
-                    editor.doc.timeline.history.checkpoint();
-                    let cp = global.then(|| editor.global_timeline.history.checkpoint());
-                    let mut doc_edited = false;
-                    let mut bg_docs_edited = HashSet::<DocKey>::new();
-                    for edit in edits.into_iter().rev() {
-                        let ActionEdit::Change {
-                            uri,
-                            range,
-                            text,
-                        } = edit else {continue};
-
-                        if uri.scheme() != "file" {return};
-                        let Ok(path) = uri.to_file_path() else {return};
-                        let Ok(path) = path.canonicalize() else {return};
-
-                        let doc = if editor.filepath.as_ref().and_then(|f| Some(f.canonicalize().ok()? == path.canonicalize().ok()?)).is_some_and(identity) {
-                            let doc = &mut editor.doc;
-                            if !doc_edited {
-                                if global {
-                                    doc.timeline.history.global_checkpoint();
-                                    editor.global_timeline.history.push_doc_change(editor.filepath.clone().unwrap());
-                                } else {
-                                    doc.timeline.history.checkpoint();
-                                }
-                                doc_edited = true;
-                            }
-                            doc
-                        } else {
-                            let Some(key) = editor.bg_docs.key_from_path(&path) else {continue};
-                            let doc = editor.bg_docs.by_key_mut(key).unwrap();
-                            if !bg_docs_edited.contains(&key) {
-                                doc.timeline.history.global_checkpoint();
-                                editor.global_timeline.history.push_doc_change(path.into());
-                                bg_docs_edited.insert(key);
-                            }
-                            doc
-                        };
-
-                        let Some(start) = doc.text().byte_of_utf16_pos(range.start) else {continue};
-                        let Some(end) = doc.text().byte_of_utf16_pos(range.end) else {continue};
-                        let Some(pos) = doc.text().pos_of_byte_pos(start) else {continue};
-                        doc.delete(start..end);
-                        doc.direct_insert(pos, &text);
-                    }
-                    if let Some(cp) = cp {
-                        if doc_edited {
-                            editor.doc.timeline.history.push_global_jump(cp);
-                        }
-                        for doc in bg_docs_edited {
-                            editor.bg_docs.by_key_mut(doc).unwrap().timeline.history.push_global_jump(cp);
-                            editor.bg_docs.push_save(doc);
-                        }
-                    }
+                    let CodeAction { edits, command: None, .. } = action else {return};
+                    editor.apply_action_edits(edits);
                     editor.close_gadget();
                 }))
             }

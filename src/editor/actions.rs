@@ -43,14 +43,14 @@ impl Editor {
             }
         }
 
-        if let Some(path) = self.filepath.clone() {
-            save_doc(path, &self.doc, self.lsp.as_ref());
-        }
-
         for doc in self.bg_docs.take_save_list() {
-            let path = self.bg_docs.path_from_key(doc).unwrap();
+            let Some(path) = self.bg_docs.path_from_key(doc) else {continue};
             let doc = self.bg_docs.by_key(doc).unwrap();
             save_doc(path, doc, self.lsp.as_ref());
+        }
+
+        if let Some(path) = self.filepath.clone() {
+            save_doc(path, &self.doc, self.lsp.as_ref());
         }
     }
 

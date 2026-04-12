@@ -11,13 +11,10 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent
 
 use crate::{
     PathedFile, document::Document, editor::{
-        clipboard::Clipboard,
-        cursors::{
+        clipboard::Clipboard, cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
-        },
-        gadget::Gadget,
-        keymap::Keymaps,
+        }, documents::DocKey, gadget::Gadget, keymap::Keymaps
     }, ix::{Byte, Ix}, lang::Language, language_server::LspContext, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}, timeline::{Timeline, global::GlobalEvent}
 };
 
@@ -92,6 +89,42 @@ impl Editor {
         self.jump_to(pos.convert(self.doc.text()));
         self.doc.scroll_main_cursor_on_screen();
         Ok(())
+    }
+
+    fn open_bg_doc(&mut self, path: Arc<Path>) -> io::Result<Option<DocKey>> {
+        if let Some(fp) = self.filepath.as_ref()
+            && let Ok(fp) = fp.canonicalize()
+            && let Ok(path) = path.canonicalize()
+            && fp == path
+        {
+            return Ok(None);
+        }
+
+        if let Some(key) = self.bg_docs.key_from_path(&path) { return Ok(Some(key)) }
+
+        let PathedFile { path, file } = PathedFile::open(path.clone())?;
+        let lang = path.extension()
+            .and_then(|e| Language::from_file_ext(&e.to_string_lossy()));
+
+        let key = self.bg_docs.insert_pathed(path.clone(), Document::new(
+            lang,
+            file,
+            Some(Default::default()),
+        ));
+
+        if let Some(lsp) = &self.lsp
+            && let Some(lang) = self.doc.language()
+        {
+            lsp.tx
+                .send(EditorToLspMessage::OpenDoc {
+                    lang,
+                    path,
+                    text: self.doc().text().to_string(),
+                })
+                .unwrap();
+        }
+
+        Ok(Some(key))
     }
 
     fn open_file_doc_impl(&mut self, path: Arc<Path>) -> io::Result<Option<Arc<Path>>> {

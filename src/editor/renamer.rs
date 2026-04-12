@@ -58,7 +58,10 @@ impl Gadget for Renamer {
                 ..
             } => {
                 let name = mem::take(&mut self.name);
-                xx!(move |e| e.complete_rename(name))
+                xx!(move |e| {
+                    e.complete_rename(name);
+                    e.close_gadget()
+                })
             },
             
             _ => None,

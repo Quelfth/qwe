@@ -4,9 +4,21 @@ use crossterm::event::MouseEvent;
 use lsp_types::Url;
 
 use crate::{
-    AppState, aprintln::aprintln, document::diagnostics::{Diagnostic, Severity}, editor::{
-        Editor, code_actions::{CodeAction, CodeActionsGadget}, completer::Completer, keymap::InputEvent, markdown_view::MarkdownGadget, picker::Picker, renamer::Renamer
-    }, language_server::LanguageServer, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::MapBounds
+    AppState, document::diagnostics::{Diagnostic, Severity}, editor::{
+        Editor,
+        code_actions::{ActionEdit, CodeAction, CodeActionsGadget},
+        completer::Completer,
+        keymap::InputEvent,
+        markdown_view::MarkdownGadget,
+        picker::Picker,
+        renamer::Renamer,
+    },
+    language_server::LanguageServer,
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    pos::Utf16Pos,
+    presenter::Present,
+    range_sequence::RangeSequence,
+    util::MapBounds,
 };
 
 impl AppState for Editor {
@@ -21,7 +33,7 @@ impl AppState for Editor {
                             .entry(lang)
                             .or_default()
                             .push(LanguageServer::new(init_result))
-                    },
+                    }
                     SemanticTokens { uri, tokens } => {
                         if uri.scheme() == "file"
                             && uri.to_file_path().is_ok_and(|p| {
@@ -115,7 +127,7 @@ impl AppState for Editor {
                     PrepareRename { range, text } => {
                         let name = if let Some(range) = range {
                             let range = range.map_bounds(|b| self.doc().text().byte_of_utf16_pos_saturating(b));
-                            
+
                             self.doc().text().byte_slice(range).map(|s| s.to_string())
                         } else { None };
                         self.gadget = Some(Box::new(Renamer::new(
@@ -126,7 +138,11 @@ impl AppState for Editor {
                         self.draw()?
                     },
                     Rename { edit } => {
-                        aprintln!("{:?}", edit);
+                        let edits = ActionEdit::from_workspace_edit(edit);
+                        action = Some(Box::new(move |e: &mut Self| -> Result<(), _> {
+                            e.apply_action_edits(edits);
+                            e.draw()
+                        }));
                     },
                 }
             }

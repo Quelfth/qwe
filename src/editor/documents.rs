@@ -25,6 +25,10 @@ impl Documents {
         self.docs.remove(key)
     }
 
+    pub fn contains_path(&self, path: &Path) -> bool {
+        self.paths.contains_left(path)
+    }
+
     #[expect(unused)]
     pub fn by_path(&self, path: &Path) -> Option<&Document> {
         let key = *self.paths.get_by_left(path)?;

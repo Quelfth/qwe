@@ -1,7 +1,7 @@
 use std::{
     borrow::Borrow,
     fmt::Write,
-    ops::{Range, RangeFrom, RangeFull, RangeTo},
+    ops::{Range, RangeFrom, RangeFull, RangeTo}, path::PathBuf,
 };
 
 use extension_trait::extension_trait;
@@ -189,4 +189,11 @@ pub fn auto_removal_char(left: &str) -> Option<&'static str> {
 
 pub fn is_right_delimiter(delimiter: &str) -> bool {
     matches!(delimiter, ")" | "]" | "}" | ">")
+}
+
+pub fn uri_to_canon_path(uri: lsp_types::Url) -> Option<PathBuf> {
+    (uri.scheme() == "file").then(||
+        uri.to_file_path().ok()?
+            .canonicalize().ok()
+    )?
 }
