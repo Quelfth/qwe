@@ -9,6 +9,7 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::{lang::Language, pos::Utf16Pos};
 
+#[derive(Debug)]
 pub enum GotoKind {
     Definition,
     Declaration,
@@ -51,6 +52,7 @@ pub enum LspToEditorMessage {
     },
 }
 
+#[derive(Debug)]
 pub enum EditorToLspMessage {
     OpenDoc {
         lang: Language,

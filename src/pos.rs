@@ -53,7 +53,7 @@ pub enum Region {
     Line(Range<Ix<Line>>),
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Utf16Pos {
     pub line: Ix<Line>,
     pub column: Ix<Utf16>,

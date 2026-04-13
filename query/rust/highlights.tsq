@@ -214,10 +214,13 @@
 "macro_rules" @o.declare.macro
 (macro_definition [ "!" "{" ";" "}"] @o.declare.macro)
 
+"macro" @o.declare.macro
+(macro_item ["(" ")" "{" "," "}"] @o.declare.macro)
+
 (macro_rule
-    left: (token_tree_pattern ["(" ")" "[" "]" "{" "}" "," ";"] @o.declare.macro)
+    matcher: (token_tree_pattern ["(" ")" "[" "]" "{" "}" "," ";"] @o.declare.macro)
     "=>" @o.declare.macro
-    right: (token_tree ["(" ")" "[" "]" "{" "}" "," ";"] @o.declare.macro)
+    transcriber: (token_tree ["(" ")" "[" "]" "{" "}" "," ";"] @o.declare.macro)
 )
 
 (metavariable "$" @o.declare.macro-parameter)

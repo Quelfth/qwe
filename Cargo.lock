@@ -236,6 +236,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "boxcar"
+version = "0.2.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "36f64beae40a84da1b4b26ff2761a5b895c12adc41dc25aaee1c4f2bbfe97a6e"
+
+[[package]]
 name = "cc"
 version = "1.2.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -854,7 +860,7 @@ dependencies = [
 [[package]]
 name = "mutx"
 version = "0.1.0"
-source = "git+https://github.com/Quelfth/mutx#9a43675c80286239bedae88e9a6aab1395cf1f26"
+source = "git+https://github.com/Quelfth/mutx#6e3cd985b83ba2a17dd0bf8435a117178bbe4b41"
 
 [[package]]
 name = "nu-ansi-term"
@@ -990,6 +996,7 @@ dependencies = [
  "async-process",
  "auto_enums",
  "bimap",
+ "boxcar",
  "clap",
  "concat-into",
  "convert_case 0.11.0",
@@ -1530,7 +1537,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-rust"
 version = "0.23.2"
-source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#cb2063cb279330d8e887b122a8c0e5c69ef2f040"
+source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#1013cb613789fce7eb73886f579e0f24d0b6c9e6"
 dependencies = [
  "cc",
  "tree-sitter-language",

@@ -44,10 +44,7 @@ use tower::ServiceBuilder;
 use tracing::Level;
 
 use crate::{
-    aprintln::aprintln,
-    lang::LangLspInfo,
-    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
-    pos::Utf16Pos,
+    aprintln::aprintln, lang::LangLspInfo, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos
 };
 
 use channel::LspChannels;
@@ -303,6 +300,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
 
     loop {
         if let Ok(Some(msg)) = timeout(Duration::from_millis(20), channels.incoming.recv()).await {
+            log!([LspMessage] "{msg:?}");
             match msg {
                 EditorToLspMessage::OpenDoc { lang, path, text } => {
                     let Some(LangLspInfo {

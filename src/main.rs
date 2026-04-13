@@ -2,6 +2,7 @@
 #![feature(gen_blocks)]
 #![feature(try_blocks)]
 #![feature(step_trait)]
+#![feature(decl_macro)]
 #![allow(clippy::module_inception)]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::large_enum_variant)]
@@ -48,6 +49,7 @@ mod incremental_select;
 mod ix;
 mod lang;
 mod language_server;
+mod log;
 mod lsp;
 mod navigator;
 mod pos;
