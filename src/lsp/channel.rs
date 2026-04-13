@@ -7,7 +7,7 @@ use lsp_types::{
 };
 use tokio::sync::mpsc::UnboundedReceiver;
 
-use crate::{lang::Language, pos::Utf16Pos};
+use crate::{lang::Language, log::{Log, LogCategory}, pos::Utf16Pos};
 
 #[derive(Debug)]
 pub enum GotoKind {

@@ -300,7 +300,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
 
     loop {
         if let Ok(Some(msg)) = timeout(Duration::from_millis(20), channels.incoming.recv()).await {
-            log!([LspMessage] "{msg:?}");
+            log!(msg);
             match msg {
                 EditorToLspMessage::OpenDoc { lang, path, text } => {
                     let Some(LangLspInfo {

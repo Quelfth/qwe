@@ -36,6 +36,7 @@ pub mod markdown_view;
 pub mod picker;
 mod poll;
 pub mod renamer;
+pub mod log;
 
 #[derive(Default)]
 pub struct Editor {
