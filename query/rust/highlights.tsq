@@ -287,6 +287,7 @@
 (try_expression "?" @o.error.propogate)
 "try" @o.error.try
 (try_block (block ["{" "}"] @o.error.try))
+(try_block "bikeshed" @o.type)
 
 "gen" @o.coroutine
 (gen_block (block ["{" "}"] @o.coroutine))

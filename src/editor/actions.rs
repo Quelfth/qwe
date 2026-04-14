@@ -2,8 +2,7 @@ use std::{collections::HashMap, fs, iter, path::Path, sync::Arc};
 
 use crate::{
     aprintln::aprintln, document::Document, editor::{
-        Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels,
-        picker::Picker,
+        Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels, log::LogViewer, picker::Picker
     }, ix::Ix, lang::Language, language_server::LspContext, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
 };
 
@@ -52,6 +51,10 @@ impl Editor {
         if let Some(path) = self.filepath.clone() {
             save_doc(path, &self.doc, self.lsp.as_ref());
         }
+    }
+
+    pub fn view_log(&mut self) {
+        self.open_gadget(LogViewer::new());
     }
 
     pub fn inspect(&mut self) {

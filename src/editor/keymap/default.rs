@@ -137,7 +137,8 @@ impl Default for Keymaps {
                 (Key::alt('*'), Mapping::once(|e| e.goto(Implementation))),
                 (Key::base('&'), Mapping::once(|e| e.goto(References))),
                 (Key::base('Y'), Mapping::once(|e| e.goto(TypeDefinition))),
-
+                
+                (Key::base(F(3)), Mapping::once(Editor::view_log)),
                 (Key::base(F(6)), Mapping::once(Editor::inspect)),
                 (Key::base(F(5)), Mapping::once(Editor::refresh_semantic_tokens)),
             ])),

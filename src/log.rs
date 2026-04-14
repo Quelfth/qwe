@@ -1,28 +1,41 @@
-use std::time::Instant;
+use std::{fmt::{Display, Formatter, Result}};
+
+use append_only_vec::AppendOnlyVec;
 
 use crate::lsp::channel::EditorToLspMessage;
 
-static LOG: boxcar::Vec<LogEntry> = boxcar::Vec::new();
+static LOG: AppendOnlyVec<LogEntry> = AppendOnlyVec::new();
 
 pub macro log($log: expr) {
     let log = &$log;
     LOG.push(LogEntry {
         category: Log::category(log),
-        time: Instant::now(),
+        time: jiff::Zoned::now(),
         source: log_source!(),
         message: Log::message(log),
         details: Log::details(log),
     })
 }
 
+pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
+    LOG.iter().rev()
+}
+
 pub enum LogCategory {
     LspMessage,
 }
 
+#[derive(Debug)]
 pub struct LogSource {
     file: &'static str,
     line: u32,
     column: u32,
+}
+
+impl Display for LogSource {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        write!(f, "{}:{}:{}", self.file, self.line, self.column)
+    }
 }
 
 macro log_source() {
@@ -34,11 +47,13 @@ macro log_source() {
 }
 
 pub struct LogEntry {
-    category: LogCategory,
-    time: Instant,
-    source: LogSource,
-    message: String,
-    details: String,
+    #[expect(unused)]
+    pub category: LogCategory,
+    pub time: jiff::Zoned,
+    pub source: LogSource,
+    pub message: String,
+    #[expect(unused)]
+    pub details: String,
 }
 
 pub trait Log {

@@ -197,3 +197,9 @@ pub fn uri_to_canon_path(uri: lsp_types::Url) -> Option<PathBuf> {
             .canonicalize().ok()
     )?
 }
+
+#[allow(unused)]
+pub trait TodoTrait {}
+impl<T: ?Sized> TodoTrait for T {}
+
+pub macro Todo() {impl TodoTrait}
