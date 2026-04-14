@@ -1,7 +1,6 @@
 use std::{collections::HashSet, path::Path, sync::Arc};
 
 use crate::{
-    aprintln::aprintln,
     editor::{Editor, code_actions::ActionEdit, documents::DocKey},
     lang::Language,
     lsp::channel::{EditorToLspMessage, GotoKind},
@@ -90,10 +89,8 @@ impl Editor {
             } = edit else {continue};
             
             let Some(path) = uri_to_canon_path(uri) else {return};
-            aprintln!("found path {path:?}");
 
             let doc = if self.filepath.as_ref().and_then(|f| (f.canonicalize().ok()? == path).then_some(())).is_some() {
-                aprintln!("open path {path:?}");
                 let doc = &mut self.doc;
                 if !doc_edited {
                     if global {
@@ -106,7 +103,6 @@ impl Editor {
                 }
                 doc
             } else {
-                aprintln!("background path {path:?}");
                 let path: Arc<Path> = path.into();
                 let key = if let Some(key) = self.bg_docs.key_from_path(&path) {key} else{
                     let Ok(key) = self.open_bg_doc(path.clone()) else {continue};
@@ -133,7 +129,9 @@ impl Editor {
             }
             for doc in bg_docs_edited {
                 self.bg_docs.by_key_mut(doc).unwrap().timeline.history.push_global_jump(cp);
-                self.bg_docs.push_save(doc);
+                if let Some(path) = self.bg_docs.path_from_key(doc) {
+                    self.bg_docs.push_save(path);
+                }
             }
         }
     }

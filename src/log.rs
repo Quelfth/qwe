@@ -1,8 +1,8 @@
-use std::{fmt::{Display, Formatter, Result}};
+use std::fmt::{Display, Formatter, Result};
 
 use append_only_vec::AppendOnlyVec;
 
-use crate::lsp::channel::EditorToLspMessage;
+use crate::lsp::channel::{EditorToLspMessage, LspToEditorMessage};
 
 static LOG: AppendOnlyVec<LogEntry> = AppendOnlyVec::new();
 
@@ -21,8 +21,10 @@ pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
     LOG.iter().rev()
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogCategory {
-    LspMessage,
+    EditorToLspMessage,
+    LspToEditorMessage,
 }
 
 #[derive(Debug)]
@@ -47,7 +49,6 @@ macro log_source() {
 }
 
 pub struct LogEntry {
-    #[expect(unused)]
     pub category: LogCategory,
     pub time: jiff::Zoned,
     pub source: LogSource,
@@ -63,12 +64,16 @@ pub trait Log {
 }
 
 impl Log for EditorToLspMessage {
-    fn category(&self) -> LogCategory { LogCategory::LspMessage }
+    fn category(&self) -> LogCategory {
+        LogCategory::EditorToLspMessage
+    }
 
     fn message(&self) -> String {
         match self {
             EditorToLspMessage::OpenDoc { path, .. } => format!("open document {path:?}"),
-            EditorToLspMessage::ChangeDoc { path, version, .. } => format!("change document {path:?} (version {version:?})"),
+            EditorToLspMessage::ChangeDoc { path, version, .. } => {
+                format!("change document {path:?} (version {version:?})")
+            }
             EditorToLspMessage::RefreshSemanticTokens => "refresh semantic tokens".to_owned(),
             EditorToLspMessage::Hover { pos, .. } => format!("hover at {pos:?}"),
             EditorToLspMessage::Completion { pos, .. } => format!("completion at {pos:?}"),
@@ -79,7 +84,7 @@ impl Log for EditorToLspMessage {
             EditorToLspMessage::Exit => format!("exit"),
             EditorToLspMessage::Save { path, .. } => format!("save {path:?}"),
             #[allow(unused)]
-            _ => format!("message type without logging implementation")
+            _ => format!("message type without logging implementation"),
         }
     }
 
@@ -87,5 +92,27 @@ impl Log for EditorToLspMessage {
         match self {
             _ => format!("{self:?}"),
         }
+    }
+}
+
+impl Log for LspToEditorMessage {
+    fn category(&self) -> LogCategory { LogCategory::LspToEditorMessage }
+
+    fn message(&self) -> String {
+        match self {
+            LspToEditorMessage::NewLsp { lang, .. } => format!("new lsp for {lang:?}"),
+            LspToEditorMessage::SemanticTokens { uri, .. } => format!("semantic tokens for {uri}"),
+            LspToEditorMessage::Diagnostics { uri, .. } => format!("diagnostics for {uri}"),
+            LspToEditorMessage::Hover { .. } => format!("hover"),
+            LspToEditorMessage::Completion { .. } => format!("completion"),
+            LspToEditorMessage::Goto { .. } => format!("goto"),
+            LspToEditorMessage::CodeActions { .. } => format!("code actions"),
+            LspToEditorMessage::PrepareRename { text, .. } => format!("prepare rename from {text:?}"),
+            LspToEditorMessage::Rename { .. } => format!("rename"),
+        }
+    }
+
+    fn details(&self) -> String {
+        String::new()
     }
 }

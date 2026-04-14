@@ -35,6 +35,7 @@ impl Grapheme {
     pub const RIGHT_TRIANGLE: Self = Self(Cow::Borrowed(""));
     pub const LEFT_SEMICIRCLE: Self = Self(Cow::Borrowed(""));
     pub const RIGHT_SEMICIRCLE: Self = Self(Cow::Borrowed(""));
+    pub const DOT: Self = Self(Cow::Borrowed("."));
 
     pub fn len(&self) -> Ix<Byte> {
         Ix::new(self.0.len())

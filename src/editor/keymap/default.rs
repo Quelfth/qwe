@@ -140,7 +140,7 @@ impl Default for Keymaps {
                 
                 (Key::base(F(3)), Mapping::once(Editor::view_log)),
                 (Key::base(F(6)), Mapping::once(Editor::inspect)),
-                (Key::base(F(5)), Mapping::once(Editor::refresh_semantic_tokens)),
+                (Key::base(F(5)), Mapping::once(Editor::refresh_lsp)),
             ])),
             line_select: Keymap::from_iter(universal().chain([
                 (Key::base('i'), Mapping::once(Editor::insert_on_newline_before)),

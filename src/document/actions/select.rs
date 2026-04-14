@@ -134,10 +134,10 @@ impl Document {
         force_cursors!(self).move_y(rows);
     }
 
-    pub fn text_extend_up(&mut self, rows: Ix<Line>) {
+    pub fn extend_up(&mut self, rows: Ix<Line>) {
         force_cursors!(self).text_extend_up(rows, &self.text)
     }
-    pub fn text_extend_down(&mut self, rows: Ix<Line>) {
+    pub fn extend_down(&mut self, rows: Ix<Line>) {
         force_cursors!(self).text_extend_down(rows, &self.text)
     }
 

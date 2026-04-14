@@ -40,10 +40,10 @@ impl Editor {
     }
 
     pub fn text_extend_up(&mut self, rows: usize) {
-        self.doc.text_extend_up(Ix::new(rows));
+        self.doc.extend_up(Ix::new(rows));
     }
     pub fn text_extend_down(&mut self, rows: usize) {
-        self.doc.text_extend_down(Ix::new(rows));
+        self.doc.extend_down(Ix::new(rows));
     }
 
     pub fn extend_left(&mut self, columns: usize) {

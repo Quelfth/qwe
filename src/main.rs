@@ -1,7 +1,6 @@
 #![feature(never_type)]
 #![feature(gen_blocks)]
 #![feature(try_blocks)]
-#![feature(try_blocks_heterogeneous)]
 #![feature(step_trait)]
 #![feature(decl_macro)]
 #![allow(clippy::module_inception)]

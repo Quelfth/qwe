@@ -42,9 +42,8 @@ impl Editor {
             }
         }
 
-        for doc in self.bg_docs.take_save_list() {
-            let Some(path) = self.bg_docs.path_from_key(doc) else {continue};
-            let doc = self.bg_docs.by_key(doc).unwrap();
+        for path in self.bg_docs.take_save_list() {
+            let doc = self.bg_docs.by_path(&path).unwrap();
             save_doc(path, doc, self.lsp.as_ref());
         }
 
@@ -168,10 +167,26 @@ impl Editor {
         }
     }
 
-    pub fn refresh_semantic_tokens(&mut self) {
+    pub fn refresh_lsp(&mut self) {
         if let Some(cx) = &self.lsp {
-            cx.tx.send(EditorToLspMessage::RefreshSemanticTokens)
-                .unwrap();
+            for (path, doc) in self.bg_docs.pathed() {
+                if let Some(lang) = doc.language() {
+                    _= cx.tx.send(EditorToLspMessage::OpenDoc{
+                        lang,
+                        path,
+                        text: doc.text().to_string(),
+                    });
+                }
+            }
+            if let Some(path) = self.filepath.clone()
+                && let Some(lang) = self.doc.language() {
+                _= cx.tx.send(EditorToLspMessage::OpenDoc{
+                    lang,
+                    path,
+                    text: self.doc.text().to_string(),
+                });
+            }
+            _= cx.tx.send(EditorToLspMessage::RefreshSemanticTokens);
         }
     }
 

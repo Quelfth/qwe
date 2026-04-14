@@ -10,10 +10,14 @@ slotmap::new_key_type! {
 pub struct Documents {
     docs: SlotMap<DocKey, Document>,
     paths: BiMap<Arc<Path>, DocKey>,
-    save_list: Vec<DocKey>,
+    save_list: Vec<Arc<Path>>,
 }
 
 impl Documents {
+    pub fn pathed(&self) -> impl Iterator<Item = (Arc<Path>, &Document)> {
+        self.docs.iter().filter_map(|(k, v)| Some((self.paths.get_by_right(&k)?.clone(), v)))
+    }
+
     pub fn pathed_mut(&mut self) -> impl Iterator<Item = (Arc<Path>, &mut Document)> {
         self.docs.iter_mut().filter_map(|(k, v)| Some((self.paths.get_by_right(&k)?.clone(), v)))
     }
@@ -29,7 +33,6 @@ impl Documents {
         self.docs.remove(key)
     }
 
-    #[expect(unused)]
     pub fn by_path(&self, path: &Path) -> Option<&Document> {
         let key = *self.paths.get_by_left(path)?;
         self.docs.get(key)
@@ -56,13 +59,11 @@ impl Documents {
         Some(self.paths.get_by_right(&key)?.clone())
     }
 
-    pub fn push_save(&mut self, key: DocKey) {
-        self.save_list.push(key);
+    pub fn push_save(&mut self, path: Arc<Path>) {
+        self.save_list.push(path);
     }
 
-    pub fn take_save_list(&mut self) -> Vec<DocKey> {
+    pub fn take_save_list(&mut self) -> Vec<Arc<Path>> {
         mem::take(&mut self.save_list)
     }
-
-
 }

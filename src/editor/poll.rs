@@ -12,13 +12,7 @@ use crate::{
         markdown_view::MarkdownGadget,
         picker::Picker,
         renamer::Renamer,
-    },
-    language_server::LanguageServer,
-    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
-    pos::Utf16Pos,
-    presenter::Present,
-    range_sequence::RangeSequence,
-    util::{MapBounds, uri_to_canon_path},
+    }, language_server::LanguageServer, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::{MapBounds, uri_to_canon_path}
 };
 
 impl AppState for Editor {
@@ -26,6 +20,7 @@ impl AppState for Editor {
         let mut action = None::<Box<dyn FnOnce(&mut Editor) -> io::Result<()>>>;
         if let Some(cx) = &self.lsp {
             while let Ok(msg) = cx.rx.try_recv() {
+                log!(msg);
                 use LspToEditorMessage::*;
                 match msg {
                     NewLsp { lang, init_result } => {
