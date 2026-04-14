@@ -127,12 +127,14 @@ impl Editor {
             if doc_edited {
                 self.doc.timeline.history.push_global_jump(cp);
             }
-            for doc in bg_docs_edited {
+            for &doc in &bg_docs_edited {
                 self.bg_docs.by_key_mut(doc).unwrap().timeline.history.push_global_jump(cp);
                 if let Some(path) = self.bg_docs.path_from_key(doc) {
                     self.bg_docs.push_save(path);
                 }
             }
+            self.send_doc_lsp_changes();
+            self.refresh_lsp();
         }
     }
 }

@@ -257,22 +257,22 @@ impl CursorState {
         }
     }
 
-    pub fn text_extend_up(&mut self, rows: Ix<Line>, text: &Rope) {
+    pub fn extend_up(&mut self, rows: Ix<Line>, text: &Rope) {
         use CursorState::*;
         match self {
             MirrorInsert(_) => (),
             Insert(_) => (),
-            Select(c) => c.iter_mut().for_each(|c| c.text_extend_up(rows, text)),
+            Select(c) => c.iter_mut().for_each(|c| c.extend_up(rows, text)),
             LineSelect(c) => c.iter_mut().for_each(|c| c.extend_up(rows)),
         }
     }
 
-    pub fn text_extend_down(&mut self, rows: Ix<Line>, text: &Rope) {
+    pub fn extend_down(&mut self, rows: Ix<Line>, text: &Rope) {
         use CursorState::*;
         match self {
-            MirrorInsert(_) => todo!(),
+            MirrorInsert(_) => (),
             Insert(_) => (),
-            Select(c) => c.iter_mut().for_each(|c| c.text_extend_down(rows, text)),
+            Select(c) => c.iter_mut().for_each(|c| c.extend_down(rows, text)),
             LineSelect(c) => c.iter_mut().for_each(|c| c.extend_down(rows)),
         }
     }

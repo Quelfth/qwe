@@ -135,10 +135,10 @@ impl Document {
     }
 
     pub fn extend_up(&mut self, rows: Ix<Line>) {
-        force_cursors!(self).text_extend_up(rows, &self.text)
+        force_cursors!(self).extend_up(rows, &self.text)
     }
     pub fn extend_down(&mut self, rows: Ix<Line>) {
-        force_cursors!(self).text_extend_down(rows, &self.text)
+        force_cursors!(self).extend_down(rows, &self.text)
     }
 
     pub fn extend_left(&mut self, columns: Ix<Column>) {

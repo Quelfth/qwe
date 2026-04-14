@@ -148,6 +148,23 @@ impl AppState for Editor {
         if let Some(action) = action {
             action(self)?
         }
+        self.send_doc_lsp_changes();
+
+        self.poll_draw()?;
+        Ok(())
+    }
+
+    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()>{
+        self.on_key_event(event)
+    }
+
+    fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()>{
+        self.on_mouse_event(event)
+    }
+}
+
+impl Editor {
+    pub fn send_doc_lsp_changes(&mut self) {
         if let Some(lsp) = &self.lsp {
             let send_doc_updates = |path: Arc<Path>, doc: &mut Document| {
                 if !doc.lsp_changes.is_empty()
@@ -170,16 +187,5 @@ impl AppState for Editor {
                 send_doc_updates(path, doc);
             }
         }
-
-        self.poll_draw()?;
-        Ok(())
-    }
-
-    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()>{
-        self.on_key_event(event)
-    }
-
-    fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()>{
-        self.on_mouse_event(event)
     }
 }

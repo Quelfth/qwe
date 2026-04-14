@@ -198,7 +198,7 @@ pub struct SelectCursor {
     pub other_lines: Vec<RangeCursorLine>,
 }
 
-#[derive(Copy, Clone, Default)]
+#[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub struct RangeCursorLine {
     pub start: Ix<Column>,
     pub end: Ix<Column>,
@@ -210,6 +210,15 @@ impl RangeCursorLine {
             start: column,
             end: column,
         }
+    }
+
+    fn is_point(&self) -> bool {
+        self.start == self.end
+    }
+
+    #[expect(unused)]
+    fn len(&self) -> Ix<Column> {
+        self.end.saturating_sub(self.start)
     }
 }
 
@@ -421,6 +430,48 @@ impl SelectCursor {
         }
     }
 
+    fn extend_y_mode(&self) -> ExtendMode {
+        if self.other_lines.is_empty() {
+            if self.first_line.is_point() {
+                ExtendMode::Block
+            } else {
+                ExtendMode::Text
+            }
+        } else {
+            if self.other_lines.iter().all(|&line| line == self.first_line) {
+                ExtendMode::Block
+            } else {
+                ExtendMode::Text
+            }
+        }
+    }
+
+    pub fn extend_up(&mut self, rows: Ix<Line>, text: &Rope) {
+        match self.extend_y_mode() {
+            ExtendMode::Text => self.text_extend_up(rows, text),
+            ExtendMode::Block => self.block_extend_up(rows),
+        }
+    }
+
+    pub fn extend_down(&mut self, rows: Ix<Line>, text: &Rope) {
+        match self.extend_y_mode() {
+            ExtendMode::Text => self.text_extend_down(rows, text),
+            ExtendMode::Block => self.block_extend_down(rows),
+        }
+    }
+
+    pub fn block_extend_up(&mut self, rows: Ix<Line>) {
+        let rows = rows.min(self.line);
+        if rows == Ix::new(0) { return }
+
+        self.line = self.line.saturating_sub(rows);
+        self.other_lines.extend(iter::repeat_n(self.first_line, rows.inner()));
+    }
+
+    pub fn block_extend_down(&mut self, rows: Ix<Line>) {
+        self.other_lines.extend(iter::repeat_n(self.first_line, rows.inner()));
+    }
+
     pub fn text_extend_up(&mut self, rows: Ix<Line>, text: &Rope) {
         if rows == Ix::new(0) {
             return;
@@ -608,4 +659,10 @@ impl RangeCursorLine {
     pub fn retract_left(&mut self, columns: Ix<Column>) {
         self.end = self.end.saturating_sub(columns).max(self.start)
     }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum ExtendMode {
+    Text,
+    Block,
 }
