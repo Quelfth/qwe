@@ -4,6 +4,15 @@
 (integer ["-" "0x" "0b" "0o" "0z"] @l.number.affix)
 (integer (literal_suffix) @l.number.affix)
 
+["self" "it"] @i.value.receiver
+
+["In" "Out"] @i.type.self
+
+["decl" "impl"] @o.implement
+
+(scoped_name "/" @o.scope)
+(scope_symbol ["." "~" "/"] @i.namespace.keyword)
+
 (parenthetical ["(" ")"] @o.group)
 
 (function ["{" "}"] @o.declare.function)
@@ -12,6 +21,29 @@
 (binary_expression ["+" "-" "*" "/"] @o.arithmetic)
 
 (function_item ["fn" "->" "{" "}"] @o.declare.function)
+(function_item !receiver name: (name (identifier) @i.function))
+
+(variable_binding ":" @o.type)
+(field_expression "." @o.access.field)
+(method_call_expression "." @o.access.method)
+
+(variable_statement "=" @o.declare.variable)
+(field_item "=" @o.declare.field)
 
 (simple_parameter ["(" ")"] @o.call)
 (named_parameters ["{" "," "}"] @o.call)
+(named_parameter name: (name (identifier) @i.value.parameter))
+(named_parameter ":" @o.type)
+
+(receiver ["." "|>" "<>" "<|"] @o.access.method)
+(function_item receiver: (_) (simple_parameter ["(" ")"] @o.call.function.method))
+(function_item receiver: (_) (named_parameters ["{" "," "}"] @o.call.function.method))
+(function_item name: (name (identifier) @i.function.method) receiver: (_))
+
+(call_expression
+    argument: [
+        (parenthetical ["(" ")"] @o.call)
+        (object ["{" "}"] @o.call)
+    ]
+)
+

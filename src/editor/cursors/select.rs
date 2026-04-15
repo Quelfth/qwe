@@ -446,6 +446,14 @@ impl SelectCursor {
         }
     }
 
+    fn extend_x_mode(&self) -> ExtendMode {
+        if self.other_lines.iter().all(|&line| line == self.first_line) {
+            ExtendMode::Block
+        } else {
+            ExtendMode::Text
+        }
+    }
+
     pub fn extend_up(&mut self, rows: Ix<Line>, text: &Rope) {
         match self.extend_y_mode() {
             ExtendMode::Text => self.text_extend_up(rows, text),
@@ -521,10 +529,16 @@ impl SelectCursor {
     }
 
     pub fn extend_left(&mut self, columns: Ix<Column>) {
-        self.first_line.extend_left(columns)
+        match self.extend_x_mode() {
+            ExtendMode::Text => self.first_line.extend_left(columns),
+            ExtendMode::Block => self.lines_mut().for_each(|l| l.extend_left(columns)),
+        }
     }
     pub fn extend_right(&mut self, columns: Ix<Column>) {
-        self.last_line_mut().extend_right(columns);
+        match self.extend_x_mode() {
+            ExtendMode::Text => self.last_line_mut().extend_right(columns),
+            ExtendMode::Block => self.lines_mut().for_each(|l| l.extend_right(columns)),
+        }
     }
 
     pub fn retract_down(&mut self, rows: Ix<Line>) {
@@ -554,11 +568,17 @@ impl SelectCursor {
     }
 
     pub fn retract_right(&mut self, columns: Ix<Column>) {
-        self.first_line.retract_right(columns);
+        match self.extend_x_mode() {
+            ExtendMode::Text => self.first_line.retract_right(columns),
+            ExtendMode::Block => self.lines_mut().for_each(|l| l.retract_right(columns)),
+        }
     }
 
     pub fn retract_left(&mut self, columns: Ix<Column>) {
-        self.last_line_mut().retract_left(columns);
+        match self.extend_x_mode() {
+            ExtendMode::Text => self.last_line_mut().retract_left(columns),
+            ExtendMode::Block => self.lines_mut().for_each(|l| l.retract_left(columns)),
+        }
     }
 
     pub fn inspect_range(&self) -> Region {
