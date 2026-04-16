@@ -1,4 +1,6 @@
 
+"`" @o.strop
+
 (digits) @l.number
 
 (integer ["-" "0x" "0b" "0o" "0z"] @l.number.affix)
@@ -7,6 +9,9 @@
 "\"" @l.string.quote
 (string_content) @l.string
 (string_interpolation ["{" "}"] @l.string.quote)
+(string_escape "\\" @l.string.escape)
+
+(string_escape (identifier) @l.string @_ (#any-of? @_ "\"" "\\" "{"))
 
 ["self" "it"] @i.value.receiver
 
