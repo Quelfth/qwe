@@ -4,6 +4,10 @@
 (integer ["-" "0x" "0b" "0o" "0z"] @l.number.affix)
 (integer (literal_suffix) @l.number.affix)
 
+"\"" @l.string.quote
+(string_content) @l.string
+(string_interpolation ["{" "}"] @l.string.quote)
+
 ["self" "it"] @i.value.receiver
 
 ["In" "Out"] @i.type.self
