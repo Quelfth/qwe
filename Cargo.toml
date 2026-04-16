@@ -2,6 +2,7 @@
 name = "qwe"
 version = "0.1.0"
 edition = "2024"
+license = "0BSD OR Apache-2.0"
 
 [dependencies]
 auto_enums = "0.8.7"
