@@ -209,6 +209,8 @@
 (attribute_macro (name (identifier) @o.implement) @_ (#semantic? @_ DeriveHelper))
 (attribute_macro (name) @_ (#semantic? @_ DeriveHelper) (token_tree ["(" "," ")" "="] @o.implement))
 
+(attribute_item "#" @o.declare.macro "[" @o.declare.macro (builtin_attribute ["proc_macro" "proc_macro_attribute"] @o.declare.macro) "]" @o.declare.macro)
+
 ; Macros
 
 "macro_rules" @o.declare.macro
