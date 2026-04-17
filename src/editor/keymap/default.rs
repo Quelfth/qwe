@@ -61,21 +61,32 @@ impl Default for Keymaps {
     fn default() -> Self {
         Self {
             mirror_insert: Keymap::from_iter(universal().chain(common_insert())),
-            insert: Keymap::from_iter(universal().chain(common_insert()).chain([
-                (Key::base('('), Mapping::rep(|e| e.insert_pair("(", ")"))),
-                (Key::base('['), Mapping::rep(|e| e.insert_pair("[", "]"))),
-                (Key::base('{'), Mapping::rep(|e| e.insert_pair("{", "}"))),
-                (Key::base(')'), Mapping::rep(|e| e.insert_reluctant(")"))),
-                (Key::base(']'), Mapping::rep(|e| e.insert_reluctant("]"))),
-                (Key::base('}'), Mapping::rep(|e| e.insert_reluctant("}"))),
+            insert: Keymap::from_iter(
+                universal()
+                    .chain(common_insert())
+                    .chain([
+                        (Key::base('('), Mapping::rep(|e| e.insert_pair("(", ")"))),
+                        (Key::base('['), Mapping::rep(|e| e.insert_pair("[", "]"))),
+                        (Key::base('{'), Mapping::rep(|e| e.insert_pair("{", "}"))),
+                        (Key::base(')'), Mapping::rep(|e| e.insert_reluctant(")"))),
+                        (Key::base(']'), Mapping::rep(|e| e.insert_reluctant("]"))),
+                        (Key::base('}'), Mapping::rep(|e| e.insert_reluctant("}"))),
 
-                (Key::alt('<'), Mapping::rep(|e| e.insert_pair("<", ">"))),
-                (Key::alt('"'), Mapping::rep(|e| e.insert_pair("\"", "\""))),
-                (Key::alt('\''), Mapping::rep(|e| e.insert_pair("'", "'"))),
-                (Key::alt('`'), Mapping::rep(|e| e.insert_pair("`", "`"))),
-                (Key::alt('|'), Mapping::rep(|e| e.insert_pair("|", "|"))),
-                (Key::alt('/'), Mapping::rep(|e| e.insert_pair("/", "/"))),
-            ])),
+                        (Key::alt('<'), Mapping::rep(|e| e.insert_pair("<", ">"))),
+                        (Key::alt('"'), Mapping::rep(|e| e.insert_pair("\"", "\""))),
+                        (Key::alt('\''), Mapping::rep(|e| e.insert_pair("'", "'"))),
+                        (Key::alt('`'), Mapping::rep(|e| e.insert_pair("`", "`"))),
+                        (Key::alt('|'), Mapping::rep(|e| e.insert_pair("|", "|"))),
+                        (Key::alt('/'), Mapping::rep(|e| e.insert_pair("/", "/"))),
+
+                        (Key::base('>'), Mapping::rep(|e| e.insert_reluctant(">"))),
+                        (Key::base('"'), Mapping::rep(|e| e.insert_reluctant("\""))),
+                        (Key::base('\''), Mapping::rep(|e| e.insert_reluctant("'"))),
+                        (Key::base('`'), Mapping::rep(|e| e.insert_reluctant("`"))),
+                        (Key::base('|'), Mapping::rep(|e| e.insert_reluctant("|"))),
+                        (Key::base('/'), Mapping::rep(|e| e.insert_reluctant("/"))),
+                    ]),
+            ),
             select: Keymap::from_iter(universal().chain([
                 (Key::base('i'), Mapping::once(Editor::insert_before)),
                 (Key::base('a'), Mapping::once(Editor::insert_after)),

@@ -84,7 +84,10 @@
 (scoped_type_name path: (keyword_scope) "::" @o.scope)
 (scoped_type_name path: (scoped_name name: (name) @_ (#semantic? @_ Namespace)) "::" @o.scope)
 
+(scoped_type_name path: (bracketed_type (qualified_type)) "::" @o.association.inherited)
 (scoped_name "::" @o.association.inherited name: (_) @_ (#semantic? @_ trait))
+(bracketed_type "<" @o.association.qualified (qualified_type) ">" @o.association.qualified)
+(qualified_type "as" @o.association.qualified)
 
 (scoped_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 (scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))

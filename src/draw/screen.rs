@@ -11,9 +11,7 @@ use crossterm::{
 use culit::culit;
 
 use crate::{
-    draw::{Range, Rect},
-    grapheme::Grapheme,
-    style::FlatStyle,
+    draw::{Range, Rect}, grapheme::Grapheme, ix::{Column, Ix}, style::FlatStyle
 };
 
 #[derive(Default)]
@@ -211,6 +209,13 @@ impl<'s> Canvas<'s> {
             rect,
         }
     }
+
+    pub fn at<'a>(&'a mut self, pos: (u16, u16)) -> CanvasCursor<'s, 'a> {
+        CanvasCursor {
+            canvas: self,
+            pos,
+        }
+    }
 }
 
 impl IndexMut<(u16, u16)> for Canvas<'_> {
@@ -238,5 +243,54 @@ impl Index<(u16, u16)> for Canvas<'_> {
             panic!("column {j} is out of bounds for canvas of width {width}")
         }
         &self.screen[(i + self.rect.rows.start, j + self.rect.cols.start)]
+    }
+}
+
+pub struct CanvasCursor<'a, 'b> {
+    canvas: &'b mut Canvas<'a>,
+    pos: (u16, u16),
+}
+
+pub struct EndOfRow;
+
+impl<'a, 'b> CanvasCursor<'a, 'b> {
+    pub fn blank(&mut self, cols: Ix<Column, u16>) {
+        self.pos.1 += cols.inner();
+    }
+
+    pub fn write1(&mut self, g: Grapheme, style: impl Into<FlatStyle>) -> Result<(), EndOfRow> {
+        if self.pos.1 >= self.canvas.width() {return Err(EndOfRow)}
+        let cell = &mut self.canvas[self.pos];
+        self.pos.1 += g.columns().inner() as u16;
+        cell.grapheme = g;
+        cell.style = style.into();
+
+        Ok(())
+    }
+
+    pub fn write1_background(&mut self, g: Grapheme, style: impl Into<FlatStyle>) -> Result<(), EndOfRow> {
+        let mut style = style.into();
+        style.fg = style.bg;
+        style.bg = self.canvas[self.pos].style.bg;
+        self.write1(g, style)
+    }
+
+    pub fn write(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>) -> Result<(), EndOfRow> {
+        use crate::grapheme::GraphemeExt;
+        let style = style.into();
+        for g in text.as_ref().graphemes() {
+            self.write1(g, style)?;
+        }
+        Ok(())
+    }
+
+    pub fn write_box(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>, ends: (Grapheme, Grapheme)) -> Result<(), EndOfRow> {
+        let (left, right) = ends;
+        let style = style.into();
+        self.write1_background(left, style)?;
+        self.write(text, style)?;
+        self.write1_background(right, style)?;
+
+        Ok(())
     }
 }

@@ -2,6 +2,8 @@ use crossterm::style::Color;
 use culit::culit;
 use lsp_types::DiagnosticSeverity;
 
+use crate::style::Style;
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum Severity {
     Hint,
@@ -43,6 +45,10 @@ impl Severity {
             Severity::Info => 0x302020rgb,
             Severity::Hint => 0x302020rgb,
         }
+    }
+
+    pub fn style(self) -> Style {
+        Style::fg(self.fg()) + Style::bg(self.bg())
     }
 }
 
