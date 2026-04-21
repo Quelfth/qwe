@@ -41,7 +41,7 @@
 "ref" @o.storage.reference
 "static" @o.storage.static
 (self_parameter "&" @o.access.reference)
-"." @o.access.field
+(field_expression "." @o.access.field)
 
 "const" @o.const
 (pointer_type "const" @o.storage.immutable)
@@ -392,6 +392,8 @@
 
 (call_expression function: (name) @_ (#semantic? @_ "!trait" associated Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" associated Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
+(call_expression function: (generic_function function: (name) @_ (#semantic? @_ "!trait" associated Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
+(call_expression function: (generic_function function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" associated Function))) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
 
 (call_expression function: (name) @_ (#semantic? @_ trait Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated.extension))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ trait Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated.extension))
@@ -416,6 +418,36 @@
     "::" @o.call.value.variant
     type_arguments: (type_arguments
         ["<" "," ">"] @o.call.value.variant
+    )
+)
+
+(generic_function
+    function: (name) @_ (#semantic? @_ Struct)
+    "::" @o.call.type.struct
+    type_arguments: (type_arguments
+        ["<" "," ">"] @o.call.type.struct
+    )
+)
+(generic_function
+    function: (scoped_name name: (name) @_ (#semantic? @_ Struct))
+    "::" @o.call.type.struct
+    type_arguments: (type_arguments
+        ["<" "," ">"] @o.call.type.struct
+    )
+)
+
+(generic_function
+    function: (name) @_ (#semantic? @_ associated Function)
+    "::" @o.call.function.associated
+    type_arguments: (type_arguments
+        ["<" "," ">"] @o.call.function.associated
+    )
+)
+(generic_function
+    function: (scoped_name name: (name) @_ (#semantic? @_ associated Function))
+    "::" @o.call.function.associated
+    type_arguments: (type_arguments
+        ["<" "," ">"] @o.call.function.associated
     )
 )
 

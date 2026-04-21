@@ -139,6 +139,8 @@ impl Default for Keymaps {
                 (Key::base('c'), Mapping::once(Editor::copy)),
                 (Key::base('v'), Mapping::once(Editor::paste)),
                 (Key::ctrl('s'), Mapping::once(Editor::save_file)),
+                (Key::ctrl('c'), Mapping::once(Editor::copy_file)),
+                (Key::ctrl_alt('c'), Mapping::once(Editor::copy_file)),
 
                 (Key::base('\''), Mapping::once(Editor::hover)),
                 (Key::base('2'), Mapping::once(Editor::code_actions)),

@@ -161,6 +161,10 @@ impl AppState for Editor {
     fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()>{
         self.on_mouse_event(event)
     }
+
+    fn on_paste(&mut self, text: String) -> io::Result<()> {
+        self.on_paste(text)
+    }
 }
 
 impl Editor {

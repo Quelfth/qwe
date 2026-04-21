@@ -96,6 +96,13 @@ struct Args {
         long,
     )]
     line: Option<Pos>,
+    #[arg(
+        short = 'v',
+        long,
+        action = SetTrue,
+        conflicts_with("path"),
+    )]
+    paste: bool,
 }
 
 thread_local! {
@@ -114,6 +121,7 @@ fn main() -> io::Result<()> {
         dirs,
         find,
         line,
+        paste,
     } = Args::parse();
     let path = if let Some(path) = path {
         Some(path)
@@ -135,7 +143,7 @@ fn main() -> io::Result<()> {
         }
     };
     let path = if let Some(path) = path {
-        Some(if !new {
+        FirstDoc::File(if !new {
             PathedFile::open(path.into())?
         } else if !dirs {
             PathedFile::create(path.into())?
@@ -143,7 +151,11 @@ fn main() -> io::Result<()> {
             PathedFile::create_with_dirs(path.into())?
         })
     } else {
-        None
+        if paste {
+            FirstDoc::Clipboard
+        } else {
+            FirstDoc::Scratch
+        }
     };
 
     setup::setup_panic_hook();
@@ -189,7 +201,13 @@ impl PathedFile {
     }
 }
 
-fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
+enum FirstDoc {
+    File(PathedFile),
+    Clipboard,
+    Scratch,
+}
+
+fn run(file: FirstDoc, pos: Option<Pos>) -> io::Result<()> {
     let (width, height) = terminal::size()?;
     set_terminal_size(width, height);
 
@@ -197,7 +215,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
     let (send_lsp_to_editor, recv_lsp_to_editor) = std::sync::mpsc::channel();
     let (send_editor_to_lsp, recv_editor_to_lsp) = mpsc::unbounded_channel();
     editor.set_lsp_channels(send_editor_to_lsp, recv_lsp_to_editor);
-    if let Some(file) = file {
+    if let FirstDoc::File(file) = file {
         _= editor.open_file_doc(file.path);
     } else {
         editor.open_scratch_doc();
@@ -257,7 +275,7 @@ fn run(file: Option<PathedFile>, pos: Option<Pos>) -> io::Result<()> {
                     event => state.on_key_event(InputEvent::Event(event))?,
                 },
                 Event::Mouse(event) => state.on_mouse_event(event)?,
-                Event::Paste(_) => (),
+                Event::Paste(string) => state.on_paste(string)?,
                 Event::Resize(width, height) => {
                     if set_terminal_size(width, height) {
                         state.draw()?
@@ -281,5 +299,7 @@ pub trait AppState {
     fn poll(&mut self) -> io::Result<()>;
     fn on_key_event(&mut self, #[expect(unused)] event: InputEvent) -> io::Result<()> { Ok(()) }
     fn on_mouse_event(&mut self, #[expect(unused)] event: MouseEvent) -> io::Result<()> { Ok(()) }
+
+    fn on_paste(&mut self, #[expect(unused)] text: String) -> io::Result<()> { Ok(()) }
 }
 

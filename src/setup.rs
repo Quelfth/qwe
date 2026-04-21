@@ -4,7 +4,7 @@ use std::{
 
 use crossterm::{
     cursor,
-    event::{DisableMouseCapture, EnableMouseCapture},
+    event::{DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture},
     execute,
     terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -49,6 +49,7 @@ pub fn setup() -> io::Result<()> {
         stdout(),
         EnterAlternateScreen,
         EnableMouseCapture,
+        EnableBracketedPaste,
         cursor::Hide,
     }?;
     IS_SETUP.store(true, Ordering::Relaxed);
@@ -63,6 +64,7 @@ pub fn teardown() -> io::Result<()> {
         stdout(),
         cursor::Show,
         DisableMouseCapture,
+        DisableBracketedPaste,
         LeaveAlternateScreen,
     }?;
     terminal::disable_raw_mode()?;

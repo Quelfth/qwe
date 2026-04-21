@@ -1,4 +1,6 @@
-use std::{collections::HashMap, fs, iter, path::Path, sync::Arc};
+use std::{collections::HashMap, fs, io::stdout, iter, path::Path, sync::Arc};
+
+use crossterm::{ExecutableCommand, clipboard::CopyToClipboard};
 
 use crate::{
     aprintln::aprintln, document::Document, editor::{
@@ -50,6 +52,10 @@ impl Editor {
         if let Some(path) = self.filepath.clone() {
             save_doc(path, &self.doc, self.lsp.as_ref());
         }
+    }
+
+    pub fn copy_file(&mut self) {
+        _= stdout().execute(CopyToClipboard::to_clipboard_from(&self.doc.text().to_string()));
     }
 
     pub fn view_log(&mut self) {

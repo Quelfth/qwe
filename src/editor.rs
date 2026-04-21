@@ -66,7 +66,14 @@ impl Editor {
     }
 
     pub fn open_scratch_doc(&mut self) {
-        self.replace_doc(Document::new(None, "", Some(Default::default())));
+        self.open_scratch_doc_with("");
+    }
+
+    pub fn open_scratch_doc_with(&mut self, text: impl AsRef<str>) {
+        self.replace_doc(Document::new(None, text, Some(Default::default())));
+        if let Some(path) = self.filepath.take() {
+            self.file_history.push(path);
+        }
     }
 
     pub fn open_file_doc(&mut self, path: Arc<Path>) -> io::Result<()> {
@@ -263,6 +270,11 @@ impl Editor {
             },
         ))?;
         Ok(())
+    }
+
+    pub fn on_paste(&mut self, text: String) -> io::Result<()> {
+        self.open_scratch_doc_with(text);
+        self.draw()
     }
 
     pub fn jump_to(&mut self, dest: Pos) {
