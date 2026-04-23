@@ -93,6 +93,7 @@
 (scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 
 (use_wildcard (name) @_ (#semantic? @_ "!Enum") "::" @o.scope)
+(use_wildcard (keyword_scope) "::" @o.scope)
 
 (use_wildcard (name) @_ (#semantic? @_ Enum) "::" @o.association.enum)
 (use_wildcard (scoped_name name: (name) @_ (#semantic? @_ Enum)) "::" @o.association.enum)
@@ -179,6 +180,7 @@
 (where_clause "," @o.implement)
 
 (trait_bounds [":" "+"] @o.implement)
+(removed_trait_bound "?" @o.implement)
 (higher_ranked_trait_bound 
     "for" @o.implement
     (type_parameters ["<" "," ">"] @o.implement)
@@ -196,7 +198,37 @@
 (attribute_item ["#" "["] @o.attribute (builtin_attribute) "]" @o.attribute)
 (inner_attribute_item ["#" "!" "["] @o.attribute (builtin_attribute) "]" @o.attribute)
 
-(builtin_attribute "feature" @i.attribute ["(" ")"] @o.attribute)
+(builtin_attribute [
+    ;"cfg" "cfg_attr"
+    "ignore" "should_panic"
+    "automatically_derived"
+    "macro_use" "macro_export"
+    "proc_macro" "proc_macro_derive" "proc_macro_attribute"
+    "must_use"
+    "deprecated"
+    "crate_type" "crate_name"
+    "link" "link_name" "export_name" "link_section" "no_mangle" "used" "link_ordinal" "naked"
+    "repr"
+    "recursion_limit" "type_length_limit" "no_main" "no_std" "no_implicit_prelude" "no_builtins"
+    "path"
+    "non_exhaustive"
+    "windows_subsystem"
+    "panic_handler"
+    "inline" "cold"
+    "target_feature"
+    "track_caller"
+    "instruction_set"
+    "doc"
+    "debugger_visualizer" "collapse_debuginfo"
+    "feature"
+    "stable" "unstable" "unstable_feature_bound"
+    "rustc_const_unstable" "rustc_const_stable" "rustc_default_body_unstable"
+    "allow_internal_unstable" "allow_internal_unsafe" "rustc_eii_foreign_item"
+] @i.attribute)
+
+(builtin_attribute ["(" ")"] @o.attribute)
+
+
 
 (lint_level_attribute ["expect" "allow" "warn" "deny" "forbid"] @i.attribute ["(" ")"] @o.attribute)
 
@@ -212,7 +244,11 @@
 (attribute_macro (name (identifier) @o.implement) @_ (#semantic? @_ DeriveHelper))
 (attribute_macro (name) @_ (#semantic? @_ DeriveHelper) (token_tree ["(" "," ")" "="] @o.implement))
 
-(attribute_item "#" @o.declare.macro "[" @o.declare.macro (builtin_attribute ["proc_macro" "proc_macro_attribute"] @o.declare.macro) "]" @o.declare.macro)
+(builtin_attribute ["proc_macro" "proc_macro_attribute"] @o.declare.macro)
+(attribute_item "#" @o.declare.macro "[" @o.declare.macro (builtin_attribute ["proc_macro" "proc_macro_attribute"]) "]" @o.declare.macro)
+
+(builtin_attribute ["cfg" "cfg_attr"] @o.branch.compilation (["(" ")"] @o.branch.compilation)?)
+(attribute_item "#" @o.branch.compilation "[" @o.branch.compilation (builtin_attribute ["cfg" "cfg_attr"]) "]" @o.branch.compilation)
 
 ; Macros
 
@@ -342,6 +378,9 @@
 (index_expression ["[" "]"] @o.sequence)
 
 (type_cast_expression "as" @o.type)
+
+"unsafe" @o.unsafe
+(unsafe_block (block ["{" "}"] @o.unsafe))
 
 ; Type Constructing Expressions
 

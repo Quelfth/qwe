@@ -103,6 +103,7 @@ o.strop = f.dark;
 o.template = f.bounds;
 o.tuple = f.tuple;
 o.type = f.type-op;
+o.unsafe = f.unsafe;
 o.use = f.scope;
 o.wildcard = f.wildcard;
 o.value.variant = f.variant;
