@@ -6,6 +6,9 @@ diagnostic.error = u:curl u.error;
 diagnostic.warning = u:curl u.warning;
 diagnostic.hint = b.hint-bg;
 
+l.escape.value = f.value-macro;
+l.escape.function = f.fn-macro;
+l.escape.arguments = f.invoke;
 l.filepath = i f.filepath;
 l.number = f.number;
 l.number.affix = f.number-affix;
@@ -103,6 +106,7 @@ o.strop = f.dark;
 o.template = f.bounds;
 o.tuple = f.tuple;
 o.type = f.type-op;
+o.unknown = f.unknown;
 o.unsafe = f.unsafe;
 o.use = f.scope;
 o.wildcard = f.wildcard;
@@ -269,6 +273,8 @@ i.function.destructor = b f.never;
 
 .exception = #ff844e;
 .never = #cc3333;
+
+.unknown = #886868;
 
 .error = #ff007f;
 .warning = #bfff01;

@@ -1548,7 +1548,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-cpp"
 version = "0.1.0"
-source = "git+https://github.com/Quelfth/tree-sitter-cpp#fcbe0883cd3f19b7efff7991a52981ce1ad608ec"
+source = "git+https://github.com/Quelfth/tree-sitter-cpp#34097967f2c71fba2c7f31dfed997b398720c871"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1601,7 +1601,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-rust"
 version = "0.23.2"
-source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#b1aa76a53f5ecea5e473e5ae8753753361e5dd8c"
+source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#2c5032395c6dfdb78c6569716a93e2d6c53af431"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1619,8 +1619,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-tsquery"
 version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1b31e95ea85379972abf3b6857a59b2f6fb7ef3b5e47e9a4fb6c07111dee5e6"
+source = "git+https://github.com/Quelfth/tree-sitter-query#2779ba2fc99aa3aafd1bb983780add0a430a7e2c"
 dependencies = [
  "cc",
  "tree-sitter-language",

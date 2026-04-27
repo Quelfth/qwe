@@ -6,6 +6,7 @@
 
 (string_content) @l.string
 (string "\"" @l.string.quote)
+(escape_sequence "\\" @l.string.escape)
 
 (capture name: (_) @i.value.artifact)
 

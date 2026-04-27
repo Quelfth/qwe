@@ -1,5 +1,6 @@
 
-(comment) @comment
+(comment_content) @comment
+(comment ["//" "/*" "*/"] @o.comment)
 
 "::" @o.association
 ";" @o.group
@@ -11,6 +12,8 @@
 (character "'" @l.string.quote)
 (boolean) @i.value.boolean
 (nullptr) @i.value.null.pointer
+
+(line_continuation "\\" @l.string.escape)
 
 "include" @o.include
 (include_directive "#" @o.include)
@@ -34,6 +37,9 @@
 (visibility_declaration (visibility "public") ":" @o.visibility.public)
 (visibility_declaration (visibility "protected") ":" @o.visibility.middle)
 (visibility_declaration (visibility "private") ":" @o.visibility.private)
+
+(static_modifier) @o.visibility.private
+(inline_modifier) @o.attribute.inline
 
 "virtual" @o.declare.virtual
 
@@ -104,6 +110,8 @@
 (assignment_expression [ "<<=" ">>=" ] @o.sequence.assign)
 (assignment_expression "=" @o.assign)
 
+(conditional_expression ["?" ":"] @o.branch)
+
 [ "if" "else" ] @o.branch
 (if_statement [ "(" ")" ] @o.branch)
 (if_statement (block ["{" "}"] @o.branch))
@@ -120,6 +128,8 @@
 (return_statement ";" @o.control.return)
 
 (sizeof_type_expression ["sizeof" "(" ")"] @o.type.size)
+
+(c_cast_expression ["(" ")"] @o.type)
 
 (call_expression ["(" "," ")"] @o.call)
 (index_expression ["[" "]"] @o.sequence)
@@ -176,6 +186,16 @@
 (operator_name ["<<=" ">>="] @o.sequence.assign)
 
 ; Macro
+
+(object_macro_define_directive ["#" "define"] @o.declare.macro)
+(function_macro_define_directive ["#" "define"] @o.declare.macro)
+(variadic_function_macro_define_directive ["#" "define"] @o.declare.macro)
+
+(macro_parameters ["(" "," ")"] @o.declare.macro)
+
+(preprocessor_operator_token) @o.unknown
+
+(function_macro_define_directive (name (identifier) @i.macro.function))
 
 (call_expression (name (identifier) @i.macro.function @_ (#semantic? @_ Macro)))
 (function_type (name (identifier) @i.macro.function @_ (#semantic? @_ Macro)))

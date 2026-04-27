@@ -19,9 +19,15 @@
 (string_literal (literal_suffix) @l.string.suffix)
 (raw_string_literal (literal_suffix) @l.string.suffix)
 
-(char_literal) @l.string
+(literal_char) @l.string
 (char_literal [(char_prefix) "\'"] @l.string.quote)
 (char_literal (literal_suffix) @l.string.suffix)
+
+(escape_sequence "\\" @l.string.escape)
+(escape ["'" "\"" "\\"] @l.string)
+(escape ["0" "n" "r" "t"] @l.escape.value)
+(escape ["x" "u"] @l.escape.function)
+(escape ["{" "}"] @l.escape.arguments)
 
 (boolean_literal) @i.value.boolean
 
@@ -130,6 +136,8 @@
 
 (associated_type ";" @o.declare.type.alias)
 
+(optional_type_parameter "=" @o.type)
+
 ; Struct
 
 "struct" @o.declare.type.struct
@@ -203,7 +211,7 @@
     "ignore" "should_panic"
     "automatically_derived"
     "macro_use" "macro_export"
-    "proc_macro" "proc_macro_derive" "proc_macro_attribute"
+    ;"proc_macro" "proc_macro_derive" "proc_macro_attribute"
     "must_use"
     "deprecated"
     "crate_type" "crate_name"
@@ -238,14 +246,16 @@
 (attribute_item "#" @o.implement "[" @o.implement (attribute_macro) @_ (#semantic? @_ Derive) "]" @o.implement)
 ((attribute_macro (name (identifier) @o.implement)) @_ (#semantic? @_ Derive))
 ((attribute_macro (token_tree ["(" "," ")"] @o.implement)) @_ (#semantic? @_ Derive))
-((identifier) @i.macro.derive (#semantic? @i.macro.derive Derive))
+((identifier) @i.macro.derive (#semantic? @i.macro.derive Derive "!declaration"))
 
 (attribute_item "#" @o.implement "[" @o.implement (attribute_macro (name) @_ (#semantic? @_ DeriveHelper)) "]" @o.implement)
 (attribute_macro (name (identifier) @o.implement) @_ (#semantic? @_ DeriveHelper))
 (attribute_macro (name) @_ (#semantic? @_ DeriveHelper) (token_tree ["(" "," ")" "="] @o.implement))
 
-(builtin_attribute ["proc_macro" "proc_macro_attribute"] @o.declare.macro)
-(attribute_item "#" @o.declare.macro "[" @o.declare.macro (builtin_attribute ["proc_macro" "proc_macro_attribute"]) "]" @o.declare.macro)
+(builtin_attribute ["proc_macro" "proc_macro_attribute" "proc_macro_derive"] @o.declare.macro)
+(attribute_item "#" @o.declare.macro "[" @o.declare.macro (builtin_attribute ["proc_macro" "proc_macro_attribute" "proc_macro_derive"]) "]" @o.declare.macro)
+(builtin_attribute "proc_macro_derive" ["(" ")"] @o.declare.macro)
+(builtin_attribute "proc_macro_derive" (name (identifier) @i.macro.derive))
 
 (builtin_attribute ["cfg" "cfg_attr"] @o.branch.compilation (["(" ")"] @o.branch.compilation)?)
 (attribute_item "#" @o.branch.compilation "[" @o.branch.compilation (builtin_attribute ["cfg" "cfg_attr"]) "]" @o.branch.compilation)
