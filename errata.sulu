@@ -71,6 +71,7 @@ o.declare.function = f.fn-decl;
 o.declare.macro = f.macro-definition;
 o.declare.macro-parameter = f.metavar-op;
 o.declare.module = f.private;
+o.declare.namespace = f.private;
 o.declare.negative = f.never;
 o.declare.type = f.type-op;
 o.declare.type.enum = f.enum;

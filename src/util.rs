@@ -191,6 +191,20 @@ pub fn is_right_delimiter(delimiter: &str) -> bool {
     matches!(delimiter, ")" | "]" | "}" | ">")
 }
 
+pub fn flip_delimiter(delimiter: &str) -> Option<&'static str> {
+    Some(match delimiter {
+        "(" => ")",
+        ")" => "(",
+        "[" => "]",
+        "]" => "[",
+        "{" => "}",
+        "}" => "{",
+        "<" => ">",
+        ">" => "<",
+        _ => return None,
+    })
+}
+
 pub fn uri_to_canon_path(uri: lsp_types::Url) -> Option<PathBuf> {
     (uri.scheme() == "file").then(||
         uri.to_file_path().ok()?

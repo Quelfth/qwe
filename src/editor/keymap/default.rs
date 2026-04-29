@@ -65,6 +65,7 @@ impl Default for Keymaps {
                 universal()
                     .chain(common_insert())
                     .chain([
+                        (Key::base(' '), Mapping::once(|e| e.insert_space())),
                         (Key::base('('), Mapping::rep(|e| e.insert_pair("(", ")"))),
                         (Key::base('['), Mapping::rep(|e| e.insert_pair("[", "]"))),
                         (Key::base('{'), Mapping::rep(|e| e.insert_pair("{", "}"))),

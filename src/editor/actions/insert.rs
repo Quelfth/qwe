@@ -31,6 +31,10 @@ impl Editor {
         self.doc.insert_reluctant(text);
     }
 
+    pub fn insert_space(&mut self) {
+        self.doc.insert_space();
+    }
+
     pub fn tab_out(&mut self) {
         self.doc.tab_out()
     }

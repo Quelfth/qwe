@@ -4,7 +4,7 @@ use crate::{
     editor::cursors::{CursorState, mirror_insert::InsertDirection},
     ix::Ix,
     pos::Pos,
-    util::{indent_string, mirror_string},
+    util::{flip_delimiter, indent_string, is_right_delimiter, mirror_string},
 };
 
 impl Document {
@@ -38,6 +38,21 @@ impl Document {
 
     pub fn insert_reluctant(&mut self, str: &str) {
         self.do_insert(|doc, pos, _| doc.insert_reluctant_change(pos, str.to_owned()))
+    }
+
+    pub fn insert_space(&mut self) {
+        self.do_insert(|doc, pos, _| {
+            if let Ok(byte_pos) = doc.text.byte_pos_of_pos(pos)
+                && let Some(g) = doc.text.byte_slice(byte_pos..).unwrap().graphemes().next()
+                && is_right_delimiter(g.as_str())
+                && let Some(l) = doc.text.byte_slice(..byte_pos).unwrap().graphemes().next_back()
+                && let Some(d) = flip_delimiter(g.as_str())
+                && d == l.as_str()
+            {
+                return doc.insert_pair_change(pos, " ".to_owned(), " ".to_owned());
+            }
+            doc.insert_change(pos, " ".to_owned())
+        })
     }
 
     pub fn insert_return(&mut self) {

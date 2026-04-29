@@ -7,32 +7,15 @@ use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
 use crate::{
-    aprintln::aprintln,
-    constants::TAB_WIDTH,
-    document::{
+    aprintln::aprintln, constants::TAB_WIDTH, document::{
         diagnostics::{Diagnostic, Severity},
         lsp_change::LspChange,
         semtoks::SemanticToken,
-    },
-    draw::Rect,
-    editor::cursors::{
-        mirror_insert::InsertDirection,
-        select::{SelectCursor, SelectCursors},
-        CursorIndex, CursorState,
-    },
-    grapheme::GraphemeExt,
-    ix::{Byte, Column, Ix, Line},
-    lang::Language,
-    range_sequence::RangeSequence,
-    rope::{Rope, RopeSlice},
-    pos::{Pos, Region, Utf16Pos},
-    timeline::{
-        global::GlobalCheckpoint,
-        TimeDirection, Timeline,
-        document::{DocumentEvent, TimeStackPop},
-    },
-    ts::parse_doc,
-    util::{LinesColumnsExt, indent_string, is_right_delimiter},
+    }, draw::Rect, editor::cursors::{
+        CursorIndex, CursorState, mirror_insert::InsertDirection, select::{SelectCursor, SelectCursors}
+    }, grapheme::GraphemeExt, ix::{Byte, Column, Ix, Line}, lang::Language, pos::{Pos, Region, Utf16Pos}, range_sequence::RangeSequence, rope::{Rope, RopeSlice}, timeline::{
+        TimeDirection, Timeline, document::{DocumentEvent, TimeStackPop}, global::GlobalCheckpoint
+    }, ts::parse_doc, util::{LinesColumnsExt, flip_delimiter, indent_string, is_right_delimiter}
 };
 
 mod actions;
@@ -550,9 +533,17 @@ impl Document {
                 } => byte_of_line + len,
             },
         };
-        for g in self.text.byte_slice(byte_pos..).unwrap().graphemes() {
-            if g.is_newline() { break }
-            if is_right_delimiter(g.as_str()) {
+        if let Some(g) = self.text.byte_slice(byte_pos..).unwrap().graphemes().next() && !g.is_newline() {
+            let g = g.as_str();
+            if is_right_delimiter(g) {
+                let indent = if let Some(l) = flip_delimiter(g)
+                    && let Some(d) = self.text.byte_slice(..byte_pos).unwrap().graphemes().next_back()
+                    && d.as_str() == l
+                {
+                    indent
+                } else {
+                    indent.saturating_sub(Ix::new(TAB_WIDTH))
+                };
                 let indent1 = indent + Ix::new(TAB_WIDTH);
                 let insert = format!("\n{}\n{}", indent_string(indent1), indent_string(indent));
                 return (
@@ -564,7 +555,6 @@ impl Document {
                     CursorChange::insert(pos, &lf_indent, pos.offset(Ix::new(1), indent1)),
                 );
             }
-            break
         }
         
         (

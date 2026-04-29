@@ -1,4 +1,5 @@
 [
     (identifier)
-    (identifier_token)
+    (type_identifier)
+    (namespace_identifier)
 ] @zebra

@@ -1,204 +1,137 @@
 
-(comment_content) @comment
-(comment ["//" "/*" "*/"] @o.comment)
+(comment) @comment
 
-"::" @o.association
+(number_literal) @l.number
+
+"\"" @l.string.quote
+(string_content) @l.string
+
+"#include" @o.include
+(system_lib_string) @l.filepath
+
+"#define" @o.declare.macro
+(preproc_params ["(" "," ")"] @o.declare.macro)
+
 ";" @o.group
 
-[(integer) (float)] @l.number
-(string_content) @l.string
-(string "\"" @l.string.quote)
-(character_content) @l.string
-(character "'" @l.string.quote)
-(boolean) @i.value.boolean
-(nullptr) @i.value.null.pointer
+"::" @o.association
+(qualified_identifier scope: (namespace_identifier) @_ (#semantic? @_ Namespace) "::" @o.scope)
 
-(line_continuation "\\" @l.string.escape)
+; Keywords
 
-"include" @o.include
-(include_directive "#" @o.include)
-(include_path ["<" ">" "\""] @o.include)
-(include_path_content) @l.filepath
+"const" @o.storage.immutable
+"virtual" @o.declare.virtual
 
-"using" @o.use
-(using_declaration ";" @o.use)
+; Function
 
-"namespace" @o.visibility.middle
+(parameter_list ["(" "," ")"] @o.call.function)
+(function_definition body: (compound_statement ["{" "}"] @o.declare.function))
 
-(scoped_name scope: (name) @_ (#semantic? @_ Namespace) "::" @o.scope)
+(function_declarator (field_identifier) (parameter_list ["(" "," ")"] @o.call.function.method))
 
-"template" @o.template
-(template_parameters ["<" "," ">"] @o.template)
-(type_parameter "typename" @o.type)
+(field_initializer_list ":" @o.declare.function)
+(field_initializer (argument_list ["(" "," ")"] @o.initialize))
+
+(default_method_clause ["=" "default" ";"] @o.declare.function)
+
+(field_declaration "virtual" "=" @o.declare.function default_value: (number_literal) @o.declare.abstract @_ (#eq? @_ "0") ";" @o.declare.function)
+
+; Types
+
+(class_specifier "class" @o.declare.type.struct body: (_))
+(struct_specifier "struct" @o.declare.type.struct body: (_))
+
+(field_declaration_list ["{" "}"] @o.implement)
+(base_class_clause ":" @o.implement)
+
+(enum_specifier ["enum" "class" ":"] @o.declare.type.enum)
+
+(enumerator_list ["{" "," "}"] @o.declare.type.enum)
+(enumerator "=" @o.declare.type.enum)
+
+(alias_declaration ["using" "=" ";"] @o.declare.type.alias)
+
+; Template
+
+"template" @o.implement
+(template_parameter_list ["<" "," ">"] @o.implement)
+
+(type_parameter_declaration ["typename" "struct" "class"] @o.type)
+
+; Use / Namespace
 
 "public" @o.visibility.public
 "protected" @o.visibility.middle
 "private" @o.visibility.private
-(visibility_declaration (visibility "public") ":" @o.visibility.public)
-(visibility_declaration (visibility "protected") ":" @o.visibility.middle)
-(visibility_declaration (visibility "private") ":" @o.visibility.private)
 
-(static_modifier) @o.visibility.private
-(inline_modifier) @o.attribute.inline
+((access_specifier "public") . ":" @o.visibility.public)
+((access_specifier "protected") . ":" @o.visibility.middle)
+((access_specifier "private") . ":" @o.visibility.private)
 
-"virtual" @o.declare.virtual
+"namespace" @o.declare.namespace
+(namespace_definition (declaration_list ["{" "}"] @o.declare.namespace))
 
-(class_declaration ["class" "struct" "union"] @o.declare.type.struct ";" @o.declare.type.struct)
-(class_declaration ":" @o.implement)
+; Statements
 
-(enum_declaration ["enum" "class" "struct" ":" "{" "," "}" ";"] @o.declare.type.enum)
-(enumerator_declaration "=" @o.key-value)
+(declaration ";" @o.declare.value)
+(init_declarator "=" @o.declare.value)
 
-(parameters ["(" "," ")"] @o.call.function)
-(function_declaration
-    body: (block ["{" "}"] @o.declare.function)
-)
-(function_declaration ["=" ";"] @o.declare.function)
-(constructor_declaration
-    body: (block ["{" "}"] @o.declare.function)
-)
-(constructor_declaration [":" "=" ";"] @o.declare.function)
-(constructor_declaration (parameters ["(" "," ")"] @o.call.function.constructor.declaration))
-(constructor_declaration name: (name (identifier) @i.function.constructor.declaration))
+(init_declarator (argument_list ["(" "," ")"] @o.initialize))
 
-(operator_declaration ["=" ";"] @o.declare.function)
-(operator_declaration (parameters ["(" "," ")"] @o.declare.function))
+"switch" @o.branch.match
+(switch_statement condition: (condition_clause ["(" ")"] @o.branch.match))
+(switch_statement body: (compound_statement ["{" "}"] @o.branch.match))
 
-(destructor_declaration
-    body: (block ["{" "}"] @o.declare.function)
-)
-(destructor_declaration [":" "=" ";"] @o.declare.function)
-(destructor_declaration (parameters ["(" "," ")"] @o.call.function.destructor.declaration))
-(destructor_name (name (identifier) @i.function.destructor))
-(destructor_name "~" @o.call.function.destructor)
+"case" @o.branch.case
+(case_statement ":" @o.branch.case)
+(case_statement (compound_statement ["{" "}"] @o.branch.case))
 
-(delete_function_assignment "delete" @o.declare.negative)
-(default_function_assignment "default" @o.declare.function)
-(abstract_function_assignment) @o.declare.abstract
+; Expressions
 
-(variable_declaration [ "=" "(" "," ")" ";" ] @o.declare.value)
-(member_initializer ["(" "," ")"] @o.declare.value)
+(binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
+(binary_expression ["&" "|" "^"] @o.logical)
+(binary_expression ["<<" ">>"] @o.sequence)
+(binary_expression ["==" "!=" "<=" ">=" "<" ">" "<=>"] @o.comparison)
+(binary_expression ["&&" "||"] @o.branch.logical)
 
-(member_list ["{" "}"] @o.implement)
-
-(member_list (function_declaration (parameters ["(" "," ")"] @o.call.function.method)))
-
-; Expression
-
-(parenthesized_expression ["(" ")"] @o.group)
-
-(member_expression ["." "->"] @o.access.field)
-(pre_unary_expression "*" @o.access.dereference)
-(pre_unary_expression "&" @o.access.pointer)
-
-(binary_expression [ "+" "-" "*" "/" "%" ] @o.arithmetic)
-(pre_unary_expression [ "+" "-" ] @o.arithmetic)
-(pre_unary_expression [ "++" "--" ] @o.arithmetic.assign)
-(post_unary_expression [ "++" "--" ] @o.arithmetic.assign)
-
-(binary_expression [ "==" "!=" "<" ">" "<=" ">=" "<=>" ] @o.comparison)
-
-(binary_expression [ "&" "^" "|" ] @o.logical)
-(pre_unary_expression [ "!" "~" ] @o.logical)
-
-(binary_expression [ "&&" "||" ] @o.branch)
-
-(binary_expression [ "<<" ">>" ] @o.sequence)
-
-(assignment_expression [ "+=" "-=" "*=" "/=" "%=" ] @o.arithmetic.assign)
-(assignment_expression [ "&=" "|=" "^=" ] @o.logical.assign)
-(assignment_expression [ "<<=" ">>=" ] @o.sequence.assign)
-(assignment_expression "=" @o.assign)
-
-(conditional_expression ["?" ":"] @o.branch)
-
-[ "if" "else" ] @o.branch
-(if_statement [ "(" ")" ] @o.branch)
-(if_statement (block ["{" "}"] @o.branch))
-
-"switch" @o.branch
-(switch_statement [ "(" ")" ] @o.branch)
-(switch_statement (block ["{" "}"] @o.branch))
-
-"while" @o.loop.while
-(while_statement ["(" ")"] @o.loop.while)
-(while_statement (block ["{" "}"] @o.loop.while))
-
-"return" @o.control.return
-(return_statement ";" @o.control.return)
-
-(sizeof_type_expression ["sizeof" "(" ")"] @o.type.size)
-
-(c_cast_expression ["(" ")"] @o.type)
-
-(call_expression ["(" "," ")"] @o.call)
-(index_expression ["[" "]"] @o.sequence)
-
-; Type
-
-(primitive_type) @i.type.builtin.keyword
-["unsigned" "signed" "short" "long"] @i.type.builtin.keyword
-"void" @i.type.void
-
-(pointer_type "*" @o.access.pointer)
-(pointer_modifier "*" @o.access.pointer)
-
-(reference_type "&" @o.access.reference)
-(reference_modifier "&" @o.access.reference)
-(rvalue_reference_type "&&" @o.access.reference)
-(rvalue_reference_modifier "&&" @o.access.reference)
-
-"const" @o.storage.immutable
+(break_statement ["break" ";"] @o.control.break)
+(continue_statement ["continue" ";"] @o.control.continue)
+(return_statement ["return" ";"] @o.control.return)
 
 ; Names
 
-((identifier) @i.reference @_ (#semantic? @_ Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.reference @_ (#semantic? @_ Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.mutable @_ (#semantic? @_ "!readonly" Method))
 
-((identifier) @i.type.struct @_ (#semantic? @_ Class))
-((identifier) @i.type.enum @_ (#semantic? @_ Enum))
-((identifier) @i.type.parameter @_ (#semantic? @_ TypeParameter))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.struct @_ (#semantic? @_ "!class-scope" Class))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.enum @_ (#semantic? @_ "!class-scope" Enum))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.parameter @_ (#semantic? @_ TypeParameter))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.builtin @_ (#semantic? @_ "!class-scope" Type))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.artifact @_ (#semantic? @_ class-scope Type))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.artifact @_ (#semantic? @_ class-scope Class))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.artifact @_ (#semantic? @_ class-scope Enum))
+(primitive_type) @i.type.builtin.keyword
 
-((identifier) @i.function @_ (#semantic? @_ Function))
-((identifier) @i.function.method @_ (#semantic? @_ Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.function @_ (#semantic? @_ Function))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.function.method @_ (#semantic? @_ Method))
 
-((identifier) @i.value.global @_ (#semantic? @_ global-scope Variable))
-((identifier) @i.value.local @_ (#semantic? @_ function-scope Variable))
-((identifier) @i.value.field @_ (#semantic? @_ Property))
-((identifier) @i.value.parameter @_ (#semantic? @_ Parameter))
-((identifier) @i.value.variant @_ (#semantic? @_ EnumMember))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.global @_ (#semantic? @_ global-scope Variable))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.local @_ (#semantic? @_ function-scope Variable))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.field @_ (#semantic? @_ Property))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.parameter @_ (#semantic? @_ Parameter))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.variant @_ (#semantic? @_ EnumMember))
 
-((identifier) @i.namespace @_ (#semantic? @_ Namespace))
+([(identifier) (type_identifier) (namespace_identifier)] @i.namespace @_ (#semantic? @_ Namespace))
 
-((identifier) @i.macro @_ (#semantic? @_ Macro))
+([(identifier) (type_identifier) (namespace_identifier)] @i.macro @_ (#semantic? @_ Macro))
 
-(template_name (name) @_ (#semantic? @_ Class) (template_arguments ["<" "," ">"] @o.generics.type.struct))
+(template_type name: (type_identifier) @_ (#semantic? @_ Class) arguments: (template_argument_list ["<" "," ">"] @o.generics.type.struct))
 
-"operator" @o.declare.function
+(function_declarator
+    (identifier) @i.function.constructor.declaration @_
+        (#semantic? @_ constructor-or-destructor declaration)
+    (parameter_list ["(" "," ")"] @o.call.function.constructor.declaration)
+)
 
-(operator_name ["+" "-" "*" "/" "%"] @o.arithmetic)
-(operator_name ["==" "!=" "<" ">" "<=" ">="] @o.comparison) ; need to add 3-way comparison
-(operator_name ["&" "^" "|" "!" "~" "&&" "||"] @o.logical)
-(operator_name ["<<" ">>"] @o.sequence)
-
-(operator_name "=" @o.assign)
-(operator_name ["+=" "-=" "*=" "/=" "%=" "++" "--"] @o.arithmetic.assign) 
-(operator_name ["&=" "^=" "|="] @o.logical.assign)
-(operator_name ["<<=" ">>="] @o.sequence.assign)
-
-; Macro
-
-(object_macro_define_directive ["#" "define"] @o.declare.macro)
-(function_macro_define_directive ["#" "define"] @o.declare.macro)
-(variadic_function_macro_define_directive ["#" "define"] @o.declare.macro)
-
-(macro_parameters ["(" "," ")"] @o.declare.macro)
-
-(preprocessor_operator_token) @o.unknown
-
-(function_macro_define_directive (name (identifier) @i.macro.function))
-
-(call_expression (name (identifier) @i.macro.function @_ (#semantic? @_ Macro)))
-(function_type (name (identifier) @i.macro.function @_ (#semantic? @_ Macro)))
-
-(call_expression (name) @_ (#semantic? @_ Macro) ["(" "," ")"] @o.call.macro.function)
-(function_type (name) @_ (#semantic? @_ Macro) (parameters ["(" "," ")"] @o.call.macro.function))
+(destructor_name "~" @i.function.destructor (identifier) @i.function.destructor)
+(function_declarator (destructor_name) (parameter_list ["(" ")"] @o.call.function.destructor))
