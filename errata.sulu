@@ -6,16 +6,18 @@ diagnostic.error = u:curl u.error;
 diagnostic.warning = u:curl u.warning;
 diagnostic.hint = b.hint-bg;
 
+l.escape. = f.value-macro;
 l.escape.value = f.value-macro;
 l.escape.function = f.fn-macro;
 l.escape.arguments = f.invoke;
-l.filepath = i f.filepath;
 l.number = f.number;
 l.number.affix = f.number-affix;
 l.string = f.string;
 l.string.quote = f.quote;
 l.source.quote = f.dark;
 l.string.escape = f.dark;
+
+l.filepath = i f.filepath; / This has to go after l.string to override;
 
 comment = f.comment;
 
@@ -67,7 +69,9 @@ o.control.return = f.fn-decl;
 o.control.yield = f.coroutine;
 o.coroutine = f.coroutine;
 o.declare.abstract = f.class;
+o.declare.explicit = f.self;
 o.declare.function = f.fn-decl;
+o.declare.function.constructor = f.self;
 o.declare.macro = f.macro-definition;
 o.declare.macro-parameter = f.metavar-op;
 o.declare.module = f.private;
@@ -107,6 +111,7 @@ o.strop = f.dark;
 o.template = f.bounds;
 o.tuple = f.tuple;
 o.type = f.type-op;
+o.type.builtin.modifier = d f.builtin-type;
 o.unknown = f.unknown;
 o.unsafe = f.unsafe;
 o.use = f.scope;
@@ -151,6 +156,7 @@ i.type.struct = b f.struct;
 i.type.union = b f.union;
 i.type.void = f.group;
 i.value.artifact = f.artifact;
+i.value.associated = f.assoc-var;
 i.value.boolean = b f.variant;
 i.value.constant = f.constant;
 i.value.field = f.field;
@@ -166,6 +172,7 @@ i.value.function = f.fn;
 
 / layer 2;
 o.implement = f.bounds;
+o.initialize = f.key-value;
 i.function.constructor.declaration = b f.self;
 i.function.destructor = b f.never;
 

@@ -3,16 +3,23 @@
 
 (number_literal) @l.number
 
-"\"" @l.string.quote
-(string_content) @l.string
+["\"" "'"] @l.string.quote
+[(string_content) (character)] @l.string
+(escape_sequence) @l.escape
 
 "#include" @o.include
 (system_lib_string) @l.filepath
+(preproc_include (string_literal "\"" @o.include))
+(preproc_include (string_literal (string_content) @l.filepath))
 
 "#define" @o.declare.macro
 (preproc_params ["(" "," ")"] @o.declare.macro)
 
+["#if" "#ifdef" "#ifndef" "#else" "#elif" "#elifdef" "#elifndef" "#endif"] @o.branch
+
 ";" @o.group
+
+"." @o.access.field
 
 "::" @o.association
 (qualified_identifier scope: (namespace_identifier) @_ (#semantic? @_ Namespace) "::" @o.scope)
@@ -20,7 +27,16 @@
 ; Keywords
 
 "const" @o.storage.immutable
+"static" @o.storage.static
+
 "virtual" @o.declare.virtual
+["final" "override"] @o.implement
+
+"explicit" @o.declare.explicit
+
+["signed" "unsigned" "short" "long"] @o.type.builtin.modifier
+
+(auto) @o.declare
 
 ; Function
 
@@ -29,12 +45,13 @@
 
 (function_declarator (field_identifier) (parameter_list ["(" "," ")"] @o.call.function.method))
 
-(field_initializer_list ":" @o.declare.function)
+(field_initializer_list [":" ","] @o.declare.function.constructor)
 (field_initializer (argument_list ["(" "," ")"] @o.initialize))
 
 (default_method_clause ["=" "default" ";"] @o.declare.function)
 
 (field_declaration "virtual" "=" @o.declare.function default_value: (number_literal) @o.declare.abstract @_ (#eq? @_ "0") ";" @o.declare.function)
+(optional_parameter_declaration "=" @o.declare.value.parameter)
 
 ; Types
 
@@ -43,6 +60,8 @@
 
 (field_declaration_list ["{" "}"] @o.implement)
 (base_class_clause ":" @o.implement)
+
+(field_declaration declarator: (_) @_ (#semantic? @_ Property) ["=" ";"] @o.declare.value.field)
 
 (enum_specifier ["enum" "class" ":"] @o.declare.type.enum)
 
@@ -59,6 +78,8 @@
 (type_parameter_declaration ["typename" "struct" "class"] @o.type)
 
 ; Use / Namespace
+
+(using_declaration ["using" ";"] @o.use)
 
 "public" @o.visibility.public
 "protected" @o.visibility.middle
@@ -78,6 +99,24 @@
 
 (init_declarator (argument_list ["(" "," ")"] @o.initialize))
 
+"if" @o.branch.if
+(if_statement condition: (condition_clause ["(" ")"] @o.branch.if))
+(if_statement consequence: (compound_statement ["{" "}"] @o.branch.if))
+
+"else" @o.branch.else
+(else_clause (compound_statement ["{" "}"] @o.branch.else))
+
+"for" @o.loop.for
+(for_statement ["(" ";" ")"] @o.loop.for)
+(for_statement body: (compound_statement ["{" "}"] @o.loop.for))
+
+(for_range_loop ["(" ":" ")"] @o.loop.for)
+(for_range_loop body: (compound_statement ["{" "}"] @o.loop.for))
+
+"while" @o.loop.while
+(while_statement condition: (condition_clause ["(" ")"] @o.loop.while))
+(while_statement body: (compound_statement ["{" "}"] @o.loop.while))
+
 "switch" @o.branch.match
 (switch_statement condition: (condition_clause ["(" ")"] @o.branch.match))
 (switch_statement body: (compound_statement ["{" "}"] @o.branch.match))
@@ -86,7 +125,30 @@
 (case_statement ":" @o.branch.case)
 (case_statement (compound_statement ["{" "}"] @o.branch.case))
 
+(break_statement ["break" ";"] @o.control.break)
+(continue_statement ["continue" ";"] @o.control.continue)
+(return_statement ["return" ";"] @o.control.return)
+
+(expression_statement (assignment_expression) ";" @o.assign)
+
 ; Expressions
+
+(parenthesized_expression ["(" ")"] @o.group)
+
+(reference_declarator ["&" "&&"] @o.storage.reference)
+(abstract_reference_declarator ["&" "&&"] @o.storage.reference)
+
+(pointer_declarator "*" @o.access.pointer)
+(abstract_pointer_declarator "*" @o.access.pointer)
+
+(pointer_expression "*" @o.access.dereference)
+
+(argument_list ["(" "," ")"] @o.call.function)
+(subscript_argument_list ["[" "," "]"] @o.sequence)
+(field_expression "->" @o.access.field)
+
+(unary_expression "!" @o.logical)
+(unary_expression "-" @o.arithmetic)
 
 (binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
 (binary_expression ["&" "|" "^"] @o.logical)
@@ -94,36 +156,85 @@
 (binary_expression ["==" "!=" "<=" ">=" "<" ">" "<=>"] @o.comparison)
 (binary_expression ["&&" "||"] @o.branch.logical)
 
-(break_statement ["break" ";"] @o.control.break)
-(continue_statement ["continue" ";"] @o.control.continue)
-(return_statement ["return" ";"] @o.control.return)
+(assignment_expression "=" @o.assign)
+
+["++" "--" "+=" "-=" "*=" "/=" "%="] @o.arithmetic.assign
+
+(conditional_expression ["?" ":"] @o.branch)
+(cast_expression ["(" ")"] @o.type)
+
+(lambda_capture_specifier ["[" "," "]"] @o.storage.capture)
+(lambda_default_capture [
+    "&" @o.storage.reference
+    "=" @o.storage.value
+])
+(lambda_expression body: (compound_statement ["{" "}"] @o.declare.function))
+
+(initializer_list ["{" "," "}"] @o.initialize.declare.function.constructor)
 
 ; Names
 
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.reference @_ (#semantic? @_ Method))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.mutable @_ (#semantic? @_ "!readonly" Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.reference @_ (#semantic? @_ Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.mutable @_ (#semantic? @_ "!readonly" Method))
 
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.struct @_ (#semantic? @_ "!class-scope" Class))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.enum @_ (#semantic? @_ "!class-scope" Enum))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.parameter @_ (#semantic? @_ TypeParameter))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.builtin @_ (#semantic? @_ "!class-scope" Type))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.artifact @_ (#semantic? @_ class-scope Type))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.artifact @_ (#semantic? @_ class-scope Class))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.type.artifact @_ (#semantic? @_ class-scope Enum))
-(primitive_type) @i.type.builtin.keyword
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.struct @_ (#semantic? @_ Class))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.enum @_ (#semantic? @_ Enum))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.parameter @_ (#semantic? @_ TypeParameter))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.builtin @_ (#semantic? @_ "!class-scope" Type))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.artifact @_ (#semantic? @_ class-scope Type))
+;([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.artifact @_ (#semantic? @_ class-scope Class))
+;([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.type.artifact @_ (#semantic? @_ class-scope Enum))
+((primitive_type) @i.type.builtin.keyword @_ (#any-of? @_ "bool" "char" "char8_t" "char16_t" "char32_t" "double" "float" "int" "wchar_t"))
+((primitive_type) @i.type.void @_ (#eq? @_ "void"))
 
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.function @_ (#semantic? @_ Function))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.function.method @_ (#semantic? @_ Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.function @_ (#semantic? @_ "!class-scope" Function))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.function.method @_ (#semantic? @_ Method))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.function.associated @_ (#semantic? @_ class-scope Function))
 
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.global @_ (#semantic? @_ global-scope Variable))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.local @_ (#semantic? @_ function-scope Variable))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.field @_ (#semantic? @_ Property))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.parameter @_ (#semantic? @_ Parameter))
-([(identifier) (type_identifier) (namespace_identifier) (field_identifier)] @i.value.variant @_ (#semantic? @_ EnumMember))
+[(true) (false)] @i.value.boolean
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.value.global @_ (#semantic? @_ global-scope Variable))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.value.local @_ (#semantic? @_ function-scope Variable))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.value.associated @_ (#semantic? @_ class-scope Variable))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.value.field @_ (#semantic? @_ Property))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.value.parameter @_ (#semantic? @_ Parameter))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.value.variant @_ (#semantic? @_ EnumMember))
 
-([(identifier) (type_identifier) (namespace_identifier)] @i.namespace @_ (#semantic? @_ Namespace))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.namespace @_ (#semantic? @_ Namespace))
 
-([(identifier) (type_identifier) (namespace_identifier)] @i.macro @_ (#semantic? @_ Macro))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.macro @_ (#semantic? @_ Macro))
+
+((identifier) @o.type.cast @_ (#any-of? @_ "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast"))
+(template_function
+    name: (identifier) @_ (#any-of? @_ "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast")
+    arguments: (template_argument_list ["<" "," ">"] @o.type.cast)
+)
+(call_expression
+    (template_function name: (identifier) @_ (#any-of? @_ "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast"))
+    arguments: (argument_list ["(" "," ")"] @o.type.cast)
+)
+
+(field_expression
+    ["." "->"] @o.access.method
+    field: (field_identifier) @_ (#semantic? @_ Method)
+)
+
+(call_expression
+    function: (field_expression field: (field_identifier) @_ (#semantic? @_ Method))
+    arguments: (argument_list ["(" "," ")"] @o.call.function.method)
+)
+(call_expression
+    function: (identifier) @_ (#semantic? @_ class-scope Function)
+    arguments: (argument_list ["(" "," ")"] @o.call.function.associated)
+)
+(call_expression
+    function: (qualified_identifier name: (identifier) @_ (#semantic? @_ class-scope Function))
+    arguments: (argument_list ["(" "," ")"] @o.call.function.associated)
+)
+
+(call_expression
+    function: (identifier) @_ (#semantic? @_ Class)
+    arguments: (argument_list ["(" "," ")"] @o.call.type.struct)
+)
 
 (template_type name: (type_identifier) @_ (#semantic? @_ Class) arguments: (template_argument_list ["<" "," ">"] @o.generics.type.struct))
 

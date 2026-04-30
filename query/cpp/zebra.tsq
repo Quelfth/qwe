@@ -2,4 +2,6 @@
     (identifier)
     (type_identifier)
     (namespace_identifier)
+    (field_identifier)
+    (primitive_type)
 ] @zebra
