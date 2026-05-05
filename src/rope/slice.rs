@@ -1,4 +1,4 @@
-use std::ops::{Bound, RangeBounds};
+use std::{iter, ops::{Bound, RangeBounds}};
 
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
@@ -109,6 +109,13 @@ impl<'a> RopeSlice<'a> {
                 byte += len;
             }
         }
+    }
+
+    pub fn columns_with_bytes(&self) -> impl Iterator<Item = (Ix<Byte>, Option<Grapheme>)> {
+        self.graphemes_with_bytes().flat_map(|(b, g)| {
+            let cols = g.columns().inner().saturating_sub(1);
+            iter::once((b, Some(g))).chain(iter::repeat_n((b, None), cols))
+        })
     }
 
     pub fn is_char_boundary(&self, byte_offset: Ix<Byte>) -> Option<bool> {

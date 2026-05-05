@@ -26,7 +26,7 @@ impl Presenter {
     }
 
     pub fn draw(&self, layout: &(impl Present + ?Sized)) -> io::Result<()> {
-        const MIN_REDRAW: Duration = Duration::from_millis(8);
+        const MIN_REDRAW: Duration = Duration::from_millis(12);
         if let Some(i) = self.last_draw.get() && i.elapsed() < MIN_REDRAW {
             self.defer_draw_to(i + MIN_REDRAW);
             return Ok(());

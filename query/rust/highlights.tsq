@@ -55,6 +55,7 @@
 (parenthesized_expression ["(" ")"] @o.group)
 (parenthesized_pattern ["(" ")"] @o.group)
 (block ["{" "}"] @o.group)
+"@" @o.key-value
 
 (visibility_modifier "pub" @o.visibility.middle "(" @o.visibility.middle ")" @o.visibility.middle)
 
@@ -210,7 +211,7 @@
     ;"cfg" "cfg_attr"
     "ignore" "should_panic"
     "automatically_derived"
-    "macro_use" "macro_export"
+    ;"macro_use" "macro_export"
     ;"proc_macro" "proc_macro_derive" "proc_macro_attribute"
     "must_use"
     "deprecated"
@@ -259,6 +260,11 @@
 
 (builtin_attribute ["cfg" "cfg_attr"] @o.branch.compilation (["(" ")"] @o.branch.compilation)?)
 (attribute_item "#" @o.branch.compilation "[" @o.branch.compilation (builtin_attribute ["cfg" "cfg_attr"]) "]" @o.branch.compilation)
+
+(builtin_attribute "macro_export" @o.visibility.public)
+(attribute_item "#" @o.visibility.public "[" @o.visibility.public (builtin_attribute "macro_export") "]" @o.visibility.public)
+(builtin_attribute "macro_use" @o.use)
+(attribute_item "#" @o.use "[" @o.use (builtin_attribute "macro_use") "]" @o.use)
 
 ; Macros
 
@@ -433,11 +439,15 @@
 
 (call_expression function: (name) @_ (#semantic? @_ EnumMember) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
+(call_expression function: (generic_function function: (name) @_ (#semantic? @_ EnumMember)) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
+(call_expression function: (generic_function function: (scoped_name name: (name) @_ (#semantic? @_ EnumMember))) arguments: (arguments ["(" "," ")"] @o.call.value.variant))
 
 (call_expression function: (self_type) arguments: (arguments ["(" "," ")"] @o.call.type.self))
 
 (call_expression function: (name) @_ (#semantic? @_ Struct) arguments: (arguments ["(" "," ")"] @o.call.type.struct))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ Struct)) arguments: (arguments ["(" "," ")"] @o.call.type.struct))
+(call_expression function: (generic_function function: (name) @_ (#semantic? @_ Struct)) arguments: (arguments ["(" "," ")"] @o.call.type.struct))
+(call_expression function: (generic_function function: (scoped_name name: (name) @_ (#semantic? @_ Struct))) arguments: (arguments ["(" "," ")"] @o.call.type.struct))
 
 (call_expression function: (name) @_ (#semantic? @_ "!trait" associated Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" associated Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated))

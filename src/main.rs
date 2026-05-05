@@ -47,6 +47,7 @@ mod editor;
 mod grapheme;
 mod incremental_select;
 mod ix;
+mod key;
 mod lang;
 mod language_server;
 mod log;

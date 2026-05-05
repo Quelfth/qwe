@@ -72,7 +72,7 @@ impl Document {
             let len = {
                 write_line_nr(&mut canvas, gi, i);
                 let mut j = gutter_width;
-                for (byte, grapheme) in line.graphemes_with_bytes().skip(self.horizontal_scroll.inner()) {
+                for (byte, grapheme) in line.columns_with_bytes().skip(self.horizontal_scroll.inner()) {
                     if j >= width {
                         break;
                     }
@@ -87,7 +87,7 @@ impl Document {
                     let hl_style = (Style::fg(color::FG) + Style::bg(color::BG))
                         + theme().highlight(&hl_scopes);
                     canvas[(i, j)] = Cell {
-                        grapheme,
+                        grapheme: if let Some(g) = grapheme && !g.is_whitespace() { g } else {Grapheme::SPACE},
                         style: {
                             hl_style
                                 + cursor_color(Ix::new((j - gutter_width) as _) + self.horizontal_scroll)
