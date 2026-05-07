@@ -15,6 +15,7 @@ pub struct FlatStyle {
     pub under: Option<Under>,
     pub uc: Option<Color>,
     pub overline: bool,
+    pub ag: u8,
 }
 
 impl Default for FlatStyle {
@@ -27,13 +28,14 @@ impl Default for FlatStyle {
             under: Default::default(),
             uc: Default::default(),
             overline: Default::default(),
+            ag: Default::default(),
         }
     }
 }
 
-impl From<FlatStyle> for ContentStyle {
-    fn from(
-        FlatStyle {
+impl FlatStyle {
+    pub fn content_style(self) -> ContentStyle {
+        let FlatStyle {
             fg,
             bg,
             italic,
@@ -41,9 +43,9 @@ impl From<FlatStyle> for ContentStyle {
             under,
             uc,
             overline,
-        }: FlatStyle,
-    ) -> Self {
-        let mut style = Self::new().with(fg).on(bg);
+            ..
+        } = self;
+        let mut style = ContentStyle::new().with(fg).on(bg);
         if italic {
             style = style.italic()
         }
@@ -59,7 +61,7 @@ impl From<FlatStyle> for ContentStyle {
         if overline {
             style = style.attribute(Attribute::OverLined)
         }
-
+        
         style
     }
 }
@@ -73,6 +75,7 @@ pub struct Style {
     pub under: Option<Option<Under>>,
     pub uc: Option<Option<Color>>,
     pub dark: Option<u8>,
+    pub ag: Option<u8>,
 }
 
 impl Style {
@@ -114,6 +117,7 @@ impl Add for Style {
             under: other.under.or(self.under),
             uc: other.uc.or(self.uc),
             dark: other.dark.or(self.dark),
+            ag: other.ag.or(self.ag),
         }
     }
 }
@@ -128,6 +132,7 @@ impl From<Style> for FlatStyle {
             under,
             uc,
             dark,
+            ag,
         } = value;
         let fg = fg.unwrap_or(Color::Reset);
         let fg = if let Some(dark) = dark {
@@ -143,6 +148,7 @@ impl From<Style> for FlatStyle {
             under: under.flatten(),
             uc: uc.flatten(),
             overline: false,
+            ag: ag.unwrap_or(0),
         }
     }
 }
@@ -212,6 +218,13 @@ impl Style {
             ..Default::default()
         }
     }
+
+    pub fn ag(value: u8) -> Self {
+        Self {
+            ag: Some(value),
+            ..Default::default()
+        }
+    }
 }
 
 impl From<Under> for Style {
@@ -261,6 +274,13 @@ impl sulu::Style for Style {
             "d" => {
                 if let Ok(value) = value.parse::<u8>() {
                     Ok(Self::dark(value))
+                } else {
+                    Err(sulu::StyleValueError::Value)
+                }
+            }
+            "ag" => {
+                if let Ok(value) = value.parse::<u8>() {
+                    Ok(Self::ag(value))
                 } else {
                     Err(sulu::StyleValueError::Value)
                 }

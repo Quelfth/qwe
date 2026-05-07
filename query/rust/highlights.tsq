@@ -3,6 +3,11 @@
 
 "r#" @o.strop
 
+(type_arguments ["<" ">"] @x.angle-bracket)
+(type_parameters ["<" ">"] @x.angle-bracket)
+(bracketed_type ["<" ">"] @x.angle-bracket)
+(use_bound ["<" ">"] @x.angle-bracket)
+
 ; Literals
 
 [(digits)] @l.number

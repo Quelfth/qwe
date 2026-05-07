@@ -60,6 +60,16 @@ impl Grapheme {
     pub fn columns(&self) -> Ix<Column> {
         Ix::new(if &*self.0 == "\t" { TAB_WIDTH } else { 1 })
     }
+
+    pub fn apply_ag(&self, ag: u8) -> Option<Self> {
+        if ag == 0 { return None };
+
+        Some(Self(Cow::Borrowed(match (&*self.0, ag) {
+            ("<", 1) => "⟨",
+            (">", 1) => "⟩",
+            _ => return None,
+        })))
+    }
 }
 
 pub trait GraphemeExt {

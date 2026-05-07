@@ -6,6 +6,8 @@ diagnostic.error = u:curl u.error;
 diagnostic.warning = u:curl u.warning;
 diagnostic.hint = b.hint-bg;
 
+x.angle-bracket = ag:1;
+
 l.escape. = f.value-macro;
 l.escape.value = f.value-macro;
 l.escape.function = f.fn-macro;

@@ -1,6 +1,5 @@
 use std::{
-    io::{self, Write, stdout},
-    ops::{Index, IndexMut},
+    borrow::Cow, io::{self, Write, stdout}, ops::{Index, IndexMut}
 };
 
 use crossterm::{
@@ -81,17 +80,17 @@ impl Cell {
 
 impl From<Cell> for StyledContent<Grapheme> {
     fn from(value: Cell) -> Self {
-        StyledContent::new(value.style(), value.grapheme)
+        StyledContent::new(value.style(), value.grapheme.apply_ag(value.style.ag).unwrap_or(value.grapheme))
     }
 }
 
 impl Cell {
     fn style(&self) -> ContentStyle {
-        self.style.into()
+        self.style.content_style()
     }
 
-    fn as_styled(&self) -> StyledContent<&str> {
-        StyledContent::new(self.style(), self.grapheme.as_str())
+    fn as_styled(&self) -> StyledContent<Cow<'_, str>> {
+        StyledContent::new(self.style(), self.grapheme.apply_ag(self.style.ag).map(|g| Cow::Owned(g.as_str().to_owned())).unwrap_or(Cow::Borrowed(self.grapheme.as_str())))
     }
 }
 
