@@ -1,6 +1,7 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyEventState, KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
+use strum::EnumCount;
 
-
+#[derive(EnumCount)]
 pub enum Key {
     Escape,
     F1,

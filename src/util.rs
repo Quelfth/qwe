@@ -1,15 +1,14 @@
 use std::{
-    borrow::Borrow,
-    fmt::Write,
-    ops::{Range, RangeFrom, RangeFull, RangeTo}, path::PathBuf,
+    borrow::Borrow, fmt::Write, iter, ops::{Range, RangeFrom, RangeFull, RangeTo}, path::PathBuf
 };
 
+use auto_enums::auto_enum;
 use extension_trait::extension_trait;
 use tree_sitter::Node;
 
 use crate::{
     grapheme::GraphemeExt,
-    ix::{Column, Ix, Line},
+    ix::{Byte, Column, Ix, Line}, rope::RopeSlice,
 };
 
 pub fn leak<T>(value: T) -> &'static T {
@@ -217,3 +216,15 @@ pub trait TodoTrait {}
 impl<T: ?Sized> TodoTrait for T {}
 
 pub macro Todo() {impl TodoTrait}
+
+
+#[auto_enum(Iterator)]
+pub fn word_splits(word: RopeSlice<'_>) -> impl Iterator<Item = Range<Ix<Byte>>> {
+    if word.byte_len() <= Ix::new(5) {
+        if word == *"usize" || word == *"isize" || word == *"uint" {
+            return [Ix::new(0)..Ix::new(1), Ix::new(1)..word.byte_len()].into_iter();
+        }
+    }
+
+    return [Ix::new(0)..word.byte_len()].into_iter();
+}

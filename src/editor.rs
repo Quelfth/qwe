@@ -148,9 +148,23 @@ impl Editor {
             doc
         } else {
             let PathedFile { path, file } = PathedFile::open(path.clone())?;
+            let lang = path.extension()
+                .and_then(|e| Language::from_file_ext(&e.to_string_lossy()));
+
+            if let Some(lsp) = &self.lsp
+                && let Some(lang) = lang
+            {
+                lsp.tx
+                    .send(EditorToLspMessage::OpenDoc {
+                        lang,
+                        path: path.clone(),
+                        text: file.clone(),
+                    })
+                    .unwrap();
+            }
+
             Document::new(
-                path.extension()
-                    .and_then(|e| Language::from_file_ext(&e.to_string_lossy())),
+                lang,
                 file,
                 Some(Default::default()),
             )
@@ -160,17 +174,6 @@ impl Editor {
         let old_path = self.filepath.clone();
         self.filepath = Some(path.clone());
 
-        if let Some(lsp) = &self.lsp
-            && let Some(lang) = self.doc.language()
-        {
-            lsp.tx
-                .send(EditorToLspMessage::OpenDoc {
-                    lang,
-                    path,
-                    text: self.doc().text().to_string(),
-                })
-                .unwrap();
-        }
 
         Ok(old_path)
     }

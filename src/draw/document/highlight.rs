@@ -6,7 +6,7 @@ use crate::{
     document::{Document, diagnostics::Severity},
     ix::{Byte, Ix},
     lang::{Highlights, Zebra},
-    util::{CharClass, MapBounds},
+    util::{CharClass, MapBounds, word_splits},
 };
 
 pub mod predicate;
@@ -84,14 +84,21 @@ impl Document {
                     |i| CharClass::of(self.text().byte_slice(i..).unwrap().chars().next().unwrap());
                 let mut last_char = char_at(i);
                 let mut even = false;
-                while i < range.end {
-                    if j >= range.end {
-                        if even {
-                            highlight_scopes.push(Highlight {
+                let zebra_word = |range: Range<Ix<Byte>>, even: &mut bool, hl_scopes: &mut Vec<Highlight>| -> () {
+                    let start = range.start;
+                    for range in word_splits(self.text().byte_slice(range).unwrap()) {
+                        if *even {
+                            hl_scopes.push(Highlight {
                                 scope: Scope::zebra(),
-                                range: i..j,
+                                range: range.map_bounds(|b| b + start),
                             });
                         }
+                        *even ^= true;
+                    }
+                };
+                while i < range.end {
+                    if j >= range.end {
+                        zebra_word(i..j, &mut even, &mut highlight_scopes);
                         break;
                     }
 
@@ -103,13 +110,7 @@ impl Document {
                                 if j < range.start + Ix::new(2) || char_at(j - Ix::new(2)) != Cap {
                                     break 'continu;
                                 }
-                                if even {
-                                    highlight_scopes.push(Highlight {
-                                        scope: Scope::zebra(),
-                                        range: i..j - Ix::new(1),
-                                    });
-                                }
-                                even ^= true;
+                                zebra_word(i..j-Ix::new(1), &mut even, &mut highlight_scopes);
                                 i = j - Ix::new(1);
                             }
                             (Symbol(_), _) => {
@@ -123,13 +124,7 @@ impl Document {
                             }
                             _ => {
                                 if last_char != char {
-                                    if even {
-                                        highlight_scopes.push(Highlight {
-                                            scope: Scope::zebra(),
-                                            range: i..j,
-                                        });
-                                    }
-                                    even ^= true;
+                                    zebra_word(i..j, &mut even, &mut highlight_scopes);
                                     i = j;
                                 }
                             }

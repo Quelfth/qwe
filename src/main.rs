@@ -37,6 +37,7 @@ use crate::{
     terminal_size::set_terminal_size,
 };
 
+mod action;
 mod aprintln;
 mod color;
 mod constants;
@@ -48,6 +49,7 @@ mod grapheme;
 mod incremental_select;
 mod ix;
 mod key;
+mod keymap;
 mod lang;
 mod language_server;
 mod log;

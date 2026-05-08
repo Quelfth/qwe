@@ -1,6 +1,6 @@
 use std::{
     boxed::Box,
-    collections::{HashMap, VecDeque, hash_map::Entry},
+    collections::{HashMap, HashSet, hash_map::Entry},
     env,
     future::Future,
     io,
@@ -10,7 +10,7 @@ use std::{
     process::Stdio,
     result::Result,
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use async_lsp::{
@@ -68,7 +68,7 @@ struct Server {
     socket: ServerSocket,
     caps: ServerCaps,
     client_channel: UnboundedReceiver<ClientMessage>,
-    docs: Vec<Url>,
+    docs: HashSet<Url>,
     _process: Child,
 }
 
@@ -129,7 +129,7 @@ impl Server {
             join,
             caps: Default::default(),
             client_channel: recv,
-            docs: Vec::new(),
+            docs: Default::default(),
             socket,
         })
     }
@@ -296,7 +296,6 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
         .init();
 
     let mut servers = HashMap::new();
-    let mut init_delay_queue = VecDeque::new();
 
     loop {
         if let Ok(Some(msg)) = timeout(Duration::from_millis(20), channels.incoming.recv()).await {
@@ -330,15 +329,15 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             text,
                         },
                     })?;
-                    server.docs.push(doc_uri.clone());
+                    if !server.docs.contains(&doc_uri) {
+                        server.docs.insert(doc_uri.clone());
+                    }
                     if let Some(tokens) = server.semantic_tokens(doc_uri.clone()).await? {
                         channels.outgoing.send(LspToEditorMessage::SemanticTokens {
                             uri: doc_uri.clone(),
                             tokens,
                         })?;
                     }
-
-                    init_delay_queue.push_back((lang, doc_uri, Instant::now()))
                 }
                 EditorToLspMessage::Exit => break,
                 EditorToLspMessage::RefreshSemanticTokens => {
@@ -624,7 +623,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
             {
                 match msg {
                     ClientMessage::SemanticTokensRefresh => {
-                        for doc in server.docs.clone() {
+                        for doc in server.docs.clone() { // This seems highly suspect.  Do I really need semtoks for background documents?
                             let Some(semtoks) = server.semantic_tokens(doc.clone()).await? else {
                                 continue;
                             };
