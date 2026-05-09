@@ -1,3 +1,6 @@
+#![expect(unused)]
+
+use crate::lsp::channel::GotoKind;
 
 enum ScrollAction {
     Up,
@@ -6,7 +9,28 @@ enum ScrollAction {
     Right,
 }
 
+enum EditorAction {
+    OpenFile,
+    PreviousFile,
+    NextFile,
+    Undo,
+    Redo,
+    Save,
+    
+    Inspect,
+    ViewLog,
+}
+
+enum LspAction {
+    Hover,
+    CodeActions,
+    Rename,
+    Goto(GotoKind),
+    Refresh,
+}
+
 enum DocumentAction {
+    Scroll(ScrollAction),
     Undo,
 
     CycleCursorsBack,
@@ -14,6 +38,9 @@ enum DocumentAction {
 
     ScrollToMainCursor,
     DropNonMainCursors,
+
+    Jump,
+    Find,
 }
 
 enum InsertAction {
@@ -25,25 +52,36 @@ enum InsertAction {
     Paste,
 }
 
+enum AnySelectAction {
+    TabIn,
+    TabOut,
+
+    SyntaxExtend,
+
+    SplitCursorsByLines,
+    CollapseToStart,
+    CollapseToEnd,
+
+    Delete,
+    Cut,
+    Copy,
+    Paste,
+}
+
 enum SelectAction {
+    Any(AnySelectAction),
     InsertBefore,
     InsertAfter,
     InsertBeforeLine,
     InsertAfterLine,
     MirrorInsertIn,
     MirrorInsertOut,
-    TabIn,
-    TabOut,
 
-    SyntaxExtend,
     WordExtend,
 
     LineSelect,
-    SplitCursorsAcrossLines,
     TextualSelect,
     BlockSelect,
-    CollapseToStart,
-    CollapseToEnd,
 
     MoveUp,
     MoveDown,
@@ -59,7 +97,29 @@ enum SelectAction {
     RetractDown,
     RetractLeft,
     RetractRight,
+}
 
+enum LineSelectAction {
+    Any(AnySelectAction),
+    InsertBefore,
+    InsertAfter,
+    InsertBeforeLine,
+    InsertAfterLine,
+    MirrorInsertIn,
+    MirrorInsertOut,
 
+    ParagraphExtend,
 
+    Select,
+    TextualSelect,
+    BlockSelect,
+
+    MoveUp,
+    MoveDown,
+
+    ExtendUp,
+    ExtendDown,
+
+    RetractUp,
+    RetractDown,
 }

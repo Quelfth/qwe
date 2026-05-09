@@ -260,12 +260,12 @@ impl Server {
         self.socket.initialized(InitializedParams {})
     }
 
-    pub async fn semantic_tokens(
+    pub fn semantic_tokens(
         &mut self,
         doc_uri: Url,
-    ) -> async_lsp::Result<Option<Vec<SemanticToken>>> {
-        if self.caps.semtoks {
-            let semtoks = self
+    ) -> impl use<> + Future<Output = async_lsp::Result<Option<Vec<SemanticToken>>>> {
+        let semtoks = self.caps.semtoks.then(||
+            self
                 .socket
                 .semantic_tokens_full(SemanticTokensParams {
                     work_done_progress_params: WorkDoneProgressParams {
@@ -276,29 +276,44 @@ impl Server {
                     },
                     text_document: TextDocumentIdentifier { uri: doc_uri },
                 })
-                .await?;
-            if let Some(semtoks) = semtoks {
+        );
+        async {
+            let Some(semtoks) = semtoks else {return Ok(None)};
+            if let Some(semtoks) = semtoks.await? {
                 let (SemanticTokensResult::Tokens(SemanticTokens { data, .. })
                 | SemanticTokensResult::Partial(SemanticTokensPartialResult { data })) = semtoks;
                 return Ok(Some(data));
             }
+        
+            Ok(None)
         }
-
-        Ok(None)
     }
 }
 
-pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
+pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_max_level(Level::DEBUG)
         .with_ansi(false)
         .with_writer(io::stderr)
         .init();
+    
+    let LspChannels { incoming: mut rx, outgoing: tx } = channels;
 
     let mut servers = HashMap::new();
 
+    fn refresh_semantic_tokens(server: &mut Server, doc: Url, tx: std::sync::mpsc::Sender<LspToEditorMessage>) {
+        let future = server.semantic_tokens(doc.clone());
+        tokio::spawn(async move {
+            let Ok(Some(semtoks)) = future.await.map_err(|e| log!(e)) else { return };
+            tx.send(LspToEditorMessage::SemanticTokens {
+                uri: doc.clone(),
+                tokens: semtoks,
+            }).unwrap();
+        });
+    }
+
     loop {
-        if let Ok(Some(msg)) = timeout(Duration::from_millis(20), channels.incoming.recv()).await {
+        if let Ok(Some(msg)) = timeout(Duration::from_millis(20), rx.recv()).await {
             log!(msg);
             match msg {
                 EditorToLspMessage::OpenDoc { lang, path, text } => {
@@ -313,9 +328,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                         let mut server = Server::spawn(command)?;
                         let init_result = server.initialize().await?;
                         server.caps = (&init_result.capabilities).into();
-                        channels
-                            .outgoing
-                            .send(LspToEditorMessage::NewLsp { lang, init_result })?;
+                        tx.send(LspToEditorMessage::NewLsp { lang, init_result })?;
                         server.initialized()?;
                         e.insert(server);
                     }
@@ -332,23 +345,13 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                     if !server.docs.contains(&doc_uri) {
                         server.docs.insert(doc_uri.clone());
                     }
-                    if let Some(tokens) = server.semantic_tokens(doc_uri.clone()).await? {
-                        channels.outgoing.send(LspToEditorMessage::SemanticTokens {
-                            uri: doc_uri.clone(),
-                            tokens,
-                        })?;
-                    }
+                    refresh_semantic_tokens(server, doc_uri, tx.clone());
                 }
                 EditorToLspMessage::Exit => break,
                 EditorToLspMessage::RefreshSemanticTokens => {
                     for server in servers.values_mut() {
                         for doc in server.docs.clone() {
-                            if let Some(semtoks) = server.semantic_tokens(doc.clone()).await? {
-                                channels.outgoing.send(LspToEditorMessage::SemanticTokens {
-                                    uri: doc.clone(),
-                                    tokens: semtoks,
-                                })?;
-                            }
+                            refresh_semantic_tokens(server, doc, tx.clone());
                         }
                     }
                 }
@@ -394,7 +397,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                     .collect(),
                                 HoverContents::Markup(MarkupContent { value, .. }) => value,
                             };
-                            channels.outgoing.send(LspToEditorMessage::Hover { view })?;
+                            tx.send(LspToEditorMessage::Hover { view })?;
                         }
                     }
                 }
@@ -425,9 +428,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                 CompletionResponse::Array(items) => items,
                                 CompletionResponse::List(CompletionList { items, .. }) => items,
                             };
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::Completion { items })?;
+                            tx.send(LspToEditorMessage::Completion { items })?;
                         }
                     }
                 }
@@ -478,9 +479,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                     .await?
                             }
                         } {
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::Goto { locations })?;
+                            tx.send(LspToEditorMessage::Goto { locations })?;
                         }
                     }
                 }
@@ -525,9 +524,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                                     }
                                 }
                             }
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::CodeActions { actions })?;
+                            tx.send(LspToEditorMessage::CodeActions { actions })?;
                         }
                     }
                 }
@@ -553,7 +550,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
 
                             let range = range.map(|Range { start, end }| Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end));
 
-                            channels.outgoing.send(LspToEditorMessage::PrepareRename { range, text })?;
+                            tx.send(LspToEditorMessage::PrepareRename { range, text })?;
                         }
                     }
                 }
@@ -571,7 +568,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             new_name: name,
                             work_done_progress_params: Default::default(),
                         }).await? {
-                            channels.outgoing.send(LspToEditorMessage::Rename { edit })?;
+                            tx.send(LspToEditorMessage::Rename { edit })?;
                         }
                     }
                 },
@@ -590,12 +587,7 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
                             },
                             content_changes: changes,
                         })?;
-                        if let Some(semtoks) = server.semantic_tokens(uri.clone()).await? {
-                            channels.outgoing.send(LspToEditorMessage::SemanticTokens {
-                                uri,
-                                tokens: semtoks,
-                            })?;
-                        }
+                        refresh_semantic_tokens(server, uri, tx.clone());
                     }
                 }
                 EditorToLspMessage::Save { lang, path } => {
@@ -623,22 +615,13 @@ pub async fn lsp_thread(mut channels: LspChannels) -> anyhow::Result<()> {
             {
                 match msg {
                     ClientMessage::SemanticTokensRefresh => {
-                        for doc in server.docs.clone() { // This seems highly suspect.  Do I really need semtoks for background documents?
-                            let Some(semtoks) = server.semantic_tokens(doc.clone()).await? else {
-                                continue;
-                            };
-
-                            channels.outgoing.send(LspToEditorMessage::SemanticTokens {
-                                uri: doc,
-                                tokens: semtoks,
-                            })?;
+                        for doc in server.docs.clone() {
+                            refresh_semantic_tokens(server, doc.clone(), tx.clone());
                         }
                     }
                     ClientMessage::PublishDiagnostics { uri, diagnostics } => {
                         if server.docs.contains(&uri) {
-                            channels
-                                .outgoing
-                                .send(LspToEditorMessage::Diagnostics { uri, diagnostics })?;
+                            tx.send(LspToEditorMessage::Diagnostics { uri, diagnostics })?;
                         }
                     }
                 }

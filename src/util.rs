@@ -1,5 +1,5 @@
 use std::{
-    borrow::Borrow, fmt::Write, iter, ops::{Range, RangeFrom, RangeFull, RangeTo}, path::PathBuf
+    borrow::Borrow, fmt::Write, ops::{Range, RangeFrom, RangeFull, RangeTo}, path::PathBuf
 };
 
 use auto_enums::auto_enum;

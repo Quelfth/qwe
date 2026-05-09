@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, io, path::{Path, PathBuf}, sync::Arc};
+use std::{ffi::OsStr, fs, io, path::{self, Path, PathBuf}, sync::Arc};
 
 use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
 
@@ -23,6 +23,8 @@ pub struct Navigator {
     clipboard: Clipboard,
     lsp: Option<LspContext>,
     presenter: Presenter,
+
+    name_box: Option<String>,
 }
 
 impl Navigator {
@@ -60,6 +62,8 @@ impl Navigator {
             clipboard,
             lsp,
             presenter,
+
+            name_box: None,
         }
     }
 
@@ -84,36 +88,45 @@ impl Navigator {
         self.path.strip_prefix(&self.root_path).unwrap_or(&self.path)
     }
 
-    pub fn navigate_down(&mut self) {
+    fn parent_dir(&self) -> &Directory {
         let mut dir = &self.root_dir;
-        let mut components = self.rel_path().components().collect::<Vec<_>>();
-        let Some(final_component) = components.pop() else { return };
-        for component in components {
+        for component in self.rel_path().components().collect::<Vec<_>>() {
             if let Some(Entry::Directory(next)) = dir.get(component.as_os_str()) {
                 dir = next;
             }
         }
-        use std::ops::Bound::*;
-        let Some(next) = dir.entries().range::<OsStr, _>((Excluded(final_component.as_os_str()), Unbounded)).next() else { return };
-
-        let Some(parent) = self.path.parent() else { return };
-        self.path = parent.join(next.0);
+        dir
     }
 
-    pub fn navigate_up(&mut self) {
-        let mut dir = &self.root_dir;
-        let mut components = self.rel_path().components().collect::<Vec<_>>();
-        let Some(final_component) = components.pop() else { return };
-        for component in components {
-            if let Some(Entry::Directory(next)) = dir.get(component.as_os_str()) {
-                dir = next;
-            }
-        }
+    fn reload(&mut self) {
+        self.root_dir = Directory::collect(&self.root_path, &self.docs);
+    }
+
+    pub fn navigate_down(&mut self) -> Option<()> {
         use std::ops::Bound::*;
-        let Some(next) = dir.entries().range::<OsStr, _>((Unbounded, Excluded(final_component.as_os_str()))).next_back() else { return };
+        let next = self.parent_dir()
+            .entries()
+            .range::<OsStr, _>((
+                Excluded(self.path.file_name().unwrap()),
+                Unbounded,
+            )).next()?;
+
+        self.path = self.path.parent()?.join(next.0);
+        Some(())
+    }
+
+    pub fn navigate_up(&mut self) -> Option<()> {
+        use std::ops::Bound::*;
+        let next = self.parent_dir()
+            .entries()
+            .range::<OsStr, _>((
+                Unbounded,
+                Excluded(self.path.file_name().unwrap()),
+            )).next_back()?;
     
-        let Some(parent) = self.path.parent() else { return };
+        let parent = self.path.parent()?;
         self.path = parent.join(next.0);
+        Some(())
     }
 
     pub fn navigate_out(&mut self) {
@@ -131,6 +144,12 @@ impl Navigator {
         }
         let Some(next) = dir.entries().iter().next() else { return };
         self.path = self.path.join(next.0);
+    }
+
+    pub fn navigate_anywhere(&mut self) {
+        if self.navigate_up().is_some() { return }
+        if self.navigate_down().is_some() { return }
+        self.navigate_out();
     }
 
     pub fn open_selected(&mut self) {
@@ -213,12 +232,36 @@ impl AppState for Navigator {
     }
 
     fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> {
+        if let Some(name) = &mut self.name_box {
+            match event {
+                InputEvent::Event(e) => match e {
+                    KeyEvent { code: KeyCode::Esc, .. } => {self.name_box = None; self.update_and_draw()?},
+                    KeyEvent { code: KeyCode::Backspace, .. } => {name.pop(); self.update_and_draw()?}
+                    KeyEvent { code: KeyCode::Char(c), .. } => {name.push(c); self.update_and_draw()?}
+                    KeyEvent { code: KeyCode::Enter, .. } => {
+                        let mut name = self.name_box.take().unwrap();
+                        if let Some(last) = name.chars().next_back() && path::is_separator(last) {
+                            name.pop();
+                            _ = fs::create_dir(self.path.join(name));
+                        } else {
+                            drop(fs::File::create_new(self.path.join(name)));
+                        }
+                        self.reload();
+                        self.update_and_draw()?;
+                    }
+                    _ => (),
+                },
+                _ => (),
+            }
+            return Ok(());
+        }
         match event {
             InputEvent::Event(key_event) => match key_event {
-                KeyEvent { code: KeyCode::Char('j'), .. } => {self.navigate_down(); self.update_and_draw()?},
-                KeyEvent { code: KeyCode::Char('k'), .. } => {self.navigate_up(); self.update_and_draw()?},
-                KeyEvent { code: KeyCode::Char('h'), .. } => {self.navigate_out(); self.update_and_draw()?},
-                KeyEvent { code: KeyCode::Char('l'), .. } => {self.navigate_in(); self.update_and_draw()?},
+                KeyEvent { code: KeyCode::Char('j'), .. } => {self.navigate_down(); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('k'), .. } => {self.navigate_up(); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('h'), .. } => {self.navigate_out(); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('l'), .. } => {self.navigate_in(); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('n'), .. } => {self.name_box = Some(Default::default()); self.update_and_draw()?}
                 _ => (),
             },
             InputEvent::Key(_) => todo!(),
@@ -227,14 +270,11 @@ impl AppState for Navigator {
     }
 }
 
-impl Present for Navigator {
-    fn presenter(&self) -> &Presenter { &self.presenter }
-    fn bg_color(&self) -> Color { color::NAV_DEEP_BG }
-
-    fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
+impl Navigator {
+    fn main_draw(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
         let root_pane = self.root_pane();
         let root_text = root_pane.text();
-
+    
         let mut margin = 0;
         for (i, g) in (0..canvas.width()).zip(root_text.graphemes()) {
             let cell = &mut canvas[(0, i)];
@@ -243,9 +283,9 @@ impl Present for Navigator {
             margin = i;
         }
         let width = root_text.graphemes().count();
-
+    
         canvas[(0, width as u16)].style.bg = color::NAV_BG_ALT;
-
+    
         for j in 1..canvas.height() {
             for i in 0..canvas.width().min(width as u16) {
                 let cell = &mut canvas[(j, i)];
@@ -253,12 +293,12 @@ impl Present for Navigator {
                 cell.style = (Style::fg(color::NAV_FG) + Style::bg(color::NAV_BG)).into();
             }
         }
-
+    
         let rel_path = self.path.strip_prefix(&self.root_path).unwrap_or(&self.path);
         let mut components = rel_path.components();
-
+    
         let mut alt = true;
-        
+            
         let mut prev_margin = margin + 2;
         let mut next_dir = Ok(&self.root_dir);
         while let Ok(dir) = next_dir {
@@ -312,7 +352,7 @@ impl Present for Navigator {
             prev_margin = next_margin + 1;
             alt ^= true;
         }
-
+    
         if let Err(Some((_, doc))) = next_dir {
             match doc {
                 FileDocument::Text(doc_key) => {
@@ -326,6 +366,19 @@ impl Present for Navigator {
             }
         }
 
+        Ok(())
+    }
+}
+
+impl Present for Navigator {
+    fn presenter(&self) -> &Presenter { &self.presenter }
+    fn bg_color(&self) -> Color { color::NAV_DEEP_BG }
+
+    fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
+        self.main_draw(canvas.reborrow())?;
+        if let Some(name) = &self.name_box {
+            _ = canvas.at((canvas.height() / 2, canvas.width() / 2)).write(name, Style::fg(color::FG) + Style::bg(color::BG));
+        }
         Ok(())
     }
 }

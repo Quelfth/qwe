@@ -1,3 +1,4 @@
+#![allow(unused)]
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
 use strum::EnumCount;
 

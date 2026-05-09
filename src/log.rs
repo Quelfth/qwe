@@ -6,7 +6,7 @@ use crate::lsp::channel::{EditorToLspMessage, LspToEditorMessage};
 
 static LOG: AppendOnlyVec<LogEntry> = AppendOnlyVec::new();
 
-pub macro log($log: expr) {
+pub macro log($log: expr) {{
     let log = &$log;
     LOG.push(LogEntry {
         category: Log::category(log),
@@ -14,7 +14,11 @@ pub macro log($log: expr) {
         source: log_source!(),
         message: Log::message(log),
         details: Log::details(log),
-    })
+    });
+}}
+
+pub macro log_err($result: expr) {
+    $result.map_err(|e| log!(e))
 }
 
 pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
@@ -25,6 +29,7 @@ pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
 pub enum LogCategory {
     EditorToLspMessage,
     LspToEditorMessage,
+    LspError,
 }
 
 #[derive(Debug)]
@@ -115,4 +120,12 @@ impl Log for LspToEditorMessage {
     fn details(&self) -> String {
         String::new()
     }
+}
+
+impl Log for async_lsp::Error {
+    fn category(&self) -> LogCategory { LogCategory::LspError }
+
+    fn message(&self) -> String { self.to_string() }
+
+    fn details(&self) -> String { String::new() }
 }
