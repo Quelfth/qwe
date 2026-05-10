@@ -228,3 +228,15 @@ pub fn word_splits(word: RopeSlice<'_>) -> impl Iterator<Item = Range<Ix<Byte>>>
 
     return [Ix::new(0)..word.byte_len()].into_iter();
 }
+
+
+pub fn completion_prefix_len(mut completion: &str, text: &RopeSlice<'_>) -> Ix<Byte> {
+    loop {
+        let Some(prefix) = text.byte_slice(text.byte_len() - Ix::new(completion.len())..) else { continue };
+        if prefix == *completion { break }
+        let Some((index, _)) = completion.char_indices().next_back() else { break };
+        completion = &completion[..index];
+    }
+
+    Ix::new(completion.len())
+}

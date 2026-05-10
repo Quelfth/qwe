@@ -4,11 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{CompletionItem, CompletionItemKind};
 
 use crate::{
-    color,
-    draw::screen::Canvas,
-    editor::{Editor, gadget::Gadget},
-    grapheme::GraphemeExt,
-    style::Style,
+    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, ix::{Byte, Ix}, rope::RopeSlice, style::Style, util::completion_prefix_len
 };
 
 pub enum CompletionKind {
@@ -95,8 +91,15 @@ pub struct Completer {
 }
 
 impl Completer {
-    pub fn new(mut items: Vec<CompletionItem>) -> Self {
-        items.sort_unstable_by(|a, b| a.sort_text.cmp(&b.sort_text));
+    pub fn new(mut items: Vec<CompletionItem>, text_before: Option<RopeSlice<'_>>) -> Self {
+        fn prefix_len(e: &CompletionItem, before: &RopeSlice<'_>) -> Ix<Byte> {
+            completion_prefix_len(e.filter_text.as_deref().unwrap_or(&e.label), &before)
+        }
+        if let Some(before) = text_before {
+            let max_prefix_len = items.iter().map(|e| prefix_len(e, &before)).max().unwrap_or_default();
+            items.retain(|e| prefix_len(e, &before) == max_prefix_len);
+        }
+        items.sort_unstable_by(|a, b| a.sort_text.as_deref().unwrap_or(&a.label).cmp(b.sort_text.as_deref().unwrap_or(&b.label)));
         let selected = items
             .iter()
             .enumerate()
@@ -112,11 +115,10 @@ impl Completer {
 
 impl Gadget for Completer {
     fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
-        macro_rules! xx {
-            ($($tokens: tt)*) => {
-                Some(Box::new($($tokens)*))
-            };
+        macro xx($($tokens: tt)*) {
+            Some(Box::new($($tokens)*))
         }
+        
         match event {
             KeyEvent {
                 code: KeyCode::Char(_),

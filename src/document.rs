@@ -344,6 +344,11 @@ impl Document {
         &self.text
     }
 
+    pub fn text_before_main_cursor(&self) -> Option<RopeSlice<'_>> {
+        let pos = self.text.byte_pos_of_pos(self.main_cursor_pos()?).ok()?;
+        self.text.byte_slice(..pos)
+    }
+
     pub fn lines_to(&self, height: Ix<Line>) -> impl Iterator<Item = RopeSlice<'_>> {
         self.text()
             .lines()

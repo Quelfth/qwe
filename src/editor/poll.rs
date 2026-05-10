@@ -89,7 +89,7 @@ impl AppState for Editor {
                         self.draw()?;
                     }
                     Completion { items } => {
-                        self.gadget = Some(Box::new(Completer::new(items)));
+                        self.gadget = Some(Box::new(Completer::new(items, self.doc.text_before_main_cursor())));
                         self.draw()?;
                     }
                     Goto { locations } => match &*locations {
