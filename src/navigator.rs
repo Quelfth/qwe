@@ -1,6 +1,6 @@
 use std::{ffi::OsStr, fs, io, path::{self, Path, PathBuf}, sync::Arc};
 
-use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
+use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
 
 use crossterm::{event::{KeyCode, KeyEvent}, style::Color};
 use directory::Directory;
@@ -24,7 +24,26 @@ pub struct Navigator {
     lsp: Option<LspContext>,
     presenter: Presenter,
 
-    name_box: Option<String>,
+    name_box: Option<NameBox>,
+}
+
+pub struct NameBox {
+    effect: NameBoxEffect,
+    name: String,
+}
+
+impl NameBox {
+    pub fn new_new() -> Self {
+        Self { effect: NameBoxEffect::New, name: String::new() }
+    }
+    pub fn new_rename() -> Self {
+        Self { effect: NameBoxEffect::Rename, name: String::new() }
+    }
+}
+
+pub enum NameBoxEffect {
+    New,
+    Rename,
 }
 
 impl Navigator {
@@ -90,7 +109,9 @@ impl Navigator {
 
     fn parent_dir(&self) -> &Directory {
         let mut dir = &self.root_dir;
-        for component in self.rel_path().components().collect::<Vec<_>>() {
+        let mut components = self.rel_path().components().peekable();
+        while let Some(component) = components.next() {
+            if components.peek().is_none() { break }
             if let Some(Entry::Directory(next)) = dir.get(component.as_os_str()) {
                 dir = next;
             }
@@ -123,6 +144,7 @@ impl Navigator {
                 Unbounded,
                 Excluded(self.path.file_name().unwrap()),
             )).next_back()?;
+        log!(DebugLog(self.path.file_name()));
     
         let parent = self.path.parent()?;
         self.path = parent.join(next.0);
@@ -150,6 +172,23 @@ impl Navigator {
         if self.navigate_up().is_some() { return }
         if self.navigate_down().is_some() { return }
         self.navigate_out();
+    }
+
+    pub fn delete_empty(&mut self) {
+        let Ok(metadata) = fs::symlink_metadata(&self.path) else { return };
+        if metadata.is_dir() {
+            if fs::remove_dir(&self.path).is_ok() {
+                self.navigate_anywhere();
+                self.reload();
+            }
+        } else if metadata.is_file() {
+            if metadata.len() == 0 {
+                if fs::remove_file(&self.path).is_ok() {
+                    self.navigate_anywhere();
+                    self.reload();
+                }
+            }
+        }
     }
 
     pub fn open_selected(&mut self) {
@@ -232,19 +271,30 @@ impl AppState for Navigator {
     }
 
     fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> {
-        if let Some(name) = &mut self.name_box {
+        if let Some(NameBox { name, .. }) = &mut self.name_box {
             match event {
                 InputEvent::Event(e) => match e {
                     KeyEvent { code: KeyCode::Esc, .. } => {self.name_box = None; self.update_and_draw()?},
                     KeyEvent { code: KeyCode::Backspace, .. } => {name.pop(); self.update_and_draw()?}
                     KeyEvent { code: KeyCode::Char(c), .. } => {name.push(c); self.update_and_draw()?}
                     KeyEvent { code: KeyCode::Enter, .. } => {
-                        let mut name = self.name_box.take().unwrap();
-                        if let Some(last) = name.chars().next_back() && path::is_separator(last) {
-                            name.pop();
-                            _ = fs::create_dir(self.path.join(name));
-                        } else {
-                            drop(fs::File::create_new(self.path.join(name)));
+                        let NameBox { effect, mut name } = self.name_box.take().unwrap();
+                        match effect {
+                            NameBoxEffect::New => if let Some(last) = name.chars().next_back() && path::is_separator(last) {
+                                name.pop();
+                                if fs::create_dir(self.path.join(&name)).is_ok() {
+                                    self.path = self.path.join(name);
+                                }
+                            } else {
+                                if fs::File::create_new(self.path.join(&name)).map(drop).is_ok() {
+                                    self.path = self.path.join(name);
+                                }
+                            },
+                            NameBoxEffect::Rename => {
+                                let mut path = self.path.clone();
+                                path.set_file_name(name);
+                                _ = fs::rename(&self.path, path);
+                            }
                         }
                         self.reload();
                         self.update_and_draw()?;
@@ -261,7 +311,10 @@ impl AppState for Navigator {
                 KeyEvent { code: KeyCode::Char('k'), .. } => {self.navigate_up(); self.update_and_draw()?}
                 KeyEvent { code: KeyCode::Char('h'), .. } => {self.navigate_out(); self.update_and_draw()?}
                 KeyEvent { code: KeyCode::Char('l'), .. } => {self.navigate_in(); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('n'), .. } => {self.name_box = Some(Default::default()); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('i'), .. } => {self.name_box = Some(NameBox::new_new()); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('a'), .. } => {self.navigate_out(); self.name_box = Some(NameBox::new_new()); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('@'), .. } => {self.name_box = Some(NameBox::new_rename()); self.update_and_draw()?}
+                KeyEvent { code: KeyCode::Char('X'), .. } => {self.delete_empty(); self.update_and_draw()?}
                 _ => (),
             },
             InputEvent::Key(_) => todo!(),
@@ -376,7 +429,7 @@ impl Present for Navigator {
 
     fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
         self.main_draw(canvas.reborrow())?;
-        if let Some(name) = &self.name_box {
+        if let Some(NameBox { name, .. }) = &self.name_box {
             _ = canvas.at((canvas.height() / 2, canvas.width() / 2)).write(name, Style::fg(color::FG) + Style::bg(color::BG));
         }
         Ok(())

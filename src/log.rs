@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Result};
+use std::fmt::{Debug, Display, Formatter, Result};
 
 use append_only_vec::AppendOnlyVec;
 
@@ -25,8 +25,11 @@ pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
     LOG.iter().rev()
 }
 
+pub struct DebugLog<T>(pub T);
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogCategory {
+    Debug,
     EditorToLspMessage,
     LspToEditorMessage,
     LspError,
@@ -126,6 +129,16 @@ impl Log for async_lsp::Error {
     fn category(&self) -> LogCategory { LogCategory::LspError }
 
     fn message(&self) -> String { self.to_string() }
+
+    fn details(&self) -> String { String::new() }
+}
+
+impl<T: Debug> Log for DebugLog<T> {
+    fn category(&self) -> LogCategory { LogCategory::Debug }
+
+    fn message(&self) -> String {
+        format!("{:?}", self.0)
+    }
 
     fn details(&self) -> String { String::new() }
 }

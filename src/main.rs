@@ -262,18 +262,17 @@ fn run(file: FirstDoc, pos: Option<Pos>) -> io::Result<()> {
                         modifiers: KeyModifiers::CONTROL,
                         kind: KeyEventKind::Press,
                         ..
-                    } if let State::Editor(editor) = state => {
-                        state = State::Navigator(editor.into_navigator());
-                        state.draw()?;
-                    },
-                    KeyEvent {
-                        code: KeyCode::Char('e'),
-                        modifiers: KeyModifiers::CONTROL,
-                        kind: KeyEventKind::Press,
-                        ..
-                    } if let State::Navigator(navigator) = state => {
-                        state = State::Editor(navigator.into_editor());
-                        state.draw()?;
+                    } => {
+                        match state {
+                            State::Editor(editor) => {
+                                state = State::Navigator(editor.into_navigator());
+                                state.draw()?;
+                            }
+                            State::Navigator(navigator) => {
+                                state = State::Editor(navigator.into_editor());
+                                state.draw()?;
+                            }
+                        }
                     },
                     event => state.on_key_event(InputEvent::Event(event))?,
                 },
