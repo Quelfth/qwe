@@ -10,7 +10,7 @@ use crossterm::{
 use culit::culit;
 
 use crate::{
-    draw::{Range, Rect}, grapheme::Grapheme, ix::{Column, Ix}, style::FlatStyle
+    document::Document, draw::{Range, Rect}, grapheme::Grapheme, ix::{Column, Ix}, style::FlatStyle
 };
 
 #[derive(Default)]
@@ -215,6 +215,14 @@ impl<'s> Canvas<'s> {
             pos,
         }
     }
+
+    pub fn fill_bg(&mut self, color: Color) {
+        for i in 0..self.height() {
+            for j in 0..self.width() {
+                self[(i, j)] = Cell::new(color);
+            }
+        }
+    }
 }
 
 impl IndexMut<(u16, u16)> for Canvas<'_> {
@@ -251,10 +259,39 @@ pub struct CanvasCursor<'a, 'b> {
 }
 
 pub struct EndOfRow;
+pub struct EndOfCanvas;
 
 impl<'a, 'b> CanvasCursor<'a, 'b> {
+    pub fn canvas_width(&self) -> u16 {
+        self.canvas.width()
+    }
+    
     pub fn blank(&mut self, cols: Ix<Column, u16>) {
         self.pos.1 += cols.inner();
+    }
+
+    pub fn next_line(&mut self) -> Result<(), EndOfCanvas> {
+        let row = self.pos.0 + 1;
+        if row >= self.canvas.height() {
+            Err(EndOfCanvas)
+        } else {
+            self.pos = (row, 0);
+            Ok(())
+        }
+    }
+
+    pub fn wrap_row(&mut self) -> Result<(), EndOfCanvas> {
+        if self.pos.1 >= self.canvas.width() {
+            self.next_line()?;
+        }
+        Ok(())
+    }
+
+    pub fn break_line(&mut self) -> Result<(), EndOfCanvas> {
+        if self.pos.1 != 0 {
+            self.next_line()?;
+        }
+        Ok(())
     }
 
     pub fn write1(&mut self, g: Grapheme, style: impl Into<FlatStyle>) -> Result<(), EndOfRow> {
@@ -290,6 +327,46 @@ impl<'a, 'b> CanvasCursor<'a, 'b> {
         self.write(text, style)?;
         self.write1_background(right, style)?;
 
+        Ok(())
+    }
+
+    pub fn write_wrapping(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>) -> Result<(), EndOfCanvas> {
+        use crate::grapheme::GraphemeExt;
+        let style = style.into();
+        for g in text.as_ref().graphemes() {
+            self.wrap_row()?;
+            _ = self.write1(g, style);
+        }
+        Ok(())
+    }
+    pub fn write_box_wrapping(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>, ends: (Grapheme, Grapheme)) -> Result<(), EndOfCanvas> {
+        let (left, right) = ends;
+        let style = style.into();
+        self.wrap_row()?;
+        _ = self.write1_background(left, style);
+        self.write_wrapping(text, style)?;
+        _ = self.write1_background(right, style);
+
+        Ok(())
+    }
+
+    pub fn draw_document(&mut self, doc: &Document) -> Result<(), EndOfCanvas> {
+        self.break_line()?;
+        let height = doc.text().max_line_number().inner() as u16;
+        let region = self.canvas.region(Rect {
+            rows: Range {
+                start: self.pos.0,
+                end: (self.pos.0 + height).min(self.canvas.height())
+            },
+            cols: Range {
+                start: 0,
+                end: self.canvas.width()
+            },
+        });
+        doc.draw(region);
+        for _ in 0..height {
+            self.next_line()?;
+        }
         Ok(())
     }
 }

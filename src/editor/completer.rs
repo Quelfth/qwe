@@ -4,7 +4,14 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{CompletionItem, CompletionItemKind};
 
 use crate::{
-    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, ix::{Byte, Ix}, rope::RopeSlice, style::Style, util::completion_prefix_len
+    color,
+    draw::screen::Canvas,
+    editor::{Editor, code_actions::{ActionChangeEdit}, gadget::Gadget},
+    grapheme::GraphemeExt,
+    ix::{Byte, Ix},
+    rope::RopeSlice,
+    style::Style,
+    util::completion_prefix_len,
 };
 
 pub enum CompletionKind {
@@ -59,7 +66,12 @@ pub struct CompletionOption {
     label: Arc<str>,
     #[allow(unused)]
     kind: CompletionKind,
-    text: Arc<str>,
+    action: CompletionAction,
+}
+
+enum CompletionAction {
+    Text { text: Arc<str> },
+    Action { edits: Vec<ActionChangeEdit> },
 }
 
 impl CompletionOption {
@@ -68,6 +80,7 @@ impl CompletionOption {
             label,
             kind,
             insert_text,
+            text_edit,
             ..
         } = item;
 
@@ -78,7 +91,11 @@ impl CompletionOption {
         };
 
         Self {
-            text: or_label(insert_text),
+            action: if let Some(edit) = text_edit {
+                CompletionAction::Action { edits: vec![ActionChangeEdit::from_completion_edit(edit)] }
+            } else {
+                CompletionAction::Text { text: or_label(insert_text) }
+            },
             label,
             kind: kind.map(|k| k.into()).unwrap_or(CompletionKind::Other),
         }
@@ -115,11 +132,36 @@ impl Completer {
 
 impl Gadget for Completer {
     fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
-        macro xx($($tokens: tt)*) {
-            Some(Box::new($($tokens)*))
+        macro xx($arg: expr) {
+            Some(Box::new($arg))
         }
         
         match event {
+            KeyEvent {
+                code: KeyCode::Enter | KeyCode::Char(' '),
+                kind: KeyEventKind::Press,
+                ..
+            } => {
+                match &self.items[self.selected].action {
+                    CompletionAction::Text { text } => {
+                        let text = text.clone();
+                        Some(Box::new(move |e| {
+                            if let Some(pos) = e.doc.main_cursor_pos() {
+                                e.doc.insert_completion(pos, &text);
+                            }
+                            e.close_gadget();
+                        }))
+                    },
+                    CompletionAction::Action { edits } => {
+                        let edits = edits.clone();
+                        Some(Box::new(move |e| {
+                            e.apply_action_change_edits(edits);
+                            e.close_gadget();
+                        }))
+                    },
+                }
+            }
+
             KeyEvent {
                 code: KeyCode::Char(_),
                 modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
@@ -158,21 +200,6 @@ impl Gadget for Completer {
                 xx!(Editor::noop)
             }
 
-            KeyEvent {
-                code: KeyCode::Enter,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
-                let text = self.items[self.selected].text.clone();
-                xx! {
-                    move |e| {
-                        if let Some(pos) = e.doc.main_cursor_pos() {
-                            e.doc.insert_completion(pos, &text);
-                        }
-                        e.close_gadget();
-                    }
-                }
-            }
 
             _ => None,
         }

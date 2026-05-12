@@ -54,6 +54,7 @@ mod lang;
 mod language_server;
 mod log;
 mod lsp;
+mod markdown;
 mod navigator;
 mod pos;
 mod pred;

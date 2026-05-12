@@ -2,41 +2,54 @@ use std::ops::Range;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{
-    CodeAction as LspCodeAction, Command, WorkspaceEdit, Url,
-    TextEdit, DocumentChanges, TextDocumentEdit, OptionalVersionedTextDocumentIdentifier,
-    AnnotatedTextEdit, OneOf, ResourceOp, CreateFile, RenameFile, DeleteFile,
+    AnnotatedTextEdit, CodeAction as LspCodeAction, Command, CompletionTextEdit, CreateFile, DeleteFile, DocumentChanges, InsertReplaceEdit, OneOf, OptionalVersionedTextDocumentIdentifier, RenameFile, ResourceOp, TextDocumentEdit, TextEdit, Url, WorkspaceEdit
 };
 
 use crate::{
     color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, pos::Utf16Pos, style::Style
 };
 
-#[expect(unused)]
-pub enum ActionEdit {
-    Change {
-        uri: Url,
-        range: Range<Utf16Pos>,
-        text: String,
-    },
-    Create {
-        uri: Url,
-    },
-    Delete {
-        uri: Url,
-    },
-    Move {
-        uri: Url,
-        new_uri: Url,
-    },
+#[derive(Clone, Debug)]
+pub struct ActionChangeEdit {
+    pub range: Range<Utf16Pos>,
+    pub text: String,
+}
+
+impl ActionChangeEdit {
+    pub fn from_text_edit(edit: TextEdit) -> Self {
+        let TextEdit { range: lsp_types::Range { start, end }, new_text } = edit;
+        Self {
+            range: Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end),
+            text: new_text,
+        }
+    }
+
+    pub fn from_completion_edit(edit: CompletionTextEdit) -> Self {
+        use CompletionTextEdit::*;
+        let (Edit(TextEdit { range, new_text }) | InsertAndReplace(InsertReplaceEdit{ new_text, replace: range, .. })) = edit;
+        Self::from_text_edit(TextEdit { range, new_text })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct ActionEdit {
+    pub uri: Url,
+    pub effect: ActionEditEffect,
+}
+
+#[derive(Clone, Debug)]
+pub enum ActionEditEffect {
+    Change(ActionChangeEdit),
+    Create,
+    Delete,
+    Move(#[allow(unused)] Url),
 }
 
 impl ActionEdit {
     pub fn from_text_edit(uri: Url, edit: TextEdit) -> Self {
-        let TextEdit { range: lsp_types::Range { start, end }, new_text } = edit;
-        Self::Change {
+        Self {
             uri,
-            range: Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end),
-            text: new_text,
+            effect: ActionEditEffect::Change (ActionChangeEdit::from_text_edit(edit)),
         }
     }
 
@@ -84,13 +97,13 @@ impl ActionEdit {
                                 use ResourceOp::*;
                                 match op {
                                     Create(CreateFile{ uri, .. }) => {
-                                        edits.push(ActionEdit::Create { uri });
+                                        edits.push(ActionEdit { uri, effect: ActionEditEffect::Create });
                                     },
                                     Rename(RenameFile { old_uri, new_uri, .. }) => {
-                                        edits.push(ActionEdit::Move { uri: old_uri, new_uri });
+                                        edits.push(ActionEdit { uri: old_uri, effect: ActionEditEffect::Move(new_uri) });
                                     },
                                     Delete(DeleteFile { uri, .. }) => {
-                                        edits.push(ActionEdit::Delete { uri });
+                                        edits.push(ActionEdit { uri, effect: ActionEditEffect::Delete });
                                     },
                                 }
                             },

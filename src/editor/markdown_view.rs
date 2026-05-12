@@ -1,22 +1,29 @@
 use crate::{
-    color,
-    draw::screen::Canvas,
-    editor::gadget::Gadget,
-    grapheme::{Grapheme, GraphemeExt},
-    style::Style,
+    color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::{Grapheme, GraphemeExt}, markdown::{MdContext, MdCxCache, MdDraw}, style::{FlatStyle, Style}
 };
 
 pub struct MarkdownView {
+    #[allow(unused)]
     scroll: usize,
-    text: String,
+    ast: markdown::mdast::Node,
+    doc_cache: MdCxCache,
 }
 
 impl MarkdownView {
     pub fn new(text: String) -> Self {
+        let ast = markdown::to_mdast(&text, &Default::default()).unwrap();
         Self {
             scroll: 0,
-            text,
+            ast,
+            doc_cache: Default::default(),
         }
+    }
+}
+
+impl MarkdownView {
+    pub fn draw(&self, mut canvas: Canvas<'_>) {
+        canvas.fill_bg(color::MD_BG);
+        _= self.ast.draw(MdContext::new(self.doc_cache.clone()), &mut canvas.at((0, 0)));
     }
 }
 
@@ -33,21 +40,7 @@ impl MarkdownGadget {
 }
 
 impl Gadget for MarkdownGadget {
-
-    fn draw(&self, mut canvas: Canvas<'_>) {
-        let style = (Style::fg(color::MD_FG) + Style::bg(color::MD_BG)).into();
-        for (i, line) in (0..canvas.height()).zip(self.view.text.lines().skip(self.view.scroll)) {
-            let mut js = 0..canvas.width();
-            for (j, g) in js.by_ref().zip(line.graphemes()) {
-                let cell = &mut canvas[(i, j)];
-                cell.grapheme = g;
-                cell.style = style;
-            }
-            for j in js.start - 1..js.end {
-                let cell = &mut canvas[(i, j)];
-                cell.grapheme = Grapheme::SPACE;
-                cell.style = style;
-            }
-        }
+    fn draw(&self, canvas: Canvas<'_>) {
+        self.view.draw(canvas)
     }
 }

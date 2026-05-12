@@ -1,7 +1,9 @@
 use std::{collections::HashSet, path::Path, sync::Arc};
 
+use lsp_types::Url;
+
 use crate::{
-    editor::{Editor, code_actions::ActionEdit, documents::DocKey},
+    editor::{Editor, code_actions::{ActionChangeEdit, ActionEdit, ActionEditEffect}, documents::DocKey},
     lang::Language,
     lsp::channel::{EditorToLspMessage, GotoKind},
     pos::Utf16Pos,
@@ -54,10 +56,21 @@ impl Editor {
         }
     }
 
+    pub fn apply_action_change_edits(&mut self, edits: Vec<ActionChangeEdit>) {
+        self.apply_action_edits(
+            edits.into_iter().map(|e|
+                ActionEdit {
+                    uri: Url::from_file_path(self.filepath.as_ref().unwrap()).unwrap(),
+                    effect: ActionEditEffect::Change(e)
+                }
+            ).collect()
+        )
+    }
+
     pub fn apply_action_edits(&mut self, mut edits: Vec<ActionEdit>) {
         let mut global = false;
         for edit in &edits {
-            let ActionEdit::Change { uri, .. } = edit else {return};
+            let ActionEdit { uri, effect: ActionEditEffect::Change(_) } = edit else {return};
             if uri.scheme() != "file" {return};
             let Ok(path) = uri.to_file_path() else {return};
             if global {continue}
@@ -74,7 +87,7 @@ impl Editor {
         }
 
         edits.sort_by_key(|e| {
-            let ActionEdit::Change{ range, .. } = e else { panic!() };
+            let ActionEdit { effect: ActionEditEffect::Change(ActionChangeEdit { range, .. }), .. } = e else { panic!() };
             range.start
         });
         self.doc.timeline.history.checkpoint();
@@ -82,10 +95,9 @@ impl Editor {
         let mut doc_edited = false;
         let mut bg_docs_edited = HashSet::<DocKey>::new();
         for edit in edits.into_iter().rev() {
-            let ActionEdit::Change {
+            let ActionEdit {
                 uri,
-                range,
-                text,
+                effect: ActionEditEffect::Change(ActionChangeEdit { range, text })
             } = edit else {continue};
             
             let Some(path) = uri_to_canon_path(uri) else {return};
