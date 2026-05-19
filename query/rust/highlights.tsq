@@ -114,7 +114,8 @@
 
 ; Functions
 
-(function_item ["fn" "->" ";"] @o.declare.function)
+"fn" @o.declare.function
+(function_item ["->" ";"] @o.declare.function)
 (function_item body: (_ ["{" "}"] @o.declare.function))
 (parameters ["(" "," ")"] @o.call.function)
 (function_item type_parameters: (type_parameters ["<" "," ">"] @o.call.function))

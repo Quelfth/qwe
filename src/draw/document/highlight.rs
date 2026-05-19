@@ -81,7 +81,13 @@ impl Document {
                 let mut i = range.start;
                 let mut j = i + Ix::new(1);
                 let char_at =
-                    |i| CharClass::of(self.text().byte_slice(i..).unwrap().chars().next().unwrap());
+                    |i| self.text()
+                        .byte_slice(i..)
+                        .unwrap()
+                        .chars()
+                        .next()
+                        .map(CharClass::of)
+                        .unwrap_or(CharClass::Symbol('\0'));
                 let mut last_char = char_at(i);
                 let mut even = false;
                 let zebra_word = |range: Range<Ix<Byte>>, even: &mut bool, hl_scopes: &mut Vec<Highlight>| -> () {

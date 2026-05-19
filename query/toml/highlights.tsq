@@ -1,3 +1,5 @@
+(comment) @comment
+
 (string) @l.string
 (string "\"" @l.string.quote)
 
@@ -11,4 +13,4 @@
 (table ["[" "]"] @o.construct.map)
 (inline_table ["{" "," "}"] @o.construct.map)
 
-(array ["[" "," "]"] @o.construct.sequence)
+(array ["[" "," "]"] @o.sequence)
