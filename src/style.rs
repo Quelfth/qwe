@@ -14,6 +14,7 @@ pub struct FlatStyle {
     pub bold: bool,
     pub under: Option<Under>,
     pub uc: Option<Color>,
+    pub strikethrough: bool,
     pub overline: bool,
     pub ag: u8,
 }
@@ -27,6 +28,7 @@ impl Default for FlatStyle {
             bold: Default::default(),
             under: Default::default(),
             uc: Default::default(),
+            strikethrough: Default::default(),
             overline: Default::default(),
             ag: Default::default(),
         }
@@ -74,6 +76,7 @@ pub struct Style {
     pub bold: Option<bool>,
     pub under: Option<Option<Under>>,
     pub uc: Option<Option<Color>>,
+    pub strikethrough: Option<bool>,
     pub dark: Option<u8>,
     pub ag: Option<u8>,
 }
@@ -116,6 +119,7 @@ impl Add for Style {
             bold: other.bold.or(self.bold),
             under: other.under.or(self.under),
             uc: other.uc.or(self.uc),
+            strikethrough: other.strikethrough.or(self.strikethrough),
             dark: other.dark.or(self.dark),
             ag: other.ag.or(self.ag),
         }
@@ -131,6 +135,7 @@ impl From<Style> for FlatStyle {
             bold,
             under,
             uc,
+            strikethrough,
             dark,
             ag,
         } = value;
@@ -147,6 +152,7 @@ impl From<Style> for FlatStyle {
             bold: bold.unwrap_or(false),
             under: under.flatten(),
             uc: uc.flatten(),
+            strikethrough: strikethrough.unwrap_or(false),
             overline: false,
             ag: ag.unwrap_or(0),
         }
@@ -208,6 +214,16 @@ impl Style {
     pub fn no_under() -> Self {
         Self {
             under: Some(None),
+            ..Default::default()
+        }
+    }
+
+    pub fn strikethrough() -> Self { Self::strikethrough_bool(true) }
+    pub fn not_strikethrough() -> Self { Self::strikethrough_bool(false) }
+
+    pub fn strikethrough_bool(bool: bool) -> Self {
+        Self {
+            strikethrough: Some(bool),
             ..Default::default()
         }
     }

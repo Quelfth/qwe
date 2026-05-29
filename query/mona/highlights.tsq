@@ -1,4 +1,6 @@
 
+(generics ["<" ">"] @x.angle-bracket)
+
 "`" @o.strop
 
 (digits) @l.number
@@ -15,9 +17,13 @@
 
 ["self" "it"] @i.value.receiver
 
-["In" "Out"] @i.type.self
+["Self" "In" "Out" "It"] @i.type.self
 
 ["decl" "impl"] @o.implement
+
+"type" @o.declare.type
+
+(impl_list_item ["{" "," "}"] @o.implement)
 
 (scoped_name "/" @o.scope)
 (scope_symbol ["." "~" "/"] @i.namespace.keyword)
@@ -25,16 +31,22 @@
 (parenthetical ["(" ")"] @o.group)
 
 (function ["{" "}"] @o.declare.function)
-(object "{" @o.call.type.struct [(field_item) (rest_item)] "}" @o.call.type.struct)
+(object "{" @o.call.type.struct ("," @o.call.type.struct)? [(field_item) (rest_item)] ("," @o.call.type.struct)? "}" @o.call.type.struct)
+(object "{" @o.call.type.enum ("," @o.call.type.enum)? (variant_item) ("," @o.call.type.enum)? "}" @o.call.type.enum)
 
 (binary_expression ["+" "-" "*" "/"] @o.arithmetic)
+(binary_expression ["<" ">" "<=" ">=" "!=" "=="] @o.comparison)
+(binary_expression ["!==" "==="] @o.branch.match)
 
 (field_capture_expression ["(" ")"] @o.access)
 (field_capture_expression ["." "="] @o.declare.field)
 (field_capture_expression name: (name (identifier) @i.value.field))
 
+(case ["=>"] @o.branch.case)
+
 (function_item ["fn" "->" "{" "}"] @o.declare.function)
 (function_item !receiver name: (name (identifier) @i.function))
+(function_item !receiver (generics ["<" "," ">"] @o.call))
 
 (variable_binding ":" @o.type)
 (field_expression "." @o.access.field)
@@ -43,6 +55,12 @@
 (variable_statement "=" @o.declare.variable)
 (field_item ["." "="] @o.declare.field)
 (field_item name: (name (identifier) @i.value.field))
+
+(variant_item "|" @o.association.enum)
+(variant_item ["(" ")"] @o.declare.value.variant)
+(variant_item ":" @o.type)
+(variant_item name: (name (identifier) @i.value.variant))
+
 
 (rest_item ".." @o.wildcard)
 
@@ -55,6 +73,7 @@
 (function_item receiver: (_) (simple_parameter ["(" ")"] @o.call.function.method))
 (function_item receiver: (_) (named_parameters ["{" "," "}"] @o.call.function.method))
 (function_item name: (name (identifier) @i.function.method) receiver: (_))
+(function_item generics: (generics ["<" "," ">"] @o.call.function.method) receiver: (_))
 
 (call_expression
     argument: [
@@ -62,3 +81,5 @@
         (object ["{" "}"] @o.call)
     ]
 )
+
+(boolean_type "?" @o.type.error)

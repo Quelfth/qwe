@@ -1,5 +1,5 @@
 use crate::{
-    color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::{Grapheme, GraphemeExt}, markdown::{MdContext, MdCxCache, MdDraw}, style::{FlatStyle, Style}
+    color, draw::screen::Canvas, editor::gadget::Gadget, markdown::{MdContext, MdCxCache, MdDraw},
 };
 
 pub struct MarkdownView {

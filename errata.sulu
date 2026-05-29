@@ -114,6 +114,7 @@ o.template = f.bounds;
 o.tuple = f.tuple;
 o.type = f.type-op;
 o.type.builtin.modifier = d f.builtin-type;
+o.type.error = f.exception;
 o.type.never = f.never;
 o.unknown = f.unknown;
 o.unsafe = f.unsafe;

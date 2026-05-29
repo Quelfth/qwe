@@ -147,7 +147,7 @@
 (subscript_argument_list ["[" "," "]"] @o.sequence)
 (field_expression "->" @o.access.field)
 
-(unary_expression "!" @o.logical)
+(unary_expression ["!" "~"] @o.logical)
 (unary_expression "-" @o.arithmetic)
 
 (binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
@@ -202,6 +202,7 @@
 ([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.namespace @_ (#semantic? @_ Namespace))
 
 ([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.macro @_ (#semantic? @_ Macro))
+([(identifier) (type_identifier) (namespace_identifier) (field_identifier) (primitive_type)] @i.macro.function @_ (#semantic? @_ function-like Macro))
 
 ((identifier) @o.type.cast @_ (#any-of? @_ "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast"))
 (template_function
@@ -211,6 +212,11 @@
 (call_expression
     (template_function name: (identifier) @_ (#any-of? @_ "static_cast" "dynamic_cast" "const_cast" "reinterpret_cast"))
     arguments: (argument_list ["(" "," ")"] @o.type.cast)
+)
+
+(call_expression
+    function: (identifier) @_ (#semantic? @_ function-like Macro)
+    arguments: (argument_list ["(" "," ")"] @o.call.macro.function)
 )
 
 (field_expression

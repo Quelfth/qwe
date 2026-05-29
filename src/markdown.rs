@@ -32,6 +32,7 @@ impl MdContext {
         let mut style = Style::default();
         if italic { style = style + Style::italic() }
         if bold { style = style + Style::bold() }
+        if strikethrough { style = style + Style::strikethrough() }
         style
     }
 }
@@ -56,15 +57,15 @@ impl MdDraw for Node {
             Node::Blockquote(blockquote) => blockquote.draw(cx, cursor)?,
             Node::List(list) => list.draw(cx, cursor)?,
             Node::ListItem(list_item) => list_item.draw(cx, cursor)?,
-            Node::Break(r#break) => (),
+            Node::Break(_) => (),
             Node::Link(link) => link.draw(cx, cursor)?,
             Node::LinkReference(link_reference) => link_reference.draw(cx, cursor)?,
-            Node::Definition(definition) => (),
-            Node::FootnoteDefinition(footnote_definition) => (),
-            Node::FootnoteReference(footnote_reference) => (),
-            Node::Table(table) => (),
-            Node::TableRow(table_row) => (),
-            Node::TableCell(table_cell) => (),
+            Node::Definition(_) => (),
+            Node::FootnoteDefinition(_) => (),
+            Node::FootnoteReference(_) => (),
+            Node::Table(_) => (),
+            Node::TableRow(_) => (),
+            Node::TableCell(_) => (),
             _ => (),
         }
         Ok(())
