@@ -1,4 +1,4 @@
-use std::{cmp::Ordering::*, collections::HashMap, iter, mem, ops::Range};
+use std::{cmp::Ordering::*, collections::HashMap, iter, mem, range::Range};
 
 use crate::{
     document::{CursorChange, CursorChangeBias},
@@ -106,6 +106,7 @@ impl Cursor for SelectCursor {
                     sel.start.column..text.columns_in_line(sel.start.line).max(sel.start.column),
                 );
                 let indent = (sel.start.line..=sel.end.line)
+                    .into_iter()
                     .map(|l| text.indent_on_line(l))
                     .min()
                     .unwrap_or(Ix::new(0));
@@ -254,6 +255,7 @@ impl SelectCursor {
             };
         }
         let indent = (start.line..=end.line)
+            .into_iter()
             .flat_map(|i| text.line_has_content(i).then(|| text.indent_on_line(i)))
             .min()
             .unwrap_or(Ix::new(0))
@@ -266,6 +268,7 @@ impl SelectCursor {
                 end: text.columns_in_line(start.line),
             },
             other_lines: (start.line + Ix::new(1)..end.line)
+                .into_iter()
                 .map(|i| RangeCursorLine {
                     start: indent,
                     end: indent.max(text.columns_in_line(i)),
@@ -376,7 +379,7 @@ impl SelectCursor {
     }
 
     pub fn lines_ix(&self) -> impl Iterator<Item = (Ix<Line>, RangeCursorLine)> {
-        (self.line..).zip(self.lines())
+        (self.line..).into_iter().zip(self.lines())
     }
 
     fn lines_mut(&mut self) -> impl Iterator<Item = &mut RangeCursorLine> {
@@ -398,7 +401,7 @@ impl SelectCursor {
 
     pub fn text_select(&mut self, text: &Rope) {
         let line_range = self.line_range();
-        let indent = line_range.clone().map(|line| text.context_indent_inc(line)).min().unwrap_or(Ix::ZERO);
+        let indent = line_range.into_iter().map(|line| text.context_indent_inc(line)).min().unwrap_or(Ix::ZERO);
         if self.first_line.start < indent {
             self.first_line.start = indent;
         }
@@ -500,6 +503,7 @@ impl SelectCursor {
         let first_line_ix = self.line;
         let num_other_lines = Ix::new(self.other_lines.len());
         (first_line_ix..)
+            .into_iter()
             .zip(self.lines_mut())
             .take((rows + Ix::new(1)).min(num_other_lines).inner())
             .for_each(|(i, l)| l.right_align(text.columns_in_line(i), i != first_line_ix))
@@ -517,6 +521,7 @@ impl SelectCursor {
         let left_align = (line_lix == 0).then(|| text.indent_on_line(self.line));
         self.other_lines.extend(iter::repeat_n(line, rows));
         (line_ix..)
+            .into_iter()
             .zip(self.lines_mut().skip(line_lix).take(rows))
             .for_each(|(i, l)| {
                 l.right_align(text.columns_in_line(i), i != first_line_ix);

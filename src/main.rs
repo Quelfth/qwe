@@ -3,6 +3,8 @@
 #![feature(try_blocks)]
 #![feature(step_trait)]
 #![feature(decl_macro)]
+#![feature(new_range)]
+
 #![allow(clippy::module_inception)]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::large_enum_variant)]
@@ -91,7 +93,7 @@ struct Args {
     #[arg(
         short,
         long,
-        num_args(0..),
+        num_args(std::ops::RangeFrom::from(0..)),
         conflicts_with("path"),
     )]
     find: Option<Vec<String>>,
@@ -305,4 +307,3 @@ pub trait AppState {
 
     fn on_paste(&mut self, #[expect(unused)] text: String) -> io::Result<()> { Ok(()) }
 }
-

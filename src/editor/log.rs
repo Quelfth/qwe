@@ -63,7 +63,7 @@ impl Gadget for LogViewer {
                 if !self.categories.contains(&log.category) {continue}
 
                 for line in log.message.lines().rev() {
-                    for (i, g) in (0..canvas.width()).zip(line.graphemes()) {
+                    for (i, g) in (0..canvas.width()).into_iter().zip(line.graphemes()) {
                         let cell = &mut canvas[(y, i)];
                         cell.grapheme = g;
                         cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into();
@@ -71,7 +71,7 @@ impl Gadget for LogViewer {
                     y = y.checked_sub(1)?;
                 }
                 let statusline = format!("    {}    {}", log.time, log.source);
-                for (i, g) in (0..canvas.width()).zip(statusline.graphemes()) {
+                for (i, g) in (0..canvas.width()).into_iter().zip(statusline.graphemes()) {
                     let cell = &mut canvas[(y, i)];
                     cell.grapheme = g;
                     cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into();

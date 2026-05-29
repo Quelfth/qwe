@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::range::Range;
 
 use crate::{
     incremental_select::fragment::{CharClass, FragmentKind},

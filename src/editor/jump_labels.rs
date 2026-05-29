@@ -63,7 +63,7 @@ impl Gadget for JumpLabels {
     fn draw(&self, mut canvas: Canvas<'_>) {
         for (pos, label) in self.labels() {
             if pos.line < self.scroll || pos.line > self.scroll + Ix::new(canvas.height() as usize) { continue }
-            for (i, g) in (0..).zip(label.graphemes()) {
+            for (i, g) in (0..).into_iter().zip(label.graphemes()) {
                 if pos.column < self.horizontal_scroll || pos.column + Ix::new(i as _) > self.horizontal_scroll + Ix::new(canvas.width() as usize) {continue}
                 let cell = &mut canvas[(
                     (pos.line - self.scroll).inner() as u16, 
@@ -108,7 +108,7 @@ impl JumpLabels {
     pub fn generate(doc: &Document, lines: Ix<Line>) -> Self {
         let first_line = doc.scroll;
         let poss: Vec<Pos> = gen {
-            for (i, line) in (first_line..).zip(doc.lines_to(lines)) {
+            for (i, line) in (first_line..).into_iter().zip(doc.lines_to(lines)) {
                 let mut graphemes = line.graphemes().peekable();
                 let mut j = Ix::new(0);
                 while let Some(grapheme) = graphemes.next() {

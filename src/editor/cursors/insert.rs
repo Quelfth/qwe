@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, ops::Range};
+use std::{cmp::Ordering, range::Range};
 
 use crate::{
     constants::TAB_WIDTH,

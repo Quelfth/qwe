@@ -1,4 +1,7 @@
-use std::iter;
+use std::{
+    iter,
+    range::Range,
+};
 
 use auto_enums::auto_enum;
 use crossterm::style::Color;
@@ -8,8 +11,6 @@ use crate::{
     editor::cursors::{CursorIndex, CursorState, select::RangeCursorLine},
     ix::{Column, Ix, Line},
 };
-
-use super::Range;
 
 #[derive(Copy, Clone)]
 pub struct CursorRange {
@@ -26,11 +27,11 @@ impl CursorRange {
         [
             (pos > Ix::new(0)).then(|| Self {
                 r#type: left,
-                range: Some(Range::one(pos - Ix::new(1))),
+                range: Some(pos - Ix::new(1)..pos),
             }),
             Some(Self {
                 r#type: right,
-                range: Some(Range::one(pos)),
+                range: Some(pos..pos + Ix::new(1)),
             }),
         ]
         .into_iter()

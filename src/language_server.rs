@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Range, sync::Arc};
+use std::{collections::HashMap, range::Range, sync::Arc};
 
 use convert_case::{Case, Casing};
 use lsp_types::{
@@ -124,7 +124,7 @@ impl LanguageServer {
                 let legend = self.semtok_legend.as_ref().unwrap();
 
                 let r#type = legend.types[token_type as usize].clone();
-                let mods = (0..32)
+                let mods = (0..32).into_iter()
                     .filter(|i| (token_modifiers_bitset & 1 << i) != 0)
                     .map(|i| legend.mods[i as usize].clone())
                     .collect::<Vec<_>>();

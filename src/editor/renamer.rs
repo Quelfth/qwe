@@ -69,7 +69,7 @@ impl Gadget for Renamer {
     }
 
     fn draw(&self, mut canvas: Canvas<'_>) {
-        for (i, g) in (0..canvas.width()).zip(self.name.graphemes()) {
+        for (i, g) in (0..canvas.width()).into_iter().zip(self.name.graphemes()) {
             let cell = &mut canvas[(0, i)];
             cell.grapheme = g;
             cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into()

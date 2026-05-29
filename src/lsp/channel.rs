@@ -1,5 +1,5 @@
 use std::{
-    ops::Range, path::Path, sync::{Arc, mpsc::Sender}
+    range::Range, path::Path, sync::{Arc, mpsc::Sender}
 };
 
 use lsp_types::{

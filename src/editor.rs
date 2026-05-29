@@ -1,6 +1,6 @@
 use std::{
     io, mem,
-    ops::Range,
+    range::Range,
     path::Path,
     sync::{Arc, mpsc::Receiver},
 };

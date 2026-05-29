@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::range::Range;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use resharp::{Match, Regex};
@@ -68,7 +68,7 @@ impl Gadget for Finder {
     }
 
     fn draw(&self, mut canvas: Canvas<'_>) {
-        for (i, g) in (0..canvas.width()).zip(self.regex.graphemes()) {
+        for (i, g) in (0..canvas.width()).into_iter().zip(self.regex.graphemes()) {
             let cell = &mut canvas[(0, i)];
             cell.grapheme = g;
             cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into()

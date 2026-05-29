@@ -1,7 +1,8 @@
 use std::{
     cmp::Ordering,
     iter, mem,
-    ops::{Index, IndexMut, Range},
+    range::Range,
+    ops::{Index, IndexMut},
 };
 
 use crate::{
@@ -192,7 +193,7 @@ impl<T> CursorSet<T> {
     }
 
     pub fn indices(&self) -> impl Iterator<Item = CursorIndex> + use<T> {
-        iter::once(CursorIndex::Main).chain((0..self.others.len()).map(CursorIndex::Other))
+        iter::once(CursorIndex::Main).chain((0..self.others.len()).into_iter().map(CursorIndex::Other))
     }
 }
 

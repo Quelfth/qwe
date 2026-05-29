@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::range::Range;
 
 use tree_sitter::{QueryCapture, QueryCursor};
 
@@ -65,7 +65,7 @@ impl Document {
             let hl_query = lang.query::<Highlights>();
             for QueryCapture { node, index } in self.query_captures(qc!(), &cx, hl_query) {
                 let name = hl_query.capture_names()[*index as usize];
-                let range = node.byte_range().map_bounds(Ix::new);
+                let range = Range::from(node.byte_range()).map_bounds(Ix::new);
                 highlight_scopes.push(Highlight {
                     scope: Scope::from_capture_name(name),
                     range,
@@ -77,7 +77,7 @@ impl Document {
                 if name != "zebra" {
                     continue;
                 }
-                let range = node.byte_range().map_bounds(Ix::<Byte>::new);
+                let range = Range::from(node.byte_range()).map_bounds(Ix::<Byte>::new);
                 let mut i = range.start;
                 let mut j = i + Ix::new(1);
                 let char_at =

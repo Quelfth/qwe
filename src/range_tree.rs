@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeMap,
     iter::{self, Sum},
-    ops::Range,
+    range::Range,
 };
 
 use auto_enums::auto_enum;

@@ -1,5 +1,5 @@
 use std::iter;
-use std::ops::Range;
+use std::range::Range;
 use std::time::Instant;
 
 use mutx::Mutex;

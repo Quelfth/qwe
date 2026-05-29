@@ -243,18 +243,18 @@ impl Gadget for Picker {
     }
 
     fn draw(&self, mut canvas: Canvas<'_>) {
-        for (i, g) in (0..canvas.width()).zip(self.term.graphemes()) {
+        for (i, g) in (0..canvas.width()).into_iter().zip(self.term.graphemes()) {
             let cell = &mut canvas[(0, i)];
             cell.grapheme = g;
             cell.style = (Style::fg(color::FG) + Style::bg(color::BG)).into()
         }
-        for (j, pick) in (2..canvas.height()).zip(
+        for (j, pick) in (2..canvas.height()).into_iter().zip(
             self.picks
                 .iter()
                 .skip(self.scroll)
                 .filter(|p| self.term.split_whitespace().all(|t| p.string.contains(t))),
         ) {
-            for (i, g) in (0..canvas.width()).zip(pick.string.graphemes()) {
+            for (i, g) in (0..canvas.width()).into_iter().zip(pick.string.graphemes()) {
                 let cell = &mut canvas[(j, i)];
                 cell.grapheme = g;
                 let fg = match pick.style {

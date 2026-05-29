@@ -1,4 +1,7 @@
-use std::ops::{Range, RangeBounds};
+use std::{
+    range::Range,
+    ops::RangeBounds,
+};
 
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
@@ -425,7 +428,7 @@ impl Rope {
     }
 
     pub fn graphemes_to_bytes(&self, graphemes: Ix<ix::Grapheme>) -> Option<Ix<Byte>> {
-        for (g, (b, _)) in (Ix::new(0)..).zip(self.graphemes_with_bytes()) {
+        for (g, (b, _)) in (Ix::new(0)..).into_iter().zip(self.graphemes_with_bytes()) {
             if graphemes == g {
                 return Some(b);
             }

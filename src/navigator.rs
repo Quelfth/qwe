@@ -1,6 +1,13 @@
-use std::{ffi::OsStr, fs, io, path::{self, Path, PathBuf}, sync::Arc};
+use std::{
+    ffi::OsStr,
+    fs,
+    io,
+    path::{self, Path, PathBuf},
+    range::Range,
+    sync::Arc,
+};
 
-use crate::{AppState, PathedFile, color, document::Document, draw::{Range, Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
+use crate::{AppState, PathedFile, color, document::Document, draw::{Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
 
 use crossterm::{event::{KeyCode, KeyEvent}, style::Color};
 use directory::Directory;
@@ -329,7 +336,7 @@ impl Navigator {
         let root_text = root_pane.text();
     
         let mut margin = 0;
-        for (i, g) in (0..canvas.width()).zip(root_text.graphemes()) {
+        for (i, g) in (0..canvas.width()).into_iter().zip(root_text.graphemes()) {
             let cell = &mut canvas[(0, i)];
             cell.grapheme = g;
             cell.style = (Style::fg(color::NAV_FG) + Style::bg(color::NAV_BG_ALT)).into();
@@ -378,11 +385,11 @@ impl Navigator {
             let entries = dir.display_entries().collect::<Vec<_>>();
             let width = entries.iter().map(|(_, e)| e.graphemes().count()).max().unwrap_or_default() as u16;
             let next_margin = prev_margin + width;
-            let mut rows = 0..canvas.height();
+            let mut rows = (0..canvas.height()).into_iter();
             for (j, (n, e)) in entries.into_iter().zip(rows.by_ref()).map(flip) {
                 let selected = matches!(next_component, Some(component) if component.as_os_str() == n);
                 let bg = decide_bg(alt != selected);
-                let mut cols = prev_margin..next_margin;
+                let mut cols = (prev_margin..next_margin).into_iter();
                 for (i, g) in e.graphemes().zip(cols.by_ref()).map(flip) {
                     let cell = &mut canvas[(j, i)];
                     cell.grapheme = g;

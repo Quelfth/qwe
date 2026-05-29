@@ -1,5 +1,9 @@
 use std::{
-    borrow::Borrow, fmt::Write, ops::{Range, RangeFrom, RangeFull, RangeTo}, path::PathBuf
+    borrow::Borrow,
+    fmt::Write,
+    range::{Range, RangeFrom},
+    ops::{RangeFull, RangeTo},
+    path::PathBuf,
 };
 
 use auto_enums::auto_enum;
@@ -51,7 +55,7 @@ fn format_node(node: Node<'_>, indent: usize, field_name: Option<&str>, out: &mu
     out.push('\n');
 
     let mut cursor = node.walk();
-    for (i, child) in (0..).zip(node.children(&mut cursor)) {
+    for (i, child) in (0..).into_iter().zip(node.children(&mut cursor)) {
         let field_name = node.field_name_for_child(i);
         format_node(child, indent + 1, field_name, out);
         out.push('\n');
@@ -130,6 +134,14 @@ pub impl<T: Ord + Copy> RangeOverlap for Range<T> {
     fn overlaps(&self, other: impl Borrow<Self>) -> bool {
         let other = other.borrow();
         self.start.max(other.start) <= self.end.min(other.end)
+    }
+}
+
+#[extension_trait]
+pub impl<T: std::ops::Sub> RangeLen for Range<T> {
+    type Output = <T as std::ops::Sub>::Output;
+    fn len(self) -> Self::Output {
+        self.end - self.start
     }
 }
 

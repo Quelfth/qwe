@@ -1,4 +1,4 @@
-use std::{ops::Range, str::FromStr};
+use std::{range::Range, str::FromStr};
 
 use crate::{
     ix::{Column, Ix, Line, Utf16}

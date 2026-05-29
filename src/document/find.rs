@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::range::Range;
 
 use crate::{
     document::Document,
@@ -53,7 +53,7 @@ impl Document {
                 .collect(),
             CursorState::LineSelect(c) => c
                 .iter()
-                .flat_map(|c| (c.line..c.line + c.height).flat_map(|l| self.line_haystack(l)))
+                .flat_map(|c| (c.line..c.line + c.height).into_iter().flat_map(|l| self.line_haystack(l)))
                 .collect(),
         };
         if haystacks.is_empty() {

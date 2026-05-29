@@ -1,60 +1,20 @@
 use std::{
     io::{self},
+    range::Range,
     ops::Sub,
 };
 
 use crate::{
-    draw::{cursor::CursorRange, screen::{Canvas}}, editor::{Editor, gadget::ScreenRegion}, ix::Ix, presenter::{Present, Presenter}
+    draw::{cursor::CursorRange, screen::{Canvas}},
+    editor::{Editor, gadget::ScreenRegion},
+    presenter::{Present, Presenter},
+    util::RangeLen,
 };
 
 mod cursor;
 pub mod document;
 pub mod jump_labels;
 pub mod screen;
-
-#[derive(Copy, Clone)]
-pub struct Range<T> {
-    pub start: T,
-    pub end: T,
-}
-
-impl<T> Range<T> {
-    fn len(self) -> <T as Sub>::Output
-    where
-        T: Sub,
-    {
-        self.end - self.start
-    }
-
-    fn contains(self, pos: T) -> bool
-    where
-        T: PartialOrd,
-    {
-        pos >= self.start && pos < self.end
-    }
-
-    fn new(range: std::ops::Range<T>) -> Self {
-        Self {
-            start: range.start,
-            end: range.end,
-        }
-    }
-}
-
-impl<T> From<std::ops::Range<T>> for Range<T> {
-    fn from(value: std::ops::Range<T>) -> Self {
-        Self::new(value)
-    }
-}
-
-impl<U> Range<Ix<U>> {
-    fn one(pos: Ix<U>) -> Self {
-        Self {
-            start: pos,
-            end: pos + Ix::new(1),
-        }
-    }
-}
 
 #[derive(Copy, Clone)]
 pub struct Rect<T> {

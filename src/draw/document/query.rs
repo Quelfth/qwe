@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter, ops::Range};
+use std::{collections::HashMap, iter, range::Range};
 
 use tree_sitter::{Query, QueryCapture, QueryCursor, QueryMatch, StreamingIterator};
 
@@ -78,7 +78,7 @@ impl Document {
                             Predicate::Semantic { capture, predicate } => {
                                 let node = capture_nodes[&capture];
                                 if !semtoks
-                                    .overlapping(node.byte_range().map_bounds(Ix::new))
+                                    .overlapping(Range::from(node.byte_range()).map_bounds(Ix::new))
                                     .any(|SemanticToken { r#type, mods }| {
                                         predicate.check(
                                             &iter::once(r#type.clone())

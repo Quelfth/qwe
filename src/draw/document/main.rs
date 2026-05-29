@@ -26,7 +26,7 @@ impl Document {
             |i| {
                 cursors
                     .iter()
-                    .find(|c| c.range.is_none_or(|r| r.contains(i)))
+                    .find(|c| c.range.is_none_or(|r| r.contains(&i)))
                     .map(|c| c.r#type)
                     .map(|k| k.style())
             }
@@ -50,7 +50,7 @@ impl Document {
                 } else {
                     (iter::repeat_n(" ", width).collect(), rgb!(0x100000))
                 };
-                for (j, grapheme) in (0..).zip(nr.graphemes()) {
+                for (j, grapheme) in (0..).into_iter().zip(nr.graphemes()) {
                     canvas[(screen_line_nr, j)] = Cell {
                         grapheme,
                         style: (Style::fg(rgb!(0x604040)) + Style::bg(bg)).into(),
@@ -119,7 +119,7 @@ impl Document {
                     });
 
             if width > len {
-                for (rj, j) in (len..width).enumerate() {
+                for (rj, j) in (len..width).into_iter().enumerate() {
                     let cell = &mut canvas[(i, j)];
                     if let Some(style) = cursor_color(Ix::new((j - gutter_width) as usize) + self.horizontal_scroll) {
                         use CursorStyle::*;

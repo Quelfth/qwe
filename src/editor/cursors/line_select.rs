@@ -1,4 +1,4 @@
-use std::{cmp::Ordering::*, ops::Range};
+use std::{cmp::Ordering::*, range::Range};
 
 use crate::{
     document::CursorChange,
@@ -106,6 +106,7 @@ impl LineCursor {
         let end_line = line + height;
 
         let start = (line..end_line)
+            .into_iter()
             .map(|l| doc.context_indent_inc(l))
             .min()
             .unwrap();
@@ -117,6 +118,7 @@ impl LineCursor {
                 end: doc.context_columns_in_line(line),
             },
             other_lines: (line + Ix::new(1)..end_line)
+                .into_iter()
                 .map(|l| RangeCursorLine {
                     start,
                     end: doc.context_columns_in_line(l),
@@ -176,7 +178,7 @@ impl LineCursor {
     }
 
     pub fn lines(&self) -> impl Iterator<Item = Ix<Line>> {
-        self.line..self.line + self.height
+        (self.line..self.line + self.height).into_iter()
     }
 
     pub fn text_range(&self, text: &Rope) -> Option<Range<Ix<Byte>>> {

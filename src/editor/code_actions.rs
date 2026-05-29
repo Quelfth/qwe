@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::range::Range;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{
@@ -219,13 +219,13 @@ impl Gadget for CodeActionsGadget {
     fn draw(&self, mut canvas: Canvas<'_>) {
         let style = (Style::fg(color::FG) + Style::bg(color::BG)).into();
 
-        for (i, item) in (0..canvas.height()).zip(&self.actions) {
+        for (i, item) in (0..canvas.height()).into_iter().zip(&self.actions) {
             let style = if i == self.selected as u16 {
                 (Style::fg(color::FG) + Style::bg(color::LIT_BG)).into()
             } else {
                 style
             };
-            for (j, g) in (0..canvas.width()).zip(item.title.graphemes()) {
+            for (j, g) in (0..canvas.width()).into_iter().zip(item.title.graphemes()) {
                 let cell = &mut canvas[(i, j)];
                 cell.grapheme = g;
                 cell.style = style;
