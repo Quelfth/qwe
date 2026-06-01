@@ -9,6 +9,7 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::large_enum_variant)]
 #![allow(clippy::blocks_in_conditions)]
+#![allow(clippy::single_match)]
 
 use std::{
     cell::Cell,
@@ -290,11 +291,10 @@ fn run(file: FirstDoc, pos: Option<Pos>) -> io::Result<()> {
         }
         state.poll()?;
     }
-    if let State::Editor(editor) = state {
-        if let Some(cx) = editor.lsp {
+    if let State::Editor(editor) = state
+        && let Some(cx) = editor.lsp {
             cx.tx.send(EditorToLspMessage::Exit).unwrap();
         }
-    }
 
     Ok(())
 }

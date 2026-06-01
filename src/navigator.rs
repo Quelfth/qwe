@@ -68,7 +68,7 @@ impl Navigator {
         let path = path.and_then(|p| p.as_ref().canonicalize().ok()).or_else(|| cwd.clone()).unwrap();
 
         let mut root_path = &*path.canonicalize().unwrap();
-        while home.as_ref().is_none_or(|h| h != &root_path) && cwd.as_ref().is_none_or(|h| h != &root_path) && let Some(parent) = root_path.parent() {
+        while home.as_ref().is_none_or(|h| h != root_path) && cwd.as_ref().is_none_or(|h| h != root_path) && let Some(parent) = root_path.parent() {
             root_path = parent;
         }
         let root_path = root_path.to_owned();
@@ -188,14 +188,12 @@ impl Navigator {
                 self.navigate_anywhere();
                 self.reload();
             }
-        } else if metadata.is_file() {
-            if metadata.len() == 0 {
-                if fs::remove_file(&self.path).is_ok() {
-                    self.navigate_anywhere();
-                    self.reload();
-                }
+        } else if metadata.is_file()
+            && metadata.len() == 0
+            && fs::remove_file(&self.path).is_ok() {
+                self.navigate_anywhere();
+                self.reload();
             }
-        }
     }
 
     pub fn open_selected(&mut self) {

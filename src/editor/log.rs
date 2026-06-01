@@ -58,8 +58,7 @@ impl Gadget for LogViewer {
                 }
                 y = y.checked_sub(2)?;
             }
-            loop {
-                let Some(log) = log.next() else {break};
+            for log in log {
                 if !self.categories.contains(&log.category) {continue}
 
                 for line in log.message.lines().rev() {

@@ -129,7 +129,7 @@ impl CodeAction {
     pub fn from_lsp(action: LspCodeAction) -> Self {
         let LspCodeAction { title, edit, command, .. } = action;
         let edits = edit
-            .map(|edit| ActionEdit::from_workspace_edit(edit))
+            .map(ActionEdit::from_workspace_edit)
             .unwrap_or_default();
         Self {
             title,

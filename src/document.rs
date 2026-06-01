@@ -116,7 +116,7 @@ impl Document {
                     r.end >= range.end && *severity <= d.severity
                 })
             {
-                diagnostic = Some((r.clone(), d.severity, &d.message));
+                diagnostic = Some((r, d.severity, &d.message));
             }
         }
         let (_, s, m) = diagnostic?;
@@ -591,10 +591,10 @@ impl Document {
         let delete_range = byte_pos..byte_pos + delete;
         let deleted = self
             .text
-            .byte_slice(delete_range.clone())
+            .byte_slice(delete_range)
             .unwrap()
             .to_string();
-        self.upkeep_delete(delete_range.clone());
+        self.upkeep_delete(delete_range);
         self.text.delete(delete_range).unwrap();
         self.text.insert(byte_pos, &insert).unwrap();
         let insert_len = Ix::new(insert.len());
@@ -610,8 +610,8 @@ impl Document {
     }
 
     fn upkeep_delete(&mut self, range: Range<Ix<Byte>>) {
-        self.tree_delete(range.clone());
-        self.lsp_delete(range.clone());
+        self.tree_delete(range);
+        self.lsp_delete(range);
         let len = range.end - range.start;
         self.semtoks.edit_delete(range.start, len);
         self.diagnostics.edit_delete(range.start, len);

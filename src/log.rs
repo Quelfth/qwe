@@ -89,17 +89,15 @@ impl Log for EditorToLspMessage {
             EditorToLspMessage::CodeActions { pos, .. } => format!("code actions at {pos:?}"),
             EditorToLspMessage::Rename { pos, .. } => format!("rename at {pos:?}"),
             EditorToLspMessage::CompleteRename { name, .. } => format!("rename to {name:?}"),
-            EditorToLspMessage::Exit => format!("exit"),
+            EditorToLspMessage::Exit => "exit".to_string(),
             EditorToLspMessage::Save { path, .. } => format!("save {path:?}"),
             #[allow(unused)]
-            _ => format!("message type without logging implementation"),
+            _ => "message type without logging implementation".to_string(),
         }
     }
 
     fn details(&self) -> String {
-        match self {
-            _ => format!("{self:?}"),
-        }
+        format!("{self:?}")
     }
 }
 
@@ -111,12 +109,12 @@ impl Log for LspToEditorMessage {
             LspToEditorMessage::NewLsp { lang, .. } => format!("new lsp for {lang:?}"),
             LspToEditorMessage::SemanticTokens { uri, .. } => format!("semantic tokens for {uri}"),
             LspToEditorMessage::Diagnostics { uri, .. } => format!("diagnostics for {uri}"),
-            LspToEditorMessage::Hover { .. } => format!("hover"),
-            LspToEditorMessage::Completion { .. } => format!("completion"),
-            LspToEditorMessage::Goto { .. } => format!("goto"),
-            LspToEditorMessage::CodeActions { .. } => format!("code actions"),
+            LspToEditorMessage::Hover { .. } => "hover".to_string(),
+            LspToEditorMessage::Completion { .. } => "completion".to_string(),
+            LspToEditorMessage::Goto { .. } => "goto".to_string(),
+            LspToEditorMessage::CodeActions { .. } => "code actions".to_string(),
             LspToEditorMessage::PrepareRename { text, .. } => format!("prepare rename from {text:?}"),
-            LspToEditorMessage::Rename { .. } => format!("rename"),
+            LspToEditorMessage::Rename { .. } => "rename".to_string(),
         }
     }
 

@@ -134,13 +134,14 @@ impl Server {
         })
     }
 
-    pub async fn initialize(&mut self) -> async_lsp::Result<InitializeResult> {
+    pub async fn initialize(&mut self, options: Option<serde_json::Value>) -> async_lsp::Result<InitializeResult> {
         self.socket
             .initialize(InitializeParams {
                 workspace_folders: Some(vec![WorkspaceFolder {
                     uri: Url::from_file_path(env::current_dir()?).unwrap(),
                     name: "root".into(),
                 }]),
+                initialization_options: options,
                 capabilities: ClientCapabilities {
                     workspace: Some(WorkspaceClientCapabilities {
                         semantic_tokens: Some(SemanticTokensWorkspaceClientCapabilities {
@@ -320,13 +321,14 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     let Some(LangLspInfo {
                         id: lang_id,
                         command,
+                        options,
                     }) = lang.lsp_info()
                     else {
                         continue;
                     };
                     if let Entry::Vacant(e) = servers.entry(lang) {
                         let mut server = Server::spawn(command)?;
-                        let init_result = server.initialize().await?;
+                        let init_result = server.initialize(options).await?;
                         server.caps = (&init_result.capabilities).into();
                         tx.send(LspToEditorMessage::NewLsp { lang, init_result })?;
                         server.initialized()?;

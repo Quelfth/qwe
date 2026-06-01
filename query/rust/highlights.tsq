@@ -98,6 +98,7 @@
 
 (scoped_type_name path: (bracketed_type (qualified_type)) "::" @o.association.inherited)
 (scoped_name "::" @o.association.inherited name: (_) @_ (#semantic? @_ trait))
+(scoped_type_name "::" @o.association.inherited name: (_) @_ (#semantic? @_ trait))
 (bracketed_type "<" @o.association.qualified (qualified_type) ">" @o.association.qualified)
 (qualified_type "as" @o.association.qualified)
 
@@ -142,6 +143,7 @@
 (type_item ["=" ";"] @o.declare.type.alias)
 
 (associated_type ";" @o.declare.type.alias)
+(associated_type (type_parameters ["<" "," ">"] @o.generics.type.artifact))
 
 (optional_type_parameter "=" @o.type)
 
@@ -244,8 +246,10 @@
 (builtin_attribute ["(" ")"] @o.attribute)
 
 
-
-(lint_level_attribute ["expect" "allow" "warn" "deny" "forbid"] @i.attribute ["(" ")"] @o.attribute)
+(attribute_item ["#" "["] @o.lint-level (builtin_attribute (lint_level_attribute)) "]" @o.lint-level)
+(inner_attribute_item ["#" "!" "["] @o.lint-level (builtin_attribute (lint_level_attribute)) "]" @o.lint-level)
+(lint_level_attribute ["expect" "allow" "warn" "deny" "forbid"] @o.lint-level ["(" ")"] @o.lint-level)
+(lint_level_attribute (simple_path (name (identifier) @i.lint-level)))
 
 (simple_path "::" @o.scope)
 (simple_path (name) @i.namespace . "::")
@@ -594,7 +598,8 @@
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Struct)) ("::" @o.generics.type.struct)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Enum)) ("::" @o.generics.type.enum)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Union)) ("::" @o.generics.type.union)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
-(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ TypeAlias)) ("::" @o.generics.type.alias)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ "!trait" TypeAlias)) ("::" @o.generics.type.alias)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ trait TypeAlias)) ("::" @o.generics.type.artifact)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.artifact))
 
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 
@@ -633,6 +638,7 @@
 ; Macro Names
 
 ((identifier) @i.macro.function @_ (#semantic? @_ Macro))
+(use_declaration (scoped_name (name (identifier) @i.macro.attribute @_ (#semantic? @_ Decorator))))
 
 (lifetime (name) ) @i.lifetime
 (lifetime "'" @o.wildcard.lifetime "_" @o.wildcard.lifetime)

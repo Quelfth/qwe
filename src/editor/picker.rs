@@ -128,10 +128,10 @@ impl Picker {
                 .flat_map(|(uri, diagnostics)| {
                     diagnostics.iter().map(move |diagnostic| (uri.clone(), diagnostic))
                 })
-                .filter_map(|(path, lsp_types::Diagnostic { range, severity, message, .. })| {
+                .map(|(path, lsp_types::Diagnostic { range, severity, message, .. })| {
                     let pos = Utf16Pos::from_lsp_pos(range.start).into();
 
-                    Some(Pick {
+                    Pick {
                         string: message.lines().next().unwrap_or("").to_owned(),
                         style: match *severity {
                             Some(DiagnosticSeverity::WARNING) => PickStyle::Warning,
@@ -140,7 +140,7 @@ impl Picker {
                         },
                         file: path,
                         pos,
-                    })
+                    }
                 })
                 .collect(),
         )

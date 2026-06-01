@@ -26,7 +26,7 @@ impl Document {
         }
 
         Some(Haystack {
-            text: self.text.byte_slice(range.clone())?.to_string(),
+            text: self.text.byte_slice(range)?.to_string(),
             offset: range.start.inner(),
         })
     }

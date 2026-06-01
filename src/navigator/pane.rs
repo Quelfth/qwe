@@ -22,9 +22,9 @@ impl RootPane {
 impl Navigator {
     pub fn root_pane(&self) -> RootPane {
         let path = &self.root_path;
-        if let Some(cwd) = &self.cwd && cwd.canonicalize().ok().as_ref() == Some(&path) {
+        if let Some(cwd) = &self.cwd && cwd.canonicalize().ok().as_ref() == Some(path) {
             RootPane::Cwd
-        } else if let Some(home) = &self.home && home.canonicalize().ok().as_ref() == Some(&path) {
+        } else if let Some(home) = &self.home && home.canonicalize().ok().as_ref() == Some(path) {
             RootPane::Home
         } else {
             RootPane::Other(path.as_os_str().to_owned())

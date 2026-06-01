@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::LazyLock};
 use concat_into::concat_into;
 use include_optional::include_str_optional;
 use mutx::Mutex;
+use serde_json::{Value, json};
 use tree_sitter::Query;
 
 use crate::{ts::QuerySource, util::leak};
@@ -24,6 +25,7 @@ pub enum Language {
 pub struct LangLspInfo {
     pub id: &'static str,
     pub command: &'static str,
+    pub options: Option<Value>,
 }
 
 impl Language {
@@ -48,10 +50,16 @@ impl Language {
             Language::Cpp => Some(LangLspInfo {
                 id: "cpp",
                 command: "clangd",
+                options: None,
             }),
             Language::Rust => Some(LangLspInfo {
                 id: "rust",
                 command: "rust-analyzer",
+                options: Some(json!{{
+                    "check": {
+                        "command": "clippy",
+                    },
+                }})
             }),
             _ => None,
         }

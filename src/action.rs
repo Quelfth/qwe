@@ -2,6 +2,13 @@
 
 use crate::lsp::channel::GotoKind;
 
+mod select;
+
+pub trait Action<O> {
+    fn act(self, object: O);
+}
+
+#[derive(Copy, Clone)]
 enum ScrollAction {
     Up,
     Down,
@@ -9,6 +16,7 @@ enum ScrollAction {
     Right,
 }
 
+#[derive(Copy, Clone)]
 enum EditorAction {
     OpenFile,
     PreviousFile,
@@ -21,6 +29,7 @@ enum EditorAction {
     ViewLog,
 }
 
+#[derive(Copy, Clone)]
 enum LspAction {
     Hover,
     CodeActions,
@@ -29,6 +38,7 @@ enum LspAction {
     Refresh,
 }
 
+#[derive(Copy, Clone)]
 enum DocumentAction {
     Scroll(ScrollAction),
     Undo,
@@ -43,6 +53,7 @@ enum DocumentAction {
     Find,
 }
 
+#[derive(Copy, Clone)]
 enum InsertAction {
     Select,
     Backspace,
@@ -52,6 +63,7 @@ enum InsertAction {
     Paste,
 }
 
+#[derive(Copy, Clone)]
 enum AnySelectAction {
     TabIn,
     TabOut,
@@ -68,6 +80,7 @@ enum AnySelectAction {
     Paste,
 }
 
+#[derive(Copy, Clone)]
 enum SelectAction {
     Any(AnySelectAction),
     InsertBefore,
@@ -99,6 +112,7 @@ enum SelectAction {
     RetractRight,
 }
 
+#[derive(Copy, Clone)]
 enum LineSelectAction {
     Any(AnySelectAction),
     InsertBefore,

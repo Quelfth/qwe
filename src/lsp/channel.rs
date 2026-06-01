@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 use crate::{lang::Language, pos::Utf16Pos};
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum GotoKind {
     Definition,
     Declaration,

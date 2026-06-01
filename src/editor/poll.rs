@@ -35,7 +35,7 @@ impl AppState for Editor {
                             .as_deref()
                             .is_some_and(|p|
                                 p.canonicalize()
-                                    .is_ok_and(|p| p == &*path)
+                                    .is_ok_and(|p| p == *path)
                             )
                         {
                             self.doc.semtoks = RangeSequence::from_abs_ordered(
@@ -130,7 +130,7 @@ impl AppState for Editor {
                         } else { None };
                         self.gadget = Some(Box::new(Renamer::new(
                             text
-                                .or_else(|| name)
+                                .or(name)
                                 .unwrap_or_default()
                         )));
                         self.draw()?

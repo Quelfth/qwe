@@ -35,7 +35,7 @@ impl Presenter {
         let (width, height) = terminal_size();
         let mut screen = Screen::new(width, height, layout.bg_color());
 
-        _ = layout.present(screen.canvas(Rect { rows: (0..height).into(), cols: (0..width).into() }));
+        _ = layout.present(screen.canvas(Rect { rows: 0..height, cols: 0..width }));
 
         {
             let last_screen = &mut *self.screen.lock();

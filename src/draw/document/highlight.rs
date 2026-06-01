@@ -144,7 +144,7 @@ impl Document {
 
         for (range, diagnostic) in self.diagnostics.ranges() {
             highlight_scopes.push(Highlight {
-                range: range.clone(),
+                range,
                 scope: Scope::diagnostic(diagnostic.severity),
             })
         }

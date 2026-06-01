@@ -9,7 +9,7 @@ use crate::{
 mod fragment;
 
 pub fn increment_range(text: &Rope, range: Range<Ix<Byte>>) -> Range<Ix<Byte>> {
-    increment(text, range.clone()).unwrap_or(range)
+    increment(text, range).unwrap_or(range)
 }
 
 fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
@@ -22,7 +22,7 @@ fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
     let mut state = State {
         text,
         kind: FragmentKind::of(
-            text.byte_slice(range.clone())?.chars(),
+            text.byte_slice(range)?.chars(),
             text.byte_slice(range.end..)?.chars().next(),
         ),
         range,
@@ -81,7 +81,7 @@ fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
         fn trim_left(&mut self) {
             while let Some(char) = self
                 .text
-                .byte_slice(self.range.clone())
+                .byte_slice(self.range)
                 .unwrap()
                 .chars()
                 .next()
@@ -94,7 +94,7 @@ fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
         fn trim_right(&mut self) {
             while let Some(char) = self
                 .text
-                .byte_slice(self.range.clone())
+                .byte_slice(self.range)
                 .unwrap()
                 .chars()
                 .next_back()
@@ -107,7 +107,7 @@ fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
         fn rekind(&mut self) {
             if let Some(kind) = try {
                 FragmentKind::of(
-                    self.text.byte_slice(self.range.clone())?.chars(),
+                    self.text.byte_slice(self.range)?.chars(),
                     self.text.byte_slice(self.range.end..)?.chars().next(),
                 )
             } {
@@ -311,7 +311,7 @@ fn increment(text: &Rope, range: Range<Ix<Byte>>) -> Option<Range<Ix<Byte>>> {
         }
     }
 
-    let range = state.range.clone();
+    let range = state.range;
     state.extend();
 
     if state.range != range {

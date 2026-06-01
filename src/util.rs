@@ -1,9 +1,5 @@
 use std::{
-    borrow::Borrow,
-    fmt::Write,
-    range::{Range, RangeFrom},
-    ops::{RangeFull, RangeTo},
-    path::PathBuf,
+    borrow::Borrow, fmt::Write, iter, ops::{RangeFull, RangeTo}, path::PathBuf, range::{Range, RangeFrom}
 };
 
 use auto_enums::auto_enum;
@@ -232,13 +228,12 @@ pub macro Todo() {impl TodoTrait}
 
 #[auto_enum(Iterator)]
 pub fn word_splits(word: RopeSlice<'_>) -> impl Iterator<Item = Range<Ix<Byte>>> {
-    if word.byte_len() <= Ix::new(5) {
-        if word == *"usize" || word == *"isize" || word == *"uint" {
+    if word.byte_len() <= Ix::new(5)
+        && (word == *"usize" || word == *"isize" || word == *"uint") {
             return [Ix::new(0)..Ix::new(1), Ix::new(1)..word.byte_len()].into_iter();
         }
-    }
 
-    return [Ix::new(0)..word.byte_len()].into_iter();
+    return iter::once(Ix::new(0)..word.byte_len());
 }
 
 

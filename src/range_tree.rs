@@ -107,17 +107,17 @@ impl<R: Ord + Copy, T> RangeTreeInner<R, T> {
     pub fn overlapping(&self, range: Range<R>) -> impl Iterator<Item = &T> {
         if range.end < self.center.center {
             self.left
-                .overlapping(range.clone())
+                .overlapping(range)
                 .chain(self.center.starting_before(range.end))
         } else if range.start > self.center.center {
             self.right
-                .overlapping(range.clone())
+                .overlapping(range)
                 .chain(self.center.ending_after(range.start))
         } else {
             self.left
-                .overlapping(range.clone())
+                .overlapping(range)
                 .chain(self.center.data.iter())
-                .chain(self.right.overlapping(range.clone()))
+                .chain(self.right.overlapping(range))
         }
     }
 }

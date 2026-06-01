@@ -98,6 +98,7 @@ o.generics.type.artifact = f.type-artifact;
 o.include = f.include;
 o.key-value = f.key-value;
 o.label = d b f.attribute;
+o.lint-level = f.set-lint-level;
 o.logical = f.logical;
 o.loop = f.loop;
 o.macro.attribute = f.attribute-macro;
@@ -135,6 +136,7 @@ i.function.associated.extension = b f.ext-method;
 i.function.method.extension = !b f.ext-method;
 i.label = b f.attribute;
 i.lifetime = i f.type-parameter;
+i.lint-level = f.lint-level;
 i.macro. = i b f.value-macro;
 i.macro.derive = i b f.trait;
 i.macro.attribute = f.attribute-macro;
@@ -287,6 +289,9 @@ i.function.destructor = b f.never;
 .never = #cc3333;
 
 .unknown = #886868;
+
+.set-lint-level = #304000;
+.lint-level = #507000;
 
 .error = #ff007f;
 .warning = #bfff01;

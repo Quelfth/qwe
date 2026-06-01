@@ -110,7 +110,7 @@ pub struct Completer {
 impl Completer {
     pub fn new(mut items: Vec<CompletionItem>, text_before: Option<RopeSlice<'_>>) -> Self {
         fn prefix_len(e: &CompletionItem, before: &RopeSlice<'_>) -> Ix<Byte> {
-            completion_prefix_len(e.filter_text.as_deref().unwrap_or(&e.label), &before)
+            completion_prefix_len(e.filter_text.as_deref().unwrap_or(&e.label), before)
         }
         if let Some(before) = text_before {
             let max_prefix_len = items.iter().map(|e| prefix_len(e, &before)).max().unwrap_or_default();

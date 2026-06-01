@@ -110,8 +110,8 @@ impl Editor {
 
         for (doc, count) in doc_counts {
             let Ok(doc) = doc.canonicalize() else {continue};
-            self.global_timeline[dir.rev()].push_doc_change((&doc).to_owned().into());
-            if self.filepath.as_ref().and_then(|f| f.canonicalize().ok()).is_some_and(|f| &f == &doc) {
+            self.global_timeline[dir.rev()].push_doc_change(doc.to_owned().into());
+            if self.filepath.as_ref().and_then(|f| f.canonicalize().ok()).is_some_and(|f| f == doc) {
                 self.doc.global_unredo(dir, cp, count);
             }
 

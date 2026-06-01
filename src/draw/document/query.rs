@@ -58,7 +58,7 @@ impl Document {
                     if !captures.iter().any(|QueryCapture { node, .. }| {
                         let start = Ix::new(node.start_position().row);
                         let end = Ix::new(node.end_position().row);
-                        (start..end).overlaps(&context.screen_lines)
+                        (start..end).overlaps(context.screen_lines)
                     }) {
                         continue
                     }
