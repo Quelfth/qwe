@@ -150,6 +150,10 @@ impl AppState for Editor {
         }
         self.send_doc_lsp_changes();
 
+        if self.doc.check_should_save() {
+            self.save_file();
+        }
+
         self.poll_draw()?;
         Ok(())
     }

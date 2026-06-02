@@ -26,11 +26,10 @@ pub struct JumpLabels {
 
 impl Gadget for JumpLabels {
     fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut Editor)>> {
-        macro_rules! xx {
-            ($($tokens: tt)*) => {
-                Some(Box::new($($tokens)*))
-            };
+        macro xx($($tokens: tt)*) {
+            Some(Box::new($($tokens)*))
         }
+        
         match event {
             KeyEvent {
                 code: KeyCode::Char(char),

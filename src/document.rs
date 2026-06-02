@@ -1,11 +1,12 @@
 use std::iter;
 use std::range::Range;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use mutx::Mutex;
 use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
+use crate::global_config::GLOBAL_CONFIG;
 use crate::{
     aprintln::aprintln, constants::TAB_WIDTH, document::{
         diagnostics::{Diagnostic, Severity},
@@ -40,8 +41,7 @@ pub struct Document {
     pub diagnostics: RangeSequence<Ix<Byte>, Diagnostic>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
-    #[expect(unused)]
-    save_prime_instant: Option<Instant>,
+    save_instant: Option<Instant>,
 }
 
 impl Document {
@@ -64,7 +64,7 @@ impl Document {
             text,
             lsp_changes: Vec::new(),
             lsp_version: 1,
-            save_prime_instant: None,
+            save_instant: None,
         }
     }
 
@@ -164,6 +164,20 @@ impl Document {
 
     pub fn screen_line_range(&self) -> Range<Ix<Line>> {
         self.scroll..self.scroll + *self.view_height.lock()
+    }
+
+    pub fn prime_save(&mut self) {
+        const SAVE_DELAY: Duration = Duration::from_millis(250);
+        self.save_instant = Some(Instant::now() + SAVE_DELAY);
+    }
+
+    pub fn check_should_save(&mut self) -> bool {
+        if let Some(instant) = self.save_instant
+            && Instant::now() > instant {
+            self.save_instant = None;
+            return true
+        }
+        false
     }
 }
 
@@ -601,6 +615,9 @@ impl Document {
         self.upkeep_insert(byte_pos, insert);
         if let Some(lang) = self.language {
             self.tree = Some(parse_doc(&self.text, self.tree(), lang).unwrap());
+            if GLOBAL_CONFIG.autosave_langs.lock().contains(&lang) {
+                self.prime_save();
+            }
         }
         Change {
             byte_pos,

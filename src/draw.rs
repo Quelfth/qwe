@@ -13,7 +13,6 @@ use crate::{
 
 mod cursor;
 pub mod document;
-pub mod jump_labels;
 pub mod screen;
 
 #[derive(Copy, Clone)]

@@ -4,6 +4,7 @@
 #![feature(step_trait)]
 #![feature(decl_macro)]
 #![feature(new_range)]
+//#![feature(share_trait)]
 
 #![allow(clippy::module_inception)]
 #![allow(clippy::type_complexity)]
@@ -30,14 +31,7 @@ use dispa::dispatch;
 use tokio::sync::mpsc;
 
 use crate::{
-    editor::{Editor, keymap::InputEvent},
-    ix::Ix, 
-    draw::screen::Canvas,
-    lsp::{channel::EditorToLspMessage, run_lsp_thread},
-    navigator::Navigator,
-    pos::Pos,
-    presenter::{Present, Presenter},
-    terminal_size::set_terminal_size,
+    draw::screen::Canvas, editor::{Editor, keymap::InputEvent}, global_config::GLOBAL_CONFIG, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, navigator::Navigator, pos::Pos, presenter::{Present, Presenter}, terminal_size::set_terminal_size
 };
 
 mod action;
@@ -48,6 +42,7 @@ mod custom_literal;
 mod document;
 mod draw;
 mod editor;
+mod global_config;
 mod grapheme;
 mod incremental_select;
 mod ix;
@@ -104,12 +99,10 @@ struct Args {
     )]
     line: Option<Pos>,
     #[arg(
-        short = 'v',
+        short = 's',
         long,
-        action = SetTrue,
-        conflicts_with("path"),
     )]
-    paste: bool,
+    autosave: bool,
 }
 
 thread_local! {
@@ -128,7 +121,7 @@ fn main() -> io::Result<()> {
         dirs,
         find,
         line,
-        paste,
+        autosave,
     } = Args::parse();
     let path = if let Some(path) = path {
         Some(path)
@@ -158,16 +151,12 @@ fn main() -> io::Result<()> {
             PathedFile::create_with_dirs(path.into())?
         })
     } else {
-        if paste {
-            FirstDoc::Clipboard
-        } else {
-            FirstDoc::Scratch
-        }
+        FirstDoc::Scratch
     };
 
     setup::setup_panic_hook();
     setup::setup()?;
-    let result = run(path, line);
+    let result = run(path, line, autosave);
     setup::teardown()?;
 
     result?;
@@ -210,11 +199,10 @@ impl PathedFile {
 
 enum FirstDoc {
     File(PathedFile),
-    Clipboard,
     Scratch,
 }
 
-fn run(file: FirstDoc, pos: Option<Pos>) -> io::Result<()> {
+fn run(file: FirstDoc, pos: Option<Pos>, autosave: bool) -> io::Result<()> {
     let (width, height) = terminal::size()?;
     set_terminal_size(width, height);
 
@@ -232,6 +220,10 @@ fn run(file: FirstDoc, pos: Option<Pos>) -> io::Result<()> {
         outgoing: send_lsp_to_editor,
         incoming: recv_editor_to_lsp,
     })?;
+
+    if autosave && let Some(lang) = editor.doc().language() {
+        GLOBAL_CONFIG.autosave_langs.lock().insert(lang);
+    }
 
     if let Some(pos) = pos {
         editor.jump_to(pos);
