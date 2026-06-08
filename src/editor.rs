@@ -217,7 +217,7 @@ impl Editor {
                         self.draw()?;
                     } else if let Some(char) = event.char() {
                         'insert: {
-                            if let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
+                            if matches!(cursors, Insert(_)) && let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
                                 match special {
                                     CharSpecial::StrongLeft(right) => {
                                         self.insert_pair(&String::from(char), &String::from(*right));

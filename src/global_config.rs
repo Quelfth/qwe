@@ -37,6 +37,7 @@ impl Default for GlobalConfig {
                     ('`', WeakPair),
                     ('|', WeakPair),
                     ('/', WeakPair),
+                    (' ', WeakPair),
                 ]))
             },
         }
@@ -166,7 +167,7 @@ impl Default for Keymaps {
                     [I] => InsertBeforeLine,
                     [A] => InsertAfterLine,
                     ['['] => MirrorInsertIn,
-                    [']'] => MirrorInsertIn,
+                    [']'] => MirrorInsertOut,
                     [w] => WordExtend,
                     [;] => LineSelect,
                     [backslash] => TextualSelect,
