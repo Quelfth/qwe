@@ -1,15 +1,9 @@
 use std::range::Range;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use resharp::{Match, Regex};
 
 use crate::{
-    color,
-    draw::screen::Canvas,
-    editor::{Editor, gadget::Gadget},
-    grapheme::GraphemeExt,
-    ix::{Byte, Ix},
-    style::Style,
+    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, ix::{Byte, Ix}, key::{KeyOrChar, key}, style::Style
 };
 
 pub struct Haystack {
@@ -23,37 +17,20 @@ pub struct Finder {
 }
 
 impl Gadget for Finder {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
         macro_rules! xx {
             ($($tokens: tt)*) => {
                 Some(Box::new($($tokens)*))
             };
         }
+        use KeyOrChar::Key;
         match event {
-            KeyEvent {
-                code: KeyCode::Char(char),
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
-                self.r#type(char);
-                xx!(Editor::noop)
-            }
-
-            KeyEvent {
-                code: KeyCode::Backspace,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            Key(key![backspace]) => {
                 self.backspace();
                 xx!(Editor::noop)
             }
 
-            KeyEvent {
-                code: KeyCode::Enter,
-                kind: KeyEventKind::Press,
-                ..
-            } => self.find().map(|f| {
+            Key(key![return]) => self.find().map(|f| {
                 let x: Box<dyn FnOnce(&mut Editor)> = Box::new(|e: &mut Editor| {
                     e.close_gadget();
                     if e.select_ranges(f).is_ok() && !e.doc.main_cursor_is_visible() {
@@ -62,6 +39,11 @@ impl Gadget for Finder {
                 });
                 x
             }),
+
+            key if let Some(char) = key.char() => {
+                self.r#type(char);
+                xx!(Editor::noop)
+            }
 
             _ => None,
         }

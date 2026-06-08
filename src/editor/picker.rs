@@ -1,10 +1,8 @@
 use std::{env, path::Path, sync::Arc};
-
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::DiagnosticSeverity;
 
 use crate::{
-    color, document::diagnostics::Severity, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, pos::{Pos, Utf16Pos, convert::ConvertableToPos}, style::Style
+    color, document::diagnostics::Severity, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, key::{KeyOrChar, key}, pos::{Pos, Utf16Pos, convert::ConvertableToPos}, style::Style
 };
 
 use super::gadget::ScreenRegion;
@@ -150,38 +148,21 @@ impl Picker {
 impl Gadget for Picker {
     fn on_key(
         &mut self,
-        event: crossterm::event::KeyEvent,
+        event: KeyOrChar,
     ) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
         macro_rules! xx {
             ($($tokens: tt)*) => {
                 Some(Box::new($($tokens)*))
             };
         }
+        use KeyOrChar::Key;
         match event {
-            KeyEvent {
-                code: KeyCode::Char(char),
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
-                self.r#type(char);
-                xx!(Editor::noop)
-            }
-
-            KeyEvent {
-                code: KeyCode::Backspace,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            Key(key![backspace]) => {
                 self.backspace();
                 xx!(Editor::noop)
             }
 
-            KeyEvent {
-                code: KeyCode::Tab,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![tab]) => {
                 let terms = self
                     .term
                     .split_whitespace()
@@ -193,11 +174,7 @@ impl Gadget for Picker {
                 xx!(Editor::noop)
             }
 
-            KeyEvent {
-                code: KeyCode::Enter,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![return]) => {
                 let terms = self
                     .term
                     .split_whitespace()
@@ -216,22 +193,17 @@ impl Gadget for Picker {
                 }
             }
 
-            KeyEvent {
-                code: KeyCode::Char('d'),
-                modifiers: KeyModifiers::CONTROL,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![ctrl d] | key![scroll down]) => {
                 self.scroll += 4;
                 xx!(Editor::noop)
             }
-            KeyEvent {
-                code: KeyCode::Char('u'),
-                modifiers: KeyModifiers::CONTROL,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![ctrl u] | key![scroll up]) => {
                 self.scroll = self.scroll.saturating_sub(4);
+                xx!(Editor::noop)
+            }
+
+            key if let Some(char) = key.char() => {
+                self.r#type(char);
                 xx!(Editor::noop)
             }
             _ => None,

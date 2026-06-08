@@ -1,9 +1,6 @@
-
 use std::collections::HashSet;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-
-use crate::{color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::{Grapheme, GraphemeExt}, log::{LogCategory, log_iter}, style::Style};
+use crate::{color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::{Grapheme, GraphemeExt}, key::{KeyOrChar, key}, log::{LogCategory, log_iter}, style::Style};
 
 
 pub struct LogViewer {
@@ -21,21 +18,14 @@ impl LogViewer {
 }
 
 impl Gadget for LogViewer {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+        use KeyOrChar::Key;
         match event {
-            KeyEvent {
-                code: KeyCode::Char('d'),
-                modifiers: KeyModifiers::CONTROL,
-                ..
-            } => {
+            Key(key![ctrl d] | key![scroll down]) => {
                 self.scroll = self.scroll.saturating_sub(1);
                 Some(Box::new(|_| ()))
             },
-            KeyEvent {
-                code: KeyCode::Char('u'),
-                modifiers: KeyModifiers::CONTROL,
-                ..
-            } => {
+            Key(key![ctrl u] | key![scroll up]) => {
                 self.scroll += 1;
                 Some(Box::new(|_| ()))
             },

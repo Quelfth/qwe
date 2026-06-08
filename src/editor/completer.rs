@@ -1,17 +1,9 @@
 use std::{convert::identity, sync::Arc};
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{CompletionItem, CompletionItemKind};
 
 use crate::{
-    color,
-    draw::screen::Canvas,
-    editor::{Editor, code_actions::{ActionChangeEdit}, gadget::Gadget},
-    grapheme::GraphemeExt,
-    ix::{Byte, Ix},
-    rope::RopeSlice,
-    style::Style,
-    util::completion_prefix_len,
+    color, draw::screen::Canvas, editor::{Editor, code_actions::ActionChangeEdit, gadget::Gadget}, grapheme::GraphemeExt, ix::{Byte, Ix}, key::{KeyOrChar, key}, rope::RopeSlice, style::Style, util::completion_prefix_len
 };
 
 pub enum CompletionKind {
@@ -131,17 +123,15 @@ impl Completer {
 }
 
 impl Gadget for Completer {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
         macro xx($arg: expr) {
             Some(Box::new($arg))
         }
-        
+
+        use KeyOrChar::Key;
+
         match event {
-            KeyEvent {
-                code: KeyCode::Enter | KeyCode::Char(' '),
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![return] | key![ ]) => {
                 match &self.items[self.selected].action {
                     CompletionAction::Text { text } => {
                         let text = text.clone();
@@ -162,37 +152,14 @@ impl Gadget for Completer {
                 }
             }
 
-            KeyEvent {
-                code: KeyCode::Char(_),
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => None,
-
-            KeyEvent {
-                code: KeyCode::Backspace,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => None,
-
-            KeyEvent {
-                code: KeyCode::Tab,
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            Key(key![tab]) => {
                 if self.items.is_empty() {
                     return None;
                 }
                 self.selected = (self.selected + 1) % self.items.len();
                 xx!(Editor::noop)
             }
-            KeyEvent {
-                code: KeyCode::BackTab,
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            Key(key![back tab]) => {
                 if self.items.is_empty() {
                     return None;
                 }

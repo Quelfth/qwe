@@ -7,9 +7,9 @@ use std::{
     sync::Arc,
 };
 
-use crate::{AppState, PathedFile, color, document::Document, draw::{Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::{InputEvent, Keymaps}}, grapheme::{Grapheme, GraphemeExt}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
+use crate::{AppSignal, AppState, PathedFile, action::Action as _, color, document::Document, draw::{Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::Keymaps}, global_config::GLOBAL_CONFIG, grapheme::{Grapheme, GraphemeExt}, key::{KeyOrChar, key}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
 
-use crossterm::{event::{KeyCode, KeyEvent}, style::Color};
+use crossterm::style::Color;
 use directory::Directory;
 
 mod directory;
@@ -235,6 +235,19 @@ impl Navigator {
         }
     }
 
+    pub fn new_child(&mut self) {
+        self.name_box = Some(NameBox::new_new())
+    }
+
+    pub fn new_sibling(&mut self) {
+        self.navigate_out();
+        self.new_child();
+    }
+
+    pub fn rename(&mut self) {
+        self.name_box = Some(NameBox::new_rename())
+    }
+
     pub fn update_and_draw(&mut self) -> io::Result<()> {
         self.open_selected();
         self.draw()?;
@@ -275,14 +288,13 @@ impl AppState for Navigator {
         Ok(())
     }
 
-    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> {
+    fn on_key_or_char(&mut self, event: KeyOrChar) -> io::Result<Option<AppSignal>> {
+        use KeyOrChar::Key;
         if let Some(NameBox { name, .. }) = &mut self.name_box {
             match event {
-                InputEvent::Event(e) => match e {
-                    KeyEvent { code: KeyCode::Esc, .. } => {self.name_box = None; self.update_and_draw()?},
-                    KeyEvent { code: KeyCode::Backspace, .. } => {name.pop(); self.update_and_draw()?}
-                    KeyEvent { code: KeyCode::Char(c), .. } => {name.push(c); self.update_and_draw()?}
-                    KeyEvent { code: KeyCode::Enter, .. } => {
+                    Key(key![esc]) => {self.name_box = None; self.update_and_draw()?},
+                    Key(key![backspace]) => {name.pop(); self.update_and_draw()?}
+                    Key(key![return]) => {
                         let NameBox { effect, mut name } = self.name_box.take().unwrap();
                         match effect {
                             NameBoxEffect::New => if let Some(last) = name.chars().next_back() && path::is_separator(last) {
@@ -304,27 +316,20 @@ impl AppState for Navigator {
                         self.reload();
                         self.update_and_draw()?;
                     }
+                    key if let Some(c) = key.char() => {name.push(c); self.update_and_draw()?}
                     _ => (),
-                },
-                _ => (),
             }
-            return Ok(());
+            return Ok(None);
         }
-        match event {
-            InputEvent::Event(key_event) => match key_event {
-                KeyEvent { code: KeyCode::Char('j'), .. } => {self.navigate_down(); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('k'), .. } => {self.navigate_up(); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('h'), .. } => {self.navigate_out(); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('l'), .. } => {self.navigate_in(); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('i'), .. } => {self.name_box = Some(NameBox::new_new()); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('a'), .. } => {self.navigate_out(); self.name_box = Some(NameBox::new_new()); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('@'), .. } => {self.name_box = Some(NameBox::new_rename()); self.update_and_draw()?}
-                KeyEvent { code: KeyCode::Char('X'), .. } => {self.delete_empty(); self.update_and_draw()?}
-                _ => (),
-            },
-            InputEvent::Key(_) => todo!(),
+
+        let mut signal = None;
+
+        if let Key(key) = event && let Some(action) = GLOBAL_CONFIG.keymaps.navigator.load()[key] {
+            signal = action.act(self);
+            self.update_and_draw()?;
         }
-        Ok(())
+
+        Ok(signal)
     }
 }
 

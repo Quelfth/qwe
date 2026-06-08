@@ -1,15 +1,26 @@
 #![expect(unused)]
 
-use crate::lsp::channel::GotoKind;
+use crate::{AppSignal, lsp::channel::GotoKind};
 
+mod app;
+mod editor;
+mod document;
+mod insert;
 mod select;
+mod line_select;
+mod navigator;
 
 pub trait Action<O> {
-    fn act(self, object: O);
+    fn act(self, object: O) -> Option<AppSignal>;
 }
 
 #[derive(Copy, Clone)]
-enum ScrollAction {
+pub enum AppAction {
+    Quit,
+}
+
+#[derive(Copy, Clone)]
+pub enum ScrollAction {
     Up,
     Down,
     Left,
@@ -17,7 +28,7 @@ enum ScrollAction {
 }
 
 #[derive(Copy, Clone)]
-enum EditorAction {
+pub enum EditorAction {
     OpenFile,
     PreviousFile,
     NextFile,
@@ -27,10 +38,20 @@ enum EditorAction {
     
     Inspect,
     ViewLog,
+
+    Navigator,
+
+    Lsp(LspAction),
+}
+
+impl From<LspAction> for EditorAction {
+    fn from(value: LspAction) -> Self {
+        Self::Lsp(value)
+    }
 }
 
 #[derive(Copy, Clone)]
-enum LspAction {
+pub enum LspAction {
     Hover,
     CodeActions,
     Rename,
@@ -39,9 +60,9 @@ enum LspAction {
 }
 
 #[derive(Copy, Clone)]
-enum DocumentAction {
+pub enum DocumentAction {
     Scroll(ScrollAction),
-    Undo,
+    Editor(EditorAction),
 
     CycleCursorsBack,
     CycleCursorsForward,
@@ -53,18 +74,52 @@ enum DocumentAction {
     Find,
 }
 
-#[derive(Copy, Clone)]
-enum InsertAction {
-    Select,
-    Backspace,
-    Return,
-    TabInOrComplete,
-    TabOut,
-    Paste,
+impl From<ScrollAction> for DocumentAction {
+    fn from(value: ScrollAction) -> Self {
+        Self::Scroll(value)
+    }
+}
+
+impl From<EditorAction> for DocumentAction {
+    fn from(value: EditorAction) -> Self {
+        Self::Editor(value)
+    }
 }
 
 #[derive(Copy, Clone)]
-enum AnySelectAction {
+pub enum InsertAction {
+    Document(DocumentAction),
+    Select,
+    Backspace,
+    Return,
+    TabIn,
+    TabInOrComplete,
+    TabOut,
+
+    Paste,
+}
+
+impl From<DocumentAction> for InsertAction {
+    fn from(value: DocumentAction) -> Self {
+        Self::Document(value)
+    }
+}
+
+impl From<ScrollAction> for InsertAction {
+    fn from(value: ScrollAction) -> Self {
+        Self::Document(value.into())
+    }
+}
+
+impl From<EditorAction> for InsertAction {
+    fn from(value: EditorAction) -> Self {
+        Self::Document(value.into())
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum AnySelectAction {
+    Document(DocumentAction),
     TabIn,
     TabOut,
 
@@ -80,8 +135,20 @@ enum AnySelectAction {
     Paste,
 }
 
+impl From<DocumentAction> for AnySelectAction {
+    fn from(value: DocumentAction) -> Self {
+        Self::Document(value)
+    }
+}
+
+impl From<ScrollAction> for AnySelectAction {
+    fn from(value: ScrollAction) -> Self {
+        Self::Document(value.into())
+    }
+}
+
 #[derive(Copy, Clone)]
-enum SelectAction {
+pub enum SelectAction {
     Any(AnySelectAction),
     InsertBefore,
     InsertAfter,
@@ -112,8 +179,26 @@ enum SelectAction {
     RetractRight,
 }
 
+impl From<AnySelectAction> for SelectAction {
+    fn from(value: AnySelectAction) -> Self {
+        Self::Any(value)
+    }
+}
+
+impl From<DocumentAction> for SelectAction {
+    fn from(value: DocumentAction) -> Self {
+        Self::Any(value.into())
+    }
+}
+
+impl From<ScrollAction> for SelectAction {
+    fn from(value: ScrollAction) -> Self {
+        Self::Any(value.into())
+    }
+}
+
 #[derive(Copy, Clone)]
-enum LineSelectAction {
+pub enum LineSelectAction {
     Any(AnySelectAction),
     InsertBefore,
     InsertAfter,
@@ -136,4 +221,35 @@ enum LineSelectAction {
 
     RetractUp,
     RetractDown,
+}
+
+impl From<AnySelectAction> for LineSelectAction {
+    fn from(value: AnySelectAction) -> Self {
+        Self::Any(value)
+    }
+}
+
+impl From<DocumentAction> for LineSelectAction {
+    fn from(value: DocumentAction) -> Self {
+        Self::Any(value.into())
+    }
+}
+
+impl From<ScrollAction> for LineSelectAction {
+    fn from(value: ScrollAction) -> Self {
+        Self::Any(value.into())
+    }
+}
+
+#[derive(Copy, Clone)]
+pub enum NavigatorAction {
+    Down,
+    Up,
+    Out,
+    In,
+    NewChild,
+    NewSibling,
+    Rename,
+    DeleteEmpty,
+    Editor,
 }

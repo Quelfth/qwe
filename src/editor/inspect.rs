@@ -1,6 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-
-use crate::{document::Document, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, ix::Ix};
+use crate::{document::Document, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, ix::Ix, key::{KeyOrChar, key}};
 
 pub struct Inspector {
     semantics: Document,
@@ -18,14 +16,10 @@ impl Inspector {
 }
 
 impl Gadget for Inspector {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+        use KeyOrChar::Key;
         match event {
-            KeyEvent {
-                code: KeyCode::Char('d'),
-                modifiers: KeyModifiers::CONTROL,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![ctrl d] | key![scroll down]) => {
                 if self.semantics.scroll >= self.semantics.text().line_len() {
                     self.tree.scroll += Ix::new(4);
                 } else {    
@@ -33,12 +27,7 @@ impl Gadget for Inspector {
                 }
                 Some(Box::new(Editor::noop))
             }
-            KeyEvent {
-                code: KeyCode::Char('u'),
-                modifiers: KeyModifiers::CONTROL,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![ctrl u] | key![scroll up]) => {
                 if self.tree.scroll == Ix::new(0) {
                     self.semantics.scroll = self.semantics.scroll.saturating_sub(Ix::new(4));
                 } else {

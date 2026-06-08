@@ -1,3 +1,4 @@
+#![expect(unused)]
 use crossterm::event::{KeyCode, MouseButton, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
 
@@ -103,7 +104,17 @@ impl Key {
     }
 }
 
-use crate::editor::Editor;
+use crate::{AppSignal, editor::Editor, keymap::KeyMap};
+
+type NewMapping = fn(&mut Editor) -> Option<AppSignal>;
+
+#[derive(Default)]
+pub struct NewKeymaps {
+    pub mirror_insert: KeyMap<NewMapping>,
+    pub insert: KeyMap<NewMapping>,
+    pub select: KeyMap<NewMapping>,
+    pub line_select: KeyMap<NewMapping>,
+}
 
 pub struct Keymaps {
     pub mirror_insert: Keymap,

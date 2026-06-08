@@ -118,13 +118,13 @@ impl Default for Keymaps {
                 (Key::base('l'), Mapping::rep(|e| e.move_x(1))),
 
                 (Key::base('H'), Mapping::rep(|e| e.retract_left(1))),
-                (Key::base('J'), Mapping::rep(|e| e.text_extend_down(1))),
+                (Key::base('J'), Mapping::rep(|e| e.extend_down(1))),
                 (Key::base('K'), Mapping::rep(|e| e.retract_up(1))),
                 (Key::base('L'), Mapping::rep(|e| e.extend_right(1))),
 
                 (Key::alt('h'), Mapping::rep(|e| e.extend_left(1))),
                 (Key::alt('j'), Mapping::rep(|e| e.retract_down(1))),
-                (Key::alt('k'), Mapping::rep(|e| e.text_extend_up(1))),
+                (Key::alt('k'), Mapping::rep(|e| e.extend_up(1))),
                 (Key::alt('l'), Mapping::rep(|e| e.retract_right(1))),
 
                 (Key::base(' '), Mapping::once(Editor::jump)),
@@ -177,10 +177,10 @@ impl Default for Keymaps {
                 //
                 (Key::base('j'), Mapping::rep(|e| e.move_y(1))),
                 (Key::base('k'), Mapping::rep(|e| e.move_y(-1))),
-                (Key::base('J'), Mapping::rep(|e| e.text_extend_down(1))),
+                (Key::base('J'), Mapping::rep(|e| e.extend_down(1))),
                 (Key::base('K'), Mapping::rep(|e| e.retract_up(1))),
                 (Key::alt('j'), Mapping::rep(|e| e.retract_down(1))),
-                (Key::alt('k'), Mapping::rep(|e| e.text_extend_up(1))),
+                (Key::alt('k'), Mapping::rep(|e| e.extend_up(1))),
                 //
                 (Key::base('f'), Mapping::once(Editor::find)),
                 //

@@ -7,19 +7,20 @@ use std::{
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
 
 use crate::{
-    PathedFile, document::Document, editor::{
+    AppSignal, PathedFile, action::Action as _, document::Document, editor::{
         clipboard::Clipboard, cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
-        }, documents::DocKey, gadget::Gadget, keymap::Keymaps
-    }, ix::{Byte, Ix}, lang::Language, language_server::LspContext, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}, timeline::{Timeline, global::GlobalEvent}
+        },
+        documents::DocKey,
+        gadget::Gadget,
+        keymap::Keymaps,
+    }, global_config::{CharSpecial, GLOBAL_CONFIG}, ix::{Byte, Ix}, key::{KeyOrChar, key}, lang::Language, language_server::LspContext, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}, timeline::{Timeline, global::GlobalEvent}
 };
 
 use documents::Documents;
-use keymap::{InputCode, InputEvent, Key, ScrollDir};
 
 mod actions;
 pub mod clipboard;
@@ -190,89 +191,78 @@ impl Editor {
         &self.doc
     }
 
-    pub fn on_key_event(&mut self, event: InputEvent) -> io::Result<()> {
+    pub fn on_key_or_char(&mut self, event: KeyOrChar) -> io::Result<Option<AppSignal>> {
         if let Some(gadget) = &mut self.gadget {
-            match event {
-                InputEvent::Event(KeyEvent {
-                    code: KeyCode::Esc,
-                    kind: KeyEventKind::Press,
-                    ..
-                }) => {
-                    self.gadget = None;
-                    self.draw()?;
-                }
-                InputEvent::Event(event) => {
-                    if let Some(effect) = gadget.on_key(event) {
-                        effect(self);
-                        self.draw()?;
-                    }
-                }
-                _ => (),
+            if event == key![esc].into() {
+                self.gadget = None;
+                self.draw()?;
+            } else if let Some(effect) = gadget.on_key(event) {
+                effect(self);
+                self.draw()?;
             }
-            return Ok(());
+            return Ok(None);
         }
+
+        let mut signal = None;
 
         if let Some(cursors) = &self.doc.cursors {
             use CursorState::*;
             match cursors {    
                 MirrorInsert(_) | Insert(_) => {
-                    let keymap = if matches!(cursors, MirrorInsert(_)) { &self.keymap.mirror_insert } else { &self.keymap.insert };
-                    if let Some(action) = keymap.map_event(event) {
-                        action(self);
-                        self.draw()?;
-                    } else if let InputEvent::Event(KeyEvent {
-                        code: KeyCode::Char(char),
-                        modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                        kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                        ..
-                    }) = event
+                    let keymap = if matches!(cursors, MirrorInsert(_)) { &GLOBAL_CONFIG.keymaps.mirror_insert } else { &GLOBAL_CONFIG.keymaps.insert };
+                    if let Some(key) = event.key()
+                        && let Some(action) = keymap.load()[key]
                     {
-                        self.insert(&String::from(char));
+                        signal = action.act(self);
                         self.draw()?;
+                    } else if let Some(char) = event.char() {
+                        'insert: {
+                            if let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
+                                match special {
+                                    CharSpecial::StrongLeft(right) => {
+                                        self.insert_pair(&String::from(char), &String::from(*right));
+                                        break 'insert;
+                                    },
+                                    CharSpecial::Right => {
+                                        self.insert_reluctant(&String::from(char));
+                                        break 'insert;
+                                    },
+                                    _ => ()
+                                }
+                            }
+                            self.insert(&String::from(char));
+                        }
+                        self.draw()?;
+                    } else if let Some(char) = event.alt_char() && let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
+                        match special {
+                            CharSpecial::StrongLeft(right) | CharSpecial::WeakLeft(right) => {
+                                self.insert_pair(&String::from(char), &String::from(*right));
+                                self.draw()?;
+                            },
+                            CharSpecial::Right => (),
+                            CharSpecial::WeakPair => {
+                                let string = String::from(char);
+                                self.insert_pair(&string, &string);
+                            },
+                        }
                     }
                 }
                 Select(_) => {
-                    if let Some(action) = self.keymap.select.map_event(event) {
-                        action(self);
+                    if let Some(key) = event.key() && let Some(action) = GLOBAL_CONFIG.keymaps.select.load()[key] {
+                        signal = action.act(self);
                         self.draw()?;
                     }
                 }
                 LineSelect(_) => {
-                    if let Some(action) = self.keymap.line_select.map_event(event) {
-                        action(self);
+                    if let Some(key) = event.key() && let Some(action) = GLOBAL_CONFIG.keymaps.line_select.load()[key] {
+                        signal = action.act(self);
                         self.draw()?;
                     }
                 }
             }
         }
 
-        Ok(())
-    }
-
-    pub fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()> {
-        let MouseEvent {
-            kind, modifiers, ..
-        } = event;
-        let code = match kind {
-            MouseEventKind::Down(button) => InputCode::Mouse(button),
-            MouseEventKind::ScrollDown => InputCode::Scroll(ScrollDir::Down),
-            MouseEventKind::ScrollUp => InputCode::Scroll(ScrollDir::Up),
-            MouseEventKind::ScrollLeft => InputCode::Scroll(ScrollDir::Left),
-            MouseEventKind::ScrollRight => InputCode::Scroll(ScrollDir::Right),
-            _ => return Ok(()),
-        };
-        self.on_key_event(InputEvent::Key(
-            match (
-                modifiers & KeyModifiers::CONTROL != KeyModifiers::NONE,
-                modifiers & KeyModifiers::ALT != KeyModifiers::NONE,
-            ) {
-                (false, false) => Key::base(code),
-                (true, false) => Key::ctrl(code),
-                (false, true) => Key::alt(code),
-                (true, true) => Key::ctrl_alt(code),
-            },
-        ))?;
-        Ok(())
+        Ok(signal)
     }
 
     pub fn on_paste(&mut self, text: String) -> io::Result<()> {

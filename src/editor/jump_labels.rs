@@ -1,16 +1,9 @@
 use std::collections::HashMap;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-
 use crate::{
     custom_literal::integer::rgb,
     document::Document,
-    draw::screen::Canvas,
-    editor::gadget::Gadget,
-    grapheme::GraphemeExt,
-    ix::{Column, Ix, Line},
-    pos::Pos,
-    style::FlatStyle,
+    draw::screen::Canvas, editor::gadget::Gadget, grapheme::GraphemeExt, ix::{Column, Ix, Line}, key::KeyOrChar, pos::Pos, style::FlatStyle,
 };
 
 use super::{Editor, gadget::ScreenRegion};
@@ -25,18 +18,13 @@ pub struct JumpLabels {
 }
 
 impl Gadget for JumpLabels {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut Editor)>> {
         macro xx($($tokens: tt)*) {
             Some(Box::new($($tokens)*))
         }
         
         match event {
-            KeyEvent {
-                code: KeyCode::Char(char),
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            key if let Some(char) = key.char() => {
                 if char == ' ' {
                     return xx!(Editor::close_gadget);
                 }

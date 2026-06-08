@@ -22,7 +22,7 @@ use std::{
 
 use clap::{ArgAction::SetTrue, Parser};
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, poll},
+    event::{self, Event, poll},
     terminal::{self},
     style::Color,
 };
@@ -31,7 +31,7 @@ use dispa::dispatch;
 use tokio::sync::mpsc;
 
 use crate::{
-    draw::screen::Canvas, editor::{Editor, keymap::InputEvent}, global_config::GLOBAL_CONFIG, ix::Ix, lsp::{channel::EditorToLspMessage, run_lsp_thread}, navigator::Navigator, pos::Pos, presenter::{Present, Presenter}, terminal_size::set_terminal_size
+    action::Action, draw::screen::Canvas, editor::Editor, global_config::GLOBAL_CONFIG, ix::Ix, key::{Key, KeyOrChar}, lsp::{channel::EditorToLspMessage, run_lsp_thread}, navigator::Navigator, pos::Pos, presenter::{Present, Presenter}, terminal_size::set_terminal_size
 };
 
 mod action;
@@ -241,38 +241,50 @@ fn run(file: FirstDoc, pos: Option<Pos>, autosave: bool) -> io::Result<()> {
 
     let mut state = State::Editor(editor);
 
+    macro handle_signal($signal: expr) {
+        use AppSignal::*;
+        if let Some(signal) = $signal {
+            match signal {
+                Quit => break,
+                Editor => state = state_into_editor(state)?,
+                Navigator => state = state_into_navigator(state)?,
+            }
+        }
+    }
+
+    fn state_into_editor(mut state: State) -> io::Result<State> {
+        if let State::Navigator(navg) = state {
+            state = State::Editor(navg.into_editor());
+            state.draw()?;
+        }
+        Ok(state)
+    }
+    fn state_into_navigator(mut state: State) -> io::Result<State> {
+        if let State::Editor(editor) = state {
+            state = State::Navigator(editor.into_navigator());
+            state.draw()?;
+        }
+        Ok(state)
+    }
+
     loop {
         if poll(Duration::from_millis(2))? {
             match event::read()? {
                 Event::FocusGained => (),
                 Event::FocusLost => (),
-                Event::Key(event) => match event {
-                    KeyEvent {
-                        code: KeyCode::Char('q'),
-                        modifiers: KeyModifiers::CONTROL,
-                        kind: KeyEventKind::Press,
-                        ..
-                    } => break,
-                    KeyEvent {
-                        code: KeyCode::Char('n'),
-                        modifiers: KeyModifiers::CONTROL,
-                        kind: KeyEventKind::Press,
-                        ..
-                    } => {
-                        match state {
-                            State::Editor(editor) => {
-                                state = State::Navigator(editor.into_navigator());
-                                state.draw()?;
+                Event::Key(event) =>
+                    if let Some(key) = KeyOrChar::from_key_event(event) {
+                        if let KeyOrChar::Key(key) = key
+                            && let Some(action) = GLOBAL_CONFIG.keymaps.app.load()[key] {
+                                handle_signal!(action.act(()));
                             }
-                            State::Navigator(navigator) => {
-                                state = State::Editor(navigator.into_editor());
-                                state.draw()?;
-                            }
-                        }
+                        handle_signal!(state.on_key_or_char(key)?);
                     },
-                    event => state.on_key_event(InputEvent::Event(event))?,
+                Event::Mouse(event) => {
+                    if let Some(key) = Key::from_mouse_event(event) {
+                        handle_signal!(state.on_key_or_char(KeyOrChar::Key(key))?);
+                    }
                 },
-                Event::Mouse(event) => state.on_mouse_event(event)?,
                 Event::Paste(string) => state.on_paste(string)?,
                 Event::Resize(width, height) => {
                     if set_terminal_size(width, height) {
@@ -291,11 +303,17 @@ fn run(file: FirstDoc, pos: Option<Pos>, autosave: bool) -> io::Result<()> {
     Ok(())
 }
 
+enum AppSignal {
+    Quit,
+    Editor,
+    Navigator,
+}
+
 #[dispatch]
-pub trait AppState {
+trait AppState {
     fn poll(&mut self) -> io::Result<()>;
-    fn on_key_event(&mut self, #[expect(unused)] event: InputEvent) -> io::Result<()> { Ok(()) }
-    fn on_mouse_event(&mut self, #[expect(unused)] event: MouseEvent) -> io::Result<()> { Ok(()) }
+
+    fn on_key_or_char(&mut self, event: KeyOrChar) -> io::Result<Option<AppSignal>> { _ = event; Ok(None) }
 
     fn on_paste(&mut self, #[expect(unused)] text: String) -> io::Result<()> { Ok(()) }
 }

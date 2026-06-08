@@ -1,8 +1,6 @@
 use std::mem;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-
-use crate::{color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::GraphemeExt, style::Style};
+use crate::{color, draw::screen::Canvas, editor::gadget::Gadget, grapheme::GraphemeExt, key::{KeyOrChar, key}, style::Style};
 
 use super::Editor;
 
@@ -26,37 +24,25 @@ impl Renamer {
 }
 
 impl Gadget for Renamer {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut Editor)>> {
         macro_rules! xx {
             ($($tokens: tt)*) => {
                 Some(Box::new($($tokens)*))
             };
         }
+        use KeyOrChar::*;
         match event {
-            KeyEvent {
-                code: KeyCode::Char(char),
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            key if let Some(char) = key.char() => {
                 self.r#type(char);
                 xx!(Editor::noop)
             }
     
-            KeyEvent {
-                code: KeyCode::Backspace,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            Key(key![backspace]) => {
                 self.backspace();
                 xx!(Editor::noop)
             }
     
-            KeyEvent {
-                code: KeyCode::Enter,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![return]) => {
                 let name = mem::take(&mut self.name);
                 xx!(move |e| {
                     e.complete_rename(name);

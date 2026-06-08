@@ -1,6 +1,4 @@
-use crossterm::event::KeyEvent;
-
-use crate::{draw::screen::Canvas, editor::Editor};
+use crate::{draw::screen::Canvas, editor::Editor, key::KeyOrChar};
 
 pub enum ScreenRegion {
     RightPanel,
@@ -8,7 +6,8 @@ pub enum ScreenRegion {
 }
 
 pub trait Gadget {
-    fn on_key(&mut self, #[allow(unused)] event: KeyEvent) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut Editor)>> {
+        _= event;
         None
     }
 

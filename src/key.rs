@@ -2,7 +2,7 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
 use strum::EnumCount;
 
-#[derive(EnumCount)]
+#[derive(Copy, Clone, PartialEq, Eq, EnumCount)]
 pub enum Key {
     Escape,
     F1,
@@ -296,26 +296,36 @@ pub enum Key {
     ScrollRight,
 }
 
-impl TryFrom<KeyEvent> for Key {
-    type Error = ();
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum KeyOrChar {
+    Key(Key),
+    Char(char),
+}
 
-    fn try_from(value: KeyEvent) -> Result<Self, ()> {
+impl From<Key> for KeyOrChar {
+    fn from(value: Key) -> Self {
+        Self::Key(value)
+    }
+}
+
+impl KeyOrChar {
+    pub fn from_key_event(value: KeyEvent) -> Option<Self> {
         let KeyEvent { code, modifiers, kind, .. } = value;
-        if !matches!(kind, KeyEventKind::Press | KeyEventKind::Repeat) {return Err(())};
-
+        if !matches!(kind, KeyEventKind::Press | KeyEventKind::Repeat) {return None};
+    
         let alt = modifiers.contains(KeyModifiers::ALT);
         let ctrl = modifiers.contains(KeyModifiers::CONTROL);
-
+    
         macro alt {
             (ctrl $($k:tt)*) => {
-                if alt {key!(ctrl alt $($k)*)} else {key!(ctrl $($k)*)}
+                Self::Key(if alt {key!(ctrl alt $($k)*)} else {key!(ctrl $($k)*)})
             },
             ($($k:tt)*) => {
-                if alt {key!(alt $($k)*)} else {key!($($k)*)}
+                Self::Key(if alt {key!(alt $($k)*)} else {key!($($k)*)})
             },
         }
-
-        Ok(match code {
+    
+        Some(match code {
             KeyCode::Backspace => alt![backspace],
             KeyCode::Enter => alt![return],
             KeyCode::Tab => alt![tab],
@@ -430,7 +440,8 @@ impl TryFrom<KeyEvent> for Key {
                     '<' => alt![<],
                     '>' => alt![>],
                     '?' => alt![?],
-                    _ => Err::<!, ()>(())?,
+                    c if !alt => Self::Char(c),
+                    _ => None::<!>?,
                 }} else {match c {    
                     'A' | 'a' => alt![ctrl a],
                     'B' | 'b' => alt![ctrl b],
@@ -460,30 +471,261 @@ impl TryFrom<KeyEvent> for Key {
                     '5' => alt![ctrl 5],
                     '6' => alt![ctrl 6],
                     '7' => alt![ctrl 7],
-                    _ => Err::<!, ()>(())?,
+                    _ => None::<!>?,
                 }},
-            _ => Err::<!, ()>(())?,
+            _ => None::<!>?,
         })
     }
 
+    pub fn key(self) -> Option<Key> {
+        match self {
+            KeyOrChar::Key(key) => Some(key),
+            KeyOrChar::Char(_) => None,
+        }
+    }
 
+    pub fn char(self) -> Option<char> {
+        match self {
+            KeyOrChar::Key(key) => key.char(),
+            KeyOrChar::Char(char) => Some(char),
+        }
+    }
+
+    pub fn alt_char(self) -> Option<char> {
+        match self {
+            KeyOrChar::Key(key) => key.alt_char(),
+            KeyOrChar::Char(_) => None,
+        }
+    }
 }
 
-impl TryFrom<MouseEvent> for Key {
-    type Error = ();
+impl Key {
+    pub fn from_key_event(event: KeyEvent) -> Option<Self> {
+        let or_char = KeyOrChar::from_key_event(event);
+        match or_char? {
+            KeyOrChar::Key(key) => Some(key),
+            KeyOrChar::Char(_) => None,
+        }
+    }
 
-    fn try_from(value: MouseEvent) -> Result<Self, Self::Error> {
-        Ok(match value.kind {
+    pub fn from_mouse_event(event: MouseEvent) -> Option<Self> {
+        Some(match event.kind {
             MouseEventKind::ScrollDown => Key::ScrollDown,
             MouseEventKind::ScrollUp => Key::ScrollUp,
             MouseEventKind::ScrollLeft => Key::ScrollLeft,
             MouseEventKind::ScrollRight => Key::ScrollRight,
-            _ => return Err(())
+            _ => None::<!>?
+        })
+    }
+
+    pub fn char(self) -> Option<char> {
+        Some(match self {
+            Key::BackTick => '`',
+            Key::One => '1',
+            Key::Two => '2',
+            Key::Three => '3',
+            Key::Four => '4',
+            Key::Five => '5',
+            Key::Six => '6',
+            Key::Seven => '7',
+            Key::Eight => '8',
+            Key::Nine => '9',
+            Key::Zero => '0',
+            Key::Minus => '-',
+            Key::Equal => '=',
+            Key::Tab => '\t',
+            Key::Q => 'q',
+            Key::W => 'w',
+            Key::E => 'e',
+            Key::R => 'r',
+            Key::T => 't',
+            Key::Y => 'y',
+            Key::U => 'u',
+            Key::I => 'i',
+            Key::O => 'o',
+            Key::P => 'p',
+            Key::LeftBracket => '[',
+            Key::RightBracket => ']',
+            Key::Backslash => '\\',
+            Key::A => 'a',
+            Key::S => 's',
+            Key::D => 'd',
+            Key::F => 'f',
+            Key::G => 'g',
+            Key::H => 'h',
+            Key::J => 'j',
+            Key::K => 'k',
+            Key::L => 'l',
+            Key::Semicolon => ';',
+            Key::Quote => '\'',
+            Key::Return => '\n',
+            Key::Z => 'z',
+            Key::X => 'x',
+            Key::C => 'c',
+            Key::V => 'v',
+            Key::B => 'b',
+            Key::N => 'n',
+            Key::M => 'm',
+            Key::Comma => ',',
+            Key::Dot => '.',
+            Key::Slash => '/',
+            Key::Space => ' ',
+            Key::Squiggle => '~',
+            Key::Bang => '!',
+            Key::At => '@',
+            Key::Hash => '#',
+            Key::Dollar => '$',
+            Key::Percent => '%',
+            Key::Caret => '^',
+            Key::Ampersand => '&',
+            Key::Star => '*',
+            Key::LeftParen => '(',
+            Key::RightParen => ')',
+            Key::Underscore => '_',
+            Key::Plus => '+',
+            Key::UpperQ => 'Q',
+            Key::UpperW => 'W',
+            Key::UpperE => 'E',
+            Key::UpperR => 'R',
+            Key::UpperT => 'T',
+            Key::UpperY => 'Y',
+            Key::UpperU => 'U',
+            Key::UpperI => 'I',
+            Key::UpperO => 'O',
+            Key::UpperP => 'P',
+            Key::LeftBrace => '{',
+            Key::RightBrace => '}',
+            Key::Bar => '|',
+            Key::UpperA => 'A',
+            Key::UpperS => 'S',
+            Key::UpperD => 'D',
+            Key::UpperF => 'F',
+            Key::UpperG => 'G',
+            Key::UpperH => 'H',
+            Key::UpperJ => 'J',
+            Key::UpperK => 'K',
+            Key::UpperL => 'L',
+            Key::Colon => ':',
+            Key::DoubleQuote => '"',
+            Key::UpperZ => 'Z',
+            Key::UpperX => 'X',
+            Key::UpperC => 'C',
+            Key::UpperV => 'V',
+            Key::UpperB => 'B',
+            Key::UpperN => 'N',
+            Key::UpperM => 'M',
+            Key::LessThan => '<',
+            Key::GreaterThan => '>',
+            Key::Question => '?',
+            _ => None::<!>?
+        })
+    }
+    
+    pub fn alt_char(self) -> Option<char> {
+        Some(match self {
+            Key::AltBackTick => '`',
+            Key::AltOne => '1',
+            Key::AltTwo => '2',
+            Key::AltThree => '3',
+            Key::AltFour => '4',
+            Key::AltFive => '5',
+            Key::AltSix => '6',
+            Key::AltSeven => '7',
+            Key::AltEight => '8',
+            Key::AltNine => '9',
+            Key::AltZero => '0',
+            Key::AltMinus => '-',
+            Key::AltEqual => '=',
+            Key::AltTab => '\t',
+            Key::AltQ => 'q',
+            Key::AltW => 'w',
+            Key::AltE => 'e',
+            Key::AltR => 'r',
+            Key::AltT => 't',
+            Key::AltY => 'y',
+            Key::AltU => 'u',
+            Key::AltI => 'i',
+            Key::AltO => 'o',
+            Key::AltP => 'p',
+            Key::AltLeftBracket => '[',
+            Key::AltRightBracket => ']',
+            Key::AltBackslash => '\\',
+            Key::AltA => 'a',
+            Key::AltS => 's',
+            Key::AltD => 'd',
+            Key::AltF => 'f',
+            Key::AltG => 'g',
+            Key::AltH => 'h',
+            Key::AltJ => 'j',
+            Key::AltK => 'k',
+            Key::AltL => 'l',
+            Key::AltSemicolon => ';',
+            Key::AltQuote => '\'',
+            Key::AltReturn => '\n',
+            Key::AltZ => 'z',
+            Key::AltX => 'x',
+            Key::AltC => 'c',
+            Key::AltV => 'v',
+            Key::AltB => 'b',
+            Key::AltN => 'n',
+            Key::AltM => 'm',
+            Key::AltComma => ',',
+            Key::AltDot => '.',
+            Key::AltSlash => '/',
+            Key::AltSpace => ' ',
+            Key::AltSquiggle => '~',
+            Key::AltBang => '!',
+            Key::AltAt => '@',
+            Key::AltHash => '#',
+            Key::AltDollar => '$',
+            Key::AltPercent => '%',
+            Key::AltCaret => '^',
+            Key::AltAmpersand => '&',
+            Key::AltStar => '*',
+            Key::AltLeftParen => '(',
+            Key::AltRightParen => ')',
+            Key::AltUnderscore => '_',
+            Key::AltPlus => '+',
+            Key::AltUpperQ => 'Q',
+            Key::AltUpperW => 'W',
+            Key::AltUpperE => 'E',
+            Key::AltUpperR => 'R',
+            Key::AltUpperT => 'T',
+            Key::AltUpperY => 'Y',
+            Key::AltUpperU => 'U',
+            Key::AltUpperI => 'I',
+            Key::AltUpperO => 'O',
+            Key::AltUpperP => 'P',
+            Key::AltLeftBrace => '{',
+            Key::AltRightBrace => '}',
+            Key::AltBar => '|',
+            Key::AltUpperA => 'A',
+            Key::AltUpperS => 'S',
+            Key::AltUpperD => 'D',
+            Key::AltUpperF => 'F',
+            Key::AltUpperG => 'G',
+            Key::AltUpperH => 'H',
+            Key::AltUpperJ => 'J',
+            Key::AltUpperK => 'K',
+            Key::AltUpperL => 'L',
+            Key::AltColon => ':',
+            Key::AltDoubleQuote => '"',
+            Key::AltUpperZ => 'Z',
+            Key::AltUpperX => 'X',
+            Key::AltUpperC => 'C',
+            Key::AltUpperV => 'V',
+            Key::AltUpperB => 'B',
+            Key::AltUpperN => 'N',
+            Key::AltUpperM => 'M',
+            Key::AltLessThan => '<',
+            Key::AltGreaterThan => '>',
+            Key::AltQuestion => '?',
+            _ => None::<!>?
         })
     }
 }
 
-macro key {
+pub macro key {
     (esc) => {$crate::key::Key::Escape},
     (f1) => {$crate::key::Key::F1},
     (f2) => {$crate::key::Key::F2},

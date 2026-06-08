@@ -171,6 +171,10 @@ impl Document {
         self.save_instant = Some(Instant::now() + SAVE_DELAY);
     }
 
+    pub fn declare_saved(&mut self) {
+        self.save_instant = None;
+    }
+
     pub fn check_should_save(&mut self) -> bool {
         if let Some(instant) = self.save_instant
             && Instant::now() > instant {

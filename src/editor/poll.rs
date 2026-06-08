@@ -1,18 +1,16 @@
 use std::{io, path::Path, sync::Arc};
 
-use crossterm::event::MouseEvent;
 use lsp_types::Url;
 
 use crate::{
-    AppState, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
+    AppSignal, AppState, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
         Editor,
         code_actions::{ActionEdit, CodeAction, CodeActionsGadget},
         completer::Completer,
-        keymap::InputEvent,
         markdown_view::MarkdownGadget,
         picker::Picker,
         renamer::Renamer,
-    }, language_server::LanguageServer, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::{MapBounds, uri_to_canon_path}
+    }, key::KeyOrChar, language_server::LanguageServer, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::{MapBounds, uri_to_canon_path}
 };
 
 impl AppState for Editor {
@@ -154,16 +152,22 @@ impl AppState for Editor {
             self.save_file();
         }
 
+        self.bg_docs
+            .pathed_mut()
+            .filter_map(|(path, doc)|
+                doc.check_should_save()
+                    .then_some(path)
+            )
+            .collect::<Vec<_>>().into_iter()
+            .for_each(|path| self.save_document(path));
+
+
         self.poll_draw()?;
         Ok(())
     }
 
-    fn on_key_event(&mut self, event: InputEvent) -> io::Result<()>{
-        self.on_key_event(event)
-    }
-
-    fn on_mouse_event(&mut self, event: MouseEvent) -> io::Result<()>{
-        self.on_mouse_event(event)
+    fn on_key_or_char(&mut self, key: KeyOrChar) -> io::Result<Option<AppSignal>> {
+        self.on_key_or_char(key)
     }
 
     fn on_paste(&mut self, text: String) -> io::Result<()> {

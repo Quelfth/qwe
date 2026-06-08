@@ -39,10 +39,10 @@ impl Editor {
         self.doc.move_y(Ix::new(rows));
     }
 
-    pub fn text_extend_up(&mut self, rows: usize) {
+    pub fn extend_up(&mut self, rows: usize) {
         self.doc.extend_up(Ix::new(rows));
     }
-    pub fn text_extend_down(&mut self, rows: usize) {
+    pub fn extend_down(&mut self, rows: usize) {
         self.doc.extend_down(Ix::new(rows));
     }
 

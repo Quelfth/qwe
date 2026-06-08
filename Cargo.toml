@@ -53,6 +53,7 @@ tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
 append-only-vec = "0.1.8"
 jiff = "0.2.23"
 strum = { version = "0.28.0", features = ["derive"] }
+arc-swap = "1.9.1"
 
 [profile.release]
 debug = true

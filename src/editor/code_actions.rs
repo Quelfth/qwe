@@ -1,12 +1,11 @@
 use std::range::Range;
 
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use lsp_types::{
     AnnotatedTextEdit, CodeAction as LspCodeAction, Command, CompletionTextEdit, CreateFile, DeleteFile, DocumentChanges, InsertReplaceEdit, OneOf, OptionalVersionedTextDocumentIdentifier, RenameFile, ResourceOp, TextDocumentEdit, TextEdit, Url, WorkspaceEdit
 };
 
 use crate::{
-    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, pos::Utf16Pos, style::Style
+    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, key::{KeyOrChar, key}, pos::Utf16Pos, style::Style
 };
 
 #[derive(Clone, Debug)]
@@ -154,44 +153,26 @@ impl CodeActionsGadget {
 }
 
 impl Gadget for CodeActionsGadget {
-    fn on_key(&mut self, event: KeyEvent) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
         macro_rules! xx {
             ($($tokens: tt)*) => {
                 Some(Box::new($($tokens)*))
             };
         }
+
+        use KeyOrChar::Key;
+
         match event {
-            KeyEvent {
-                code: KeyCode::Char(_),
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => None,
 
-            KeyEvent {
-                code: KeyCode::Backspace,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => None,
-
-            KeyEvent {
-                code: KeyCode::Tab,
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+            Key(key![tab]) => {
                 if self.actions.is_empty() {
                     return None;
                 }
                 self.selected = (self.selected + 1) % self.actions.len();
                 xx!(Editor::noop)
             }
-            KeyEvent {
-                code: KeyCode::BackTab,
-                modifiers: KeyModifiers::NONE | KeyModifiers::SHIFT,
-                kind: KeyEventKind::Press | KeyEventKind::Repeat,
-                ..
-            } => {
+
+            Key(key![back tab]) => {
                 if self.actions.is_empty() {
                     return None;
                 }
@@ -199,11 +180,7 @@ impl Gadget for CodeActionsGadget {
                 xx!(Editor::noop)
             }
 
-            KeyEvent {
-                code: KeyCode::Enter,
-                kind: KeyEventKind::Press,
-                ..
-            } => {
+            Key(key![return] | key![ ]) => {
                 let action = self.actions.remove(self.selected);
                 Some(Box::new(move |editor| {
                     let CodeAction { edits, command: None, .. } = action else {return};

@@ -5,7 +5,7 @@ use crossterm::{ExecutableCommand, clipboard::CopyToClipboard};
 use crate::{
     aprintln::aprintln, document::Document, editor::{
         Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels, log::LogViewer, picker::Picker
-    }, ix::Ix, lang::Language, language_server::LspContext, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
+    }, ix::Ix, lang::Language, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
 };
 
 mod insert;
@@ -35,22 +35,29 @@ impl Editor {
     }
 
     pub fn save_file(&mut self) {
-        fn save_doc(path: Arc<Path>, doc: &Document, lsp: Option<&LspContext>) {
-            _ = fs::write(&path, doc.text().to_string().as_bytes());
-            if let Some(cx) = &lsp
-                && let Some(lang) = doc.language()
-            {
-                _ = cx.tx.send(EditorToLspMessage::Save { lang, path });
-            }
-        }
-
         for path in self.bg_docs.take_save_list() {
-            let doc = self.bg_docs.by_path(&path).unwrap();
-            save_doc(path, doc, self.lsp.as_ref());
+            self.save_document(path);
         }
 
         if let Some(path) = self.filepath.clone() {
-            save_doc(path, &self.doc, self.lsp.as_ref());
+            self.save_document(path);
+        }
+    }
+
+    pub fn save_document(&mut self, path: Arc<Path>) {
+        let doc = if let Some(fp) = self.filepath.clone() && let Ok(eq) = try {path.canonicalize()? == fp.canonicalize()?} && eq {
+            self.doc.declare_saved();
+            &self.doc
+        } else {
+            let Some(doc) = self.bg_docs.by_path_mut(&path) else { return };
+            doc.declare_saved();
+            self.bg_docs.by_path(&path).unwrap()
+        };
+        _ = fs::write(&path, doc.text().to_string().as_bytes());
+        if let Some(cx) = &self.lsp
+            && let Some(lang) = doc.language()
+        {
+            _ = cx.tx.send(EditorToLspMessage::Save { lang, path });
         }
     }
 
