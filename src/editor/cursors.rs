@@ -111,6 +111,25 @@ impl CursorState {
         }
     }
 
+    pub fn len(&self) -> usize {
+        use CursorState::*;
+        match self {
+            MirrorInsert(c) => c.len(),
+            Insert(c) => c.len(),
+            Select(c) => c.len(),
+            LineSelect(c) => c.len(),
+        }
+    }
+
+    pub fn last_index(&self) -> CursorIndex {
+        let len = self.len();
+        if len == 1 {
+            CursorIndex::Main
+        } else {
+            CursorIndex::Other(len - 2)
+        }
+    }
+
     pub fn assume_mirror_insert(&self) -> &MirrorInsertCursors {
         let Self::MirrorInsert(cursors) = self else {
             panic!()
@@ -175,6 +194,10 @@ pub struct CursorSet<Cursor> {
 impl<T> CursorSet<T> {
     pub fn main(&self) -> &T {
         &self.main
+    }
+
+    pub fn len(&self) -> usize {
+        self.others.len() + 1
     }
 
     pub fn one(cursor: T) -> Self {
@@ -335,6 +358,15 @@ impl CursorState {
             Insert(_) => iter::empty(),
             Select(c) => c.delete_ranges(text),
             LineSelect(c) => c.delete_ranges(text),
+        }
+    }
+
+    #[auto_enum(Iterator)]
+    pub fn delete_ranges_for_cursor(&self, text: &Rope, cursor: CursorIndex) -> impl Iterator<Item = Range<Ix<Byte>>> {
+        match self {
+            CursorState::Select(cursors) if let Some(cursor) = cursors.get(cursor) => cursor.delete_ranges(text),
+            CursorState::LineSelect(cursors) if let Some(cursor) = cursors.get(cursor) => cursor.text_range(text).into_iter(),
+            _ => iter::empty()
         }
     }
 }

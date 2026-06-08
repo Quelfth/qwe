@@ -6,12 +6,14 @@ impl Action<&mut Editor> for AnySelectAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {
         match self {
             AnySelectAction::Document(action) => return action.act(ed),
-            AnySelectAction::TabIn => _= ed.tab_lines_in(),
+            AnySelectAction::TabIn => ed.tab_lines_in(),
             AnySelectAction::TabOut => ed.tab_lines_out(),
             AnySelectAction::SyntaxExtend => ed.syntax_extend(),
             AnySelectAction::SplitCursorsByLines => ed.cursor_line_split(),
             AnySelectAction::CollapseToStart => ed.collapse_cursors_to_start(),
             AnySelectAction::CollapseToEnd => ed.collapse_cursors_to_end(),
+            AnySelectAction::FlitForward => ed.doc_mut().flit_forward(),
+            AnySelectAction::FlitBackward => ed.doc_mut().flit_backward(),
             AnySelectAction::Delete => ed.delete(),
             AnySelectAction::Cut => ed.cut(),
             AnySelectAction::Copy => ed.copy(),

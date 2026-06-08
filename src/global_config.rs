@@ -140,6 +140,8 @@ impl Default for Keymaps {
             [:] => SplitCursorsByLines,
             [u] => CollapseToStart,
             [q] => CollapseToEnd,
+            [alt 9] => FlitBackward,
+            [alt 0] => FlitForward,
             [X] => Delete,
             [x] => Cut,
             [c] => Copy,

@@ -1,6 +1,6 @@
 use crate::{
     document::{Document, force_cursors},
-    editor::cursors::{CursorState, Cursors},
+    editor::cursors::{CursorIndex, CursorState, Cursors},
     ix::{Column, Ix, Line},
 };
 
@@ -169,5 +169,35 @@ impl Document {
             && let Some(c) = &mut self.cursors {
                 c.syntax_extend(&self.text, tree)
             }
+    }
+
+    pub fn flit_forward(&mut self) {
+        let Some(cursors) = &self.cursors else {return};
+        if cursors.len() < 2 {return};
+        let last_index = cursors.last_index();
+
+        self.timeline.history.checkpoint();
+        let main_text = self.cut_from_cursor(CursorIndex::Main).unwrap();
+        let other_text = self.cut_from_cursor(CursorIndex::Other(0)).unwrap();
+
+        self.cursors.as_mut().unwrap().cycle_forward();
+
+        self.paste_at_cursor(main_text, CursorIndex::Main);
+        self.paste_at_cursor(other_text, last_index);
+    }
+
+    pub fn flit_backward(&mut self) {
+        let Some(cursors) = &self.cursors else {return};
+        if cursors.len() < 2 {return};
+        let last_index = cursors.last_index();
+
+        self.timeline.history.checkpoint();
+        let main_text = self.cut_from_cursor(CursorIndex::Main).unwrap();
+        let other_text = self.cut_from_cursor(last_index).unwrap();
+
+        self.cursors.as_mut().unwrap().cycle_backward();
+
+        self.paste_at_cursor(main_text, CursorIndex::Main);
+        self.paste_at_cursor(other_text, CursorIndex::Other(0));
     }
 }

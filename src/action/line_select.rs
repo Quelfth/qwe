@@ -5,8 +5,8 @@ impl Action<&mut Editor> for LineSelectAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {
         match self {
             LineSelectAction::Any(action) => return action.act(ed),
-            LineSelectAction::InsertBefore => ed.insert_before(),
-            LineSelectAction::InsertAfter => ed.insert_after(),
+            LineSelectAction::InsertBefore => ed.insert_on_newline_before(),
+            LineSelectAction::InsertAfter => ed.insert_on_newline_after(),
             LineSelectAction::InsertBeforeLine => ed.insert_before_line(),
             LineSelectAction::InsertAfterLine => ed.insert_after_line(),
             LineSelectAction::MirrorInsertIn => ed.mirror_insert_in(),

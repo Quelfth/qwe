@@ -20,51 +20,54 @@ impl Document {
             .saturating_sub(*self.view_height.lock() / 2)
     }
 
-    pub fn copy_text(&self) -> impl Iterator<Item = String> {
-        gen {
-            if let Some(cursors) = &self.cursors {
-                use CursorState::*;
-                match cursors {
-                    MirrorInsert(_) => todo!(),
-                    Insert(_) => (),
-                    Select(c) => {
-                        for cursor in c.iter() {
-                            let mut s = String::new();
-                            for (i, RangeCursorLine { start, end }) in cursor.lines_ix() {
-                                let Some(line) = self.text.line(i) else {
-                                    continue;
-                                };
-                                let range = line.column_range_to_byte_range(start..end);
-                                s.extend(line.byte_slice(range).unwrap().chunks());
-                                s += "\n";
-                            }
-                            s.pop();
-                            yield s;
-                        }
-                    }
-                    LineSelect(cursor_set) => {
-                        for cursor in cursor_set.iter() {
-                            if let Some(range) = cursor.text_range(&self.text) {
-                                let mut s = String::new();
-                                let slice = self.text.byte_slice(range).unwrap();
-                                let indent = cursor
-                                    .lines()
-                                    .map(|l| self.text.indent_on_line(l))
-                                    .min()
-                                    .unwrap_or_default();
-                                for line in slice.lines() {
-                                    let indent = line.columns_to_bytes(indent);
-                                    let cropped = &line.to_string()[indent.inner()..];
-                                    s += cropped;
-                                    s += "\n";
-                                }
-                                yield s.to_string();
-                            }
-                        }
-                    }
+    pub fn cut_from_cursor(&mut self, cursor: CursorIndex) -> Option<String> {
+        let text = self.copy_from_cursor(cursor)?;
+        self.delete_at_cursor(cursor);
+        Some(text)
+    }
+
+    pub fn copy_from_cursor(&self, cursor: CursorIndex) -> Option<String> {
+        let Some(cursors) = &self.cursors else {return None};
+        Some(match cursors {
+            CursorState::Select(cursors) => {
+                let mut s = String::new();
+                let cursor = cursors.get(cursor)?;
+                for (i, RangeCursorLine { start, end }) in cursor.lines_ix() {
+                    let Some(line) = self.text.line(i) else { continue };
+                    let range = line.column_range_to_byte_range(start..end);
+                    s.extend(line.byte_slice(range).unwrap().chunks());
+                    s += "\n";
                 }
-            }
-        }
+                s.pop();
+                s
+            },
+            CursorState::LineSelect(c) => {
+                let cursor = c.get(cursor)?;
+                if let Some(range) = cursor.text_range(&self.text) {
+                    let mut s = String::new();
+                    let slice = self.text.byte_slice(range).unwrap();
+                    let indent = cursor
+                        .lines()
+                        .map(|l| self.text.indent_on_line(l))
+                        .min()
+                        .unwrap_or_default();
+                    for line in slice.lines() {
+                        let indent = line.columns_to_bytes(indent);
+                        let cropped = &line.to_string()[indent.inner()..];
+                        s += cropped;
+                        s += "\n";
+                    }
+                    s
+                } else { String::new() }
+            },
+            _ => String::new()
+        })
+    }
+
+    pub fn copy_text(&self) -> impl Iterator<Item = String> {
+        self.cursors.iter()
+            .flat_map(|c| c.indices())
+            .flat_map(|i| self.copy_from_cursor(i))
     }
 
     pub fn paste_at_cursor(&mut self, text: String, cursor: CursorIndex) {

@@ -129,6 +129,9 @@ pub enum AnySelectAction {
     CollapseToStart,
     CollapseToEnd,
 
+    FlitForward,
+    FlitBackward,
+
     Delete,
     Cut,
     Copy,

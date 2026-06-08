@@ -191,6 +191,10 @@ impl Editor {
         &self.doc
     }
 
+    pub fn doc_mut(&mut self) -> &mut Document {
+        &mut self.doc
+    }
+
     pub fn on_key_or_char(&mut self, event: KeyOrChar) -> io::Result<Option<AppSignal>> {
         if let Some(gadget) = &mut self.gadget {
             if event == key![esc].into() {

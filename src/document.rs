@@ -795,6 +795,16 @@ impl Document {
         }
     }
 
+    pub fn delete_at_cursor(&mut self, cursor: CursorIndex) {
+        if let Some(cursors) = &self.cursors {
+            let mut ranges = cursors.delete_ranges_for_cursor(&self.text, cursor).collect::<Vec<_>>();
+            ranges.sort_unstable_by_key(|r| r.start);
+            for range in ranges.into_iter().rev() {
+                self.delete(range);
+            }
+        }
+    }
+
     pub fn delete(&mut self, range: Range<Ix<Byte>>) {
         if range.is_empty() {
             return;
