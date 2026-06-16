@@ -1,5 +1,5 @@
 use crate::{
-    AppSignal,
+    app::AppSignal,
     action::{Action, InsertAction},
     document::Document, editor::Editor,
 };

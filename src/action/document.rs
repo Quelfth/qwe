@@ -1,4 +1,4 @@
-use crate::{AppSignal, action::{Action, DocumentAction, ScrollAction}, document::Document, editor::Editor};
+use crate::{app::AppSignal, action::{Action, DocumentAction, ScrollAction}, document::Document, editor::Editor};
 
 impl Action<&mut Editor> for ScrollAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {

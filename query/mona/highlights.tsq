@@ -31,8 +31,8 @@
 (parenthetical ["(" ")"] @o.group)
 
 (function ["{" "}"] @o.declare.function)
-(object "{" @o.call.type.struct ("," @o.call.type.struct)? [(field_item) (rest_item)] ("," @o.call.type.struct)? "}" @o.call.type.struct)
-(object "{" @o.call.type.enum ("," @o.call.type.enum)? (variant_item) ("," @o.call.type.enum)? "}" @o.call.type.enum)
+(object "[" @o.call.type.struct ("," @o.call.type.struct)? [(field_item) (rest_item)] ("," @o.call.type.struct)? "]" @o.call.type.struct)
+(object "[" @o.call.type.enum ("," @o.call.type.enum)? (variant_item) ("," @o.call.type.enum)? "]" @o.call.type.enum)
 
 (binary_expression ["+" "-" "*" "/"] @o.arithmetic)
 (binary_expression ["<" ">" "<=" ">=" "!=" "=="] @o.comparison)
@@ -65,20 +65,20 @@
 (rest_item ".." @o.wildcard)
 
 (simple_parameter ["(" ")"] @o.call)
-(named_parameters ["{" "," "}"] @o.call)
+(named_parameters ["[" "," "]"] @o.call)
 (named_parameter name: (name (identifier) @i.value.parameter))
 (named_parameter ":" @o.type)
 
 (receiver ["." "|>" "<>" "<|"] @o.access.method)
 (function_item receiver: (_) (simple_parameter ["(" ")"] @o.call.function.method))
-(function_item receiver: (_) (named_parameters ["{" "," "}"] @o.call.function.method))
+(function_item receiver: (_) (named_parameters ["[" "," "]"] @o.call.function.method))
 (function_item name: (name (identifier) @i.function.method) receiver: (_))
 (function_item generics: (generics ["<" "," ">"] @o.call.function.method) receiver: (_))
 
 (call_expression
     argument: [
         (parenthetical ["(" ")"] @o.call)
-        (object ["{" "}"] @o.call)
+        (object ["[" "]"] @o.call)
     ]
 )
 

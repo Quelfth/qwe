@@ -1,4 +1,4 @@
-use crate::{AppSignal, action::{Action, LineSelectAction}, editor::Editor};
+use crate::{app::AppSignal, action::{Action, LineSelectAction}, editor::Editor};
 
 
 impl Action<&mut Editor> for LineSelectAction {

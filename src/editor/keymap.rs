@@ -104,7 +104,7 @@ impl Key {
     }
 }
 
-use crate::{AppSignal, editor::Editor, keymap::KeyMap};
+use crate::{app::AppSignal, editor::Editor, keymap::KeyMap};
 
 type NewMapping = fn(&mut Editor) -> Option<AppSignal>;
 

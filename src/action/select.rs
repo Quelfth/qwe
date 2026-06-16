@@ -1,4 +1,4 @@
-use crate::{AppSignal, action::{Action, SelectAction}, editor::Editor};
+use crate::{app::AppSignal, action::{Action, SelectAction}, editor::Editor};
 
 use super::AnySelectAction;
 

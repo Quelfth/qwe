@@ -1,16 +1,5 @@
 use std::{
-    boxed::Box,
-    collections::{HashMap, HashSet, hash_map::Entry},
-    env,
-    future::Future,
-    io,
-    marker::Send,
-    ops::ControlFlow,
-    pin::Pin,
-    process::Stdio,
-    result::Result,
-    thread,
-    time::Duration,
+    boxed::Box, collections::{HashMap, HashSet, hash_map::Entry}, env, future::Future, io, marker::Send, ops::ControlFlow, pin::Pin, process::Stdio, result::Result, thread, time::Duration
 };
 
 use async_lsp::{
@@ -44,7 +33,7 @@ use tower::ServiceBuilder;
 use tracing::Level;
 
 use crate::{
-    aprintln::aprintln, lang::LangLspInfo, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos
+    aprintln::aprintln, lang::LangLspInfo, log::{log, log_err}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos
 };
 
 use channel::LspChannels;
@@ -102,7 +91,7 @@ impl From<&ServerCapabilities> for ServerCaps {
 }
 
 impl Server {
-    fn spawn(command: &str) -> anyhow::Result<Self> {
+    fn spawn(command: &str) -> async_lsp::Result<Self> {
         let (send, recv) = tokio::sync::mpsc::unbounded_channel();
         let (r#loop, socket) = async_lsp::MainLoop::new_client(|_| {
             ServiceBuilder::new()
@@ -327,11 +316,11 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                         continue;
                     };
                     if let Entry::Vacant(e) = servers.entry(lang) {
-                        let mut server = Server::spawn(command)?;
-                        let init_result = server.initialize(options).await?;
+                        let Ok(mut server) = log_err!(Server::spawn(command)) else {continue};
+                        let Ok(init_result) = log_err!(server.initialize(options).await) else {continue};
                         server.caps = (&init_result.capabilities).into();
                         tx.send(LspToEditorMessage::NewLsp { lang, init_result })?;
-                        server.initialized()?;
+                        _=log_err!(server.initialized());
                         e.insert(server);
                     }
                     let server = servers.get_mut(&lang).unwrap();
@@ -363,8 +352,8 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     pos: Utf16Pos { line, column },
                 } => {
                     if let Some(server) = servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
-                        if let Some(Hover { contents, .. }) = server
+                        let uri = Url::from_file_path(path.canonicalize().unwrap_or((*path).to_owned())).unwrap();
+                        if let Ok(Some(Hover { contents, .. })) = log_err!(server
                             .socket
                             .hover(HoverParams {
                                 text_document_position_params: TextDocumentPositionParams {
@@ -378,7 +367,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                     work_done_token: None,
                                 },
                             })
-                            .await?
+                            .await)
                         {
                             let view = match contents {
                                 HoverContents::Scalar(string) => match string {
@@ -410,7 +399,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 } => {
                     if let Some(server) = servers.get_mut(&lang) {
                         let uri = Url::from_file_path(path.canonicalize()?).unwrap();
-                        if let Some(response) = server
+                        if let Ok(Some(response)) = log_err!(server
                             .socket
                             .completion(CompletionParams {
                                 text_document_position: TextDocumentPositionParams {
@@ -424,7 +413,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                 partial_result_params: Default::default(),
                                 context: None,
                             })
-                            .await?
+                            .await)
                         {
                             let items = match response {
                                 CompletionResponse::Array(items) => items,
@@ -463,12 +452,12 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                             })
                         }
                         if let Some(locations) = match kind {
-                            Definition => locs(server.socket.definition(params).await?),
-                            Declaration => locs(server.socket.declaration(params).await?),
-                            Implementation => locs(server.socket.implementation(params).await?),
-                            TypeDefinition => locs(server.socket.type_definition(params).await?),
+                            Definition => locs(log_err!(server.socket.definition(params).await).ok().flatten()),
+                            Declaration => locs(log_err!(server.socket.declaration(params).await).ok().flatten()),
+                            Implementation => locs(log_err!(server.socket.implementation(params).await).ok().flatten()),
+                            TypeDefinition => locs(log_err!(server.socket.type_definition(params).await).ok().flatten()),
                             References => {
-                                server
+                                log_err!(server
                                     .socket
                                     .references(ReferenceParams {
                                         text_document_position: text_document_position_params,
@@ -478,7 +467,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                             include_declaration: true,
                                         },
                                     })
-                                    .await?
+                                    .await).ok().flatten()
                             }
                         } {
                             tx.send(LspToEditorMessage::Goto { locations })?;
@@ -496,7 +485,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                             line: line.inner() as _,
                             character: column.inner() as _,
                         };
-                        if let Some(response) = server
+                        if let Ok(Some(response)) = log_err!(server
                             .socket
                             .code_action(CodeActionParams {
                                 text_document: TextDocumentIdentifier { uri },
@@ -512,7 +501,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                                 partial_result_params: Default::default(),
                                 work_done_progress_params: Default::default(),
                             })
-                            .await?
+                            .await)
                         {
                             let mut actions = Vec::new();
                             for action in response {
@@ -537,13 +526,13 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 } => {
                     if let Some(server) = servers.get_mut(&lang) {
                         let uri = Url::from_file_path(path.canonicalize()?).unwrap();
-                        if let Some(response) = server.socket.prepare_rename(TextDocumentPositionParams {
+                        if let Ok(Some(response)) = log_err!(server.socket.prepare_rename(TextDocumentPositionParams {
                             text_document: TextDocumentIdentifier { uri },
                             position: Position {
                                 line: line.inner() as _,
                                 character: column.inner() as _,
                             },
-                        }).await? {
+                        }).await) {
                             let (range, text) = match response {
                                 PrepareRenameResponse::Range(range) => (Some(range), None),
                                 PrepareRenameResponse::RangeWithPlaceholder { range, placeholder } => (Some(range), Some(placeholder)),
@@ -559,7 +548,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 EditorToLspMessage::CompleteRename { lang, path, pos: Utf16Pos { line, column }, name } => {
                      if let Some(server) = servers.get_mut(&lang) {
                         let uri = Url::from_file_path(path.canonicalize()?).unwrap();
-                        if let Some(edit) = server.socket.rename(RenameParams{ 
+                        if let Ok(Some(edit)) = log_err!(server.socket.rename(RenameParams{ 
                             text_document_position: TextDocumentPositionParams {
                                 text_document: TextDocumentIdentifier { uri },
                                 position: Position {
@@ -569,7 +558,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                             },
                             new_name: name,
                             work_done_progress_params: Default::default(),
-                        }).await? {
+                        }).await) {
                             tx.send(LspToEditorMessage::Rename { edit })?;
                         }
                     }
@@ -582,31 +571,31 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 } => {
                     if let Some(server) = servers.get_mut(&lang) {
                         let uri = Url::from_file_path(path.canonicalize()?).unwrap();
-                        server.socket.did_change(DidChangeTextDocumentParams {
+                        _=log_err!(server.socket.did_change(DidChangeTextDocumentParams {
                             text_document: VersionedTextDocumentIdentifier {
                                 uri: uri.clone(),
                                 version,
                             },
                             content_changes: changes,
-                        })?;
+                        }));
                         refresh_semantic_tokens(server, uri, tx.clone());
                     }
                 }
                 EditorToLspMessage::Save { lang, path } => {
                     if let Some(server) = servers.get_mut(&lang) {
                         let uri = Url::from_file_path(path.canonicalize()?).unwrap();
-                        server.socket.did_save(DidSaveTextDocumentParams {
+                        _=log_err!(server.socket.did_save(DidSaveTextDocumentParams {
                             text_document: TextDocumentIdentifier { uri: uri.clone() },
                             text: None,
-                        })?;
-                        server
+                        }));
+                        _=log_err!(server
                             .socket
                             .did_change_watched_files(DidChangeWatchedFilesParams {
                                 changes: vec![FileEvent {
                                     uri,
                                     typ: FileChangeType::CHANGED,
                                 }],
-                            })?;
+                            }));
                     }
                 }
             }

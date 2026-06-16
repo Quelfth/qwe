@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 
 use crate::{
-    AppSignal, PathedFile, action::Action as _, document::Document, editor::{
+    app::AppSignal, PathedFile, action::Action as _, document::Document, editor::{
         clipboard::Clipboard, cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
@@ -247,6 +247,7 @@ impl Editor {
                             CharSpecial::WeakPair => {
                                 let string = String::from(char);
                                 self.insert_pair(&string, &string);
+                                self.draw()?;
                             },
                         }
                     }

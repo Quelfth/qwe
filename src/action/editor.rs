@@ -1,4 +1,4 @@
-use crate::{AppSignal, action::{Action, EditorAction}, editor::Editor};
+use crate::{app::AppSignal, action::{Action, EditorAction}, editor::Editor};
 
 use super::LspAction;
 

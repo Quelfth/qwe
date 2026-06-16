@@ -386,6 +386,9 @@
 (assignment_expression "=" @o.assign)
 (expression_statement [(assignment_expression) (compound_assignment_expr)] ";" @o.assign)
 
+(assignment_expression left: "_" "=" @o.assign.discard)
+(expression_statement [(assignment_expression left: "_")] ";" @o.assign.discard)
+
 (compound_assignment_expr ["+=" "-=" "*=" "/=" "%="] @o.arithmetic.assign)
 (compound_assignment_expr ["&=" "|=" "^="] @o.logical.assign)
 (compound_assignment_expr ["<<=" ">>="] @o.sequence.assign)

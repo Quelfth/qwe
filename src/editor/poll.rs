@@ -3,7 +3,7 @@ use std::{io, path::Path, sync::Arc};
 use lsp_types::Url;
 
 use crate::{
-    AppSignal, AppState, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
+    app::{AppSignal, AppState}, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
         Editor,
         code_actions::{ActionEdit, CodeAction, CodeActionsGadget},
         completer::Completer,

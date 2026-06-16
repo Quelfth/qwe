@@ -10,9 +10,10 @@ pub struct LogViewer {
 
 impl LogViewer {
     pub fn new() -> Self {
+        use LogCategory::*;
         Self {
             scroll: 0,
-            categories: [LogCategory::EditorToLspMessage].into_iter().collect(),
+            categories: [EditorToLspMessage, LspError].into_iter().collect(),
         }
     }
 }

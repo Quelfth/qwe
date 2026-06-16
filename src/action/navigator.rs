@@ -1,4 +1,4 @@
-use crate::{AppSignal, action::{Action, NavigatorAction}, navigator::{NameBox, Navigator}};
+use crate::{app::AppSignal, action::{Action, NavigatorAction}, navigator::{NameBox, Navigator}};
 
 
 impl Action<&mut Navigator> for NavigatorAction {

@@ -35,6 +35,7 @@ o.access.method.extension = f.ext-method-access;
 o.access.pointer = f.pointer;
 o.arithmetic = f.arithmetic;
 o.assign = b f.access;
+o.assign.discard = f.wildcard;
 o.association = f.association;
 o.association.inherited = f.inherited;
 o.association.enum = f.enum-assoc;

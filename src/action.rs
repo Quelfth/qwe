@@ -1,6 +1,6 @@
 #![expect(unused)]
 
-use crate::{AppSignal, lsp::channel::GotoKind};
+use crate::{app::AppSignal, lsp::channel::GotoKind};
 
 mod app;
 mod editor;

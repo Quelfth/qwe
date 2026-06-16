@@ -1,4 +1,4 @@
-use crate::{AppSignal, action::{Action, AppAction}};
+use crate::{app::AppSignal, action::{Action, AppAction}};
 
 
 impl<T> Action<T> for AppAction {

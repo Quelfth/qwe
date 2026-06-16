@@ -32,16 +32,11 @@ impl Gadget for Renamer {
         }
         use KeyOrChar::*;
         match event {
-            key if let Some(char) = key.char() => {
-                self.r#type(char);
-                xx!(Editor::noop)
-            }
-    
             Key(key![backspace]) => {
                 self.backspace();
                 xx!(Editor::noop)
             }
-    
+
             Key(key![return]) => {
                 let name = mem::take(&mut self.name);
                 xx!(move |e| {
@@ -49,6 +44,11 @@ impl Gadget for Renamer {
                     e.close_gadget()
                 })
             },
+
+            key if let Some(char) = key.char() => {
+                self.r#type(char);
+                xx!(Editor::noop)
+            }
             
             _ => None,
         }
