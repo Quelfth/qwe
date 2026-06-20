@@ -3,13 +3,8 @@ use std::range::Range;
 use tree_sitter::{QueryCapture, QueryCursor};
 
 use crate::{
-    document::{Document, diagnostics::Severity},
-    ix::{Byte, Ix},
-    lang::{Highlights, Zebra},
-    util::{CharClass, MapBounds, word_splits},
+    document::{Document, diagnostics::Severity}, ix::{Byte, Ix}, lang::{Highlights, Zebra}, ts, util::{CharClass, MapBounds, word_splits}
 };
-
-pub mod predicate;
 
 pub struct Highlight {
     pub range: Range<Ix<Byte>>,
@@ -61,9 +56,9 @@ impl Document {
             };
         }
 
-        if let Some(lang) = self.language() {
+        if let Some(lang) = self.language() && let Some(tree) = self.tree() {
             let hl_query = lang.query::<Highlights>();
-            for QueryCapture { node, index } in self.query_captures(qc!(), &cx, hl_query) {
+            for QueryCapture { node, index } in ts::query_captures(tree, self.text(), qc!(), &cx, hl_query, true) {
                 let name = hl_query.capture_names()[*index as usize];
                 let range = Range::from(node.byte_range()).map_bounds(Ix::new);
                 highlight_scopes.push(Highlight {
@@ -72,7 +67,7 @@ impl Document {
                 });
             }
             let zebra = lang.query::<Zebra>();
-            for QueryCapture { node, index } in self.query_captures(qc!(), &cx, zebra) {
+            for QueryCapture { node, index } in ts::query_captures(tree, self.text(), qc!(), &cx, zebra, true) {
                 let name = zebra.capture_names()[*index as usize];
                 if name != "zebra" {
                     continue;

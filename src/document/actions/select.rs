@@ -167,7 +167,7 @@ impl Document {
     pub fn syntax_extend(&mut self) {
         if let Some(tree) = &self.tree
             && let Some(c) = &mut self.cursors {
-                c.syntax_extend(&self.text, tree)
+                c.syntax_extend(&self.text, &tree.tree)
             }
     }
 

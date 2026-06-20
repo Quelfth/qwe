@@ -45,6 +45,22 @@ impl Language {
         })
     }
 
+    pub fn from_injection_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "c" | "cpp" => Self::Cpp,
+            "css" => Self::Css,
+            "js" | "javascript" => Self::Javascript,
+            "mona" => Self::Mona,
+            "nu" => Self::Nu,
+            "tsq" => Self::Query,
+            "rust" => Self::Rust,
+            "sulu" => Self::Sulu,
+            "toml" => Self::Toml,
+            "yaml" => Self::Yaml,
+            _ => None::<!>?
+        })
+    }
+
     pub fn lsp_info(self) -> Option<LangLspInfo> {
         match self {
             Language::Cpp => Some(LangLspInfo {
@@ -88,6 +104,7 @@ queries! {
     }
 
     Highlights "highlights"
+    Injections "injections"
     Zebra "zebra"
 }
 

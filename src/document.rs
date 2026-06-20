@@ -6,6 +6,7 @@ use mutx::Mutex;
 use thiserror::Error;
 use tree_sitter::{InputEdit, Tree};
 
+use crate::document::tree::MetaTree;
 use crate::global_config::GLOBAL_CONFIG;
 use crate::{
     aprintln::aprintln, constants::TAB_WIDTH, document::{
@@ -26,6 +27,7 @@ mod find;
 mod lsp_change;
 pub mod semtoks;
 mod unopened;
+pub mod tree;
 
 #[derive(Default)]
 pub struct Document {
@@ -36,7 +38,7 @@ pub struct Document {
     text: Rope,
     pub timeline: Timeline<DocumentEvent>,
     language: Option<Language>,
-    tree: Option<Tree>,
+    tree: Option<MetaTree>,
     pub semtoks: RangeSequence<Ix<Byte>, SemanticToken>,
     pub diagnostics: RangeSequence<Ix<Byte>, Diagnostic>,
     pub lsp_version: i32,
@@ -71,12 +73,12 @@ impl Document {
     #[allow(unused)]
     pub fn print_tree(&self) {
         if let Some(tree) = &self.tree {
-            aprintln!("{}", tree.root_node().to_sexp());
+            aprintln!("{}", tree.tree.root_node().to_sexp());
         }
     }
 
     pub fn tree(&self) -> Option<&Tree> {
-        self.tree.as_ref()
+        self.tree.as_ref().map(|tree| &tree.tree)
     }
 
     pub fn language(&self) -> Option<Language> {
@@ -618,7 +620,11 @@ impl Document {
         let insert_len = Ix::new(insert.len());
         self.upkeep_insert(byte_pos, insert);
         if let Some(lang) = self.language {
-            self.tree = Some(parse_doc(&self.text, self.tree(), lang).unwrap());
+            if let Some(tree) = &self.tree {
+                self.tree = Some(tree.reparse(None, lang, &self.text, None).unwrap());
+            } else {
+                self.tree = Some(MetaTree::parse(None, lang, &self.text, None).unwrap());
+            }
             if GLOBAL_CONFIG.autosave_langs.lock().contains(&lang) {
                 self.prime_save();
             }

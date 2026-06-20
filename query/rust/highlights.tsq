@@ -121,7 +121,7 @@
 (parameters ["(" "," ")"] @o.call.function)
 (function_item type_parameters: (type_parameters ["<" "," ">"] @o.call.function))
 
-(function_item name: (_) @i.function)
+(function_item name: (_ (identifier) @i.function))
 (parameter ":" @o.type)
 
 (declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated)))

@@ -248,6 +248,15 @@ impl Rope {
         })
     }
 
+    pub fn ts_range_of_byte_range(&self, range: Range<Ix<Byte>>) -> Option<tree_sitter::Range> {
+        Some(tree_sitter::Range {
+            start_byte: range.start.inner(),
+            end_byte: range.end.inner(),
+            start_point: self.ts_pos_of_byte(range.start)?,
+            end_point: self.ts_pos_of_byte(range.end)?,
+        })
+    }
+
     pub fn utf16_pos_of_byte(&self, byte: Ix<Byte>) -> Option<Utf16Pos> {
         let line = self.line_of_byte(byte)?;
         Some(Utf16Pos {
