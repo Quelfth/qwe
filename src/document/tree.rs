@@ -1,9 +1,10 @@
 use std::{cmp, mem, range::Range};
 
+use extension_traits::extension;
 use thiserror::Error;
-use tree_sitter::{InputEdit, LanguageError, Parser, QueryCapture, QueryCursor, Tree};
+use tree_sitter::{InputEdit, LanguageError, Node, Parser, QueryCapture, QueryCursor, Tree};
 
-use crate::{ix::{Byte, Ix}, lang::{Injections, Language}, rope::Rope, ts::{self, QueryCx}};
+use crate::{ix::{Byte, Ix}, lang::{Injections, Language, LanguageQuery}, rope::Rope, ts::{self, QueryCx}};
 
 
 pub struct MetaTree {
@@ -19,19 +20,49 @@ impl MetaTree {
         }
     }
 
-    pub fn parse(cx: Option<&QueryCx<'_>>, lang: Language, text: &Rope, range: Option<Range<Ix<Byte>>>) -> Result<Self, ParseTreeError> {
-        parse_meta_tree(cx, lang, text, range, None)
-    }
-
-    pub fn reparse(&self, cx: Option<&QueryCx<'_>>, lang: Language, text: &Rope, range: Option<Range<Ix<Byte>>>) -> Result<Self, ParseTreeError> {
-        parse_meta_tree(cx, lang, text, range, Some(self))
-    }
-
     pub fn edit(&mut self, edit: &InputEdit) {
         self.tree.edit(edit);
         for inj in &mut self.injections {
             inj.tree.edit(edit);
         }
+    }
+
+    pub fn query<'t, Q>(&'t self, cx: &'t QueryCx<'_>, cursor: &mut QueryCursor, text: &Rope, lang: Language) -> impl Iterator<Item = MetaQueryCapture<'t>> where Language: LanguageQuery<Q> {
+        self.query_inner::<Q>(0, cx, cursor, text, lang)
+    }
+
+    fn query_inner<'t, Q>(&'t self, layer: u32, cx: &QueryCx<'t>, cursor: &mut QueryCursor, text: &Rope, lang: Language) -> impl Iterator<Item = MetaQueryCapture<'t>>
+        where
+            Language: LanguageQuery<Q>,
+    {
+        gen move {
+            let query = lang.query::<Q>();
+            for &QueryCapture{ node, index } in ts::query_captures(&self.tree, text, cursor, cx, lang.query::<Q>(), true) {
+                let name = query.capture_names()[index as usize];
+                yield MetaQueryCapture { node, name, layer };
+            }
+
+            for injection in &self.injections {
+                *cursor = QueryCursor::new();
+                for cap in Box::new(injection.tree.query_inner::<Q>(layer + 1, cx, cursor, text, injection.lang)) {
+                    yield cap;
+                }
+            }
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct MetaQueryCapture<'t> {
+    pub node: Node<'t>,
+    pub name: &'static str,
+    pub layer: u32,
+}
+
+#[extension(pub trait OptionTreeParseExt)]
+impl Option<MetaTree> {
+    fn parse(&self, cx: Option<&QueryCx<'_>>, lang: Language, text: &Rope, range: Option<Range<Ix<Byte>>>) -> Result<MetaTree, ParseTreeError> {
+        parse_meta_tree(cx, lang, text, range, self.as_ref())
     }
 }
 

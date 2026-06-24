@@ -20,6 +20,8 @@ pub enum Language {
     Sulu,
     Toml,
     Yaml,
+
+    RustFormatArgs,
 }
 
 pub struct LangLspInfo {
@@ -57,6 +59,8 @@ impl Language {
             "sulu" => Self::Sulu,
             "toml" => Self::Toml,
             "yaml" => Self::Yaml,
+
+            "rust-format-args" => Self::RustFormatArgs,
             _ => None::<!>?
         })
     }
@@ -101,6 +105,8 @@ queries! {
         Sulu => "sulu"
         Toml => "toml"
         Yaml => "yaml"
+
+        RustFormatArgs => "rust-format-args"
     }
 
     Highlights "highlights"
@@ -119,6 +125,7 @@ ts_lang! {
     Sulu => tree_sitter_sulu
     Toml => tree_sitter_toml
     Yaml => tree_sitter_yaml
+    RustFormatArgs => tree_sitter_rust_format_args
 }
 
 pub trait LanguageQuery<Q> {

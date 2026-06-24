@@ -50,10 +50,12 @@ resharp = "0.3.7"
 bimap = "0.6.3"
 tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
 #tree-sitter-mona.path = "../tree-sitter-mona"
+tree-sitter-rust-format-args.git = "https://github.com/Quelfth/tree-sitter-rust-format-args"
 append-only-vec = "0.1.8"
 jiff = "0.2.23"
 strum = { version = "0.28.0", features = ["derive"] }
 arc-swap = "1.9.1"
+extension-traits = "2.0.2"
 
 [profile.release]
 debug = true

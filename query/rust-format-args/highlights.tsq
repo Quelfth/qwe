@@ -1,0 +1,10 @@
+(argument (identifier) @i.value.field)
+(argument (integer) @i.value.field.tuple)
+(argument_nlz (identifier) @i.value.field)
+(argument_nlz (integer) @i.value.field.tuple)
+
+(format ["{" ":" "}"] @l.string.interpolation)
+
+(align ["<" "^" ">"] @o.sequence)
+
+"$" @o

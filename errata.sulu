@@ -16,6 +16,7 @@ l.number = f.number;
 l.number.affix = f.number-affix;
 l.string = f.string;
 l.string.quote = f.quote;
+l.string.interpolation = f.quote;
 l.source.quote = f.dark;
 l.string.escape = f.dark;
 

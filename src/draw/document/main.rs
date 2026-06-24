@@ -1,14 +1,7 @@
 use std::{cmp::Ordering::*, iter};
 
 use crate::{
-    color,
-    custom_literal::integer::rgb,
-    document::Document,
-    draw::{cursor::CursorStyle, document::highlight::Highlight, screen::Canvas},
-    grapheme::{Grapheme, GraphemeExt},
-    ix::{Column, Ix, Line},
-    style::{Style, Under},
-    theme::theme,
+    color, custom_literal::integer::rgb, document::{Document}, draw::{cursor::CursorStyle, document::{highlight::Highlight, query::query_cx}, screen::Canvas}, grapheme::{Grapheme, GraphemeExt}, ix::{Column, Ix, Line}, style::{Style, Under}, theme::theme,
 };
 
 use super::{super::screen::Cell, CursorRange};
@@ -31,7 +24,9 @@ impl Document {
                     .map(|k| k.style())
             }
         }
-        let highlight_scopes = self.highlight();
+        let qcx = query_cx!(self);
+
+        let highlight_scopes = self.highlight(&qcx);
 
         let numbered_lines = self.text().max_line_number();
         let gutter_width = if numbered_lines != Ix::new(0) {
@@ -79,6 +74,19 @@ impl Document {
                     let hl_scopes = highlight_scopes
                         .iter()
                         .filter(|Highlight { range, .. }| range.contains(&(byte + line_byte)))
+                        .collect::<Vec<_>>();
+
+                    let max_injection_layer = hl_scopes
+                        .iter().copied()
+                        .filter_map(|&Highlight { injection_layer, ..  }| injection_layer)
+                        .max()
+                        .unwrap_or_default();
+
+                    let hl_scopes = hl_scopes
+                        .iter()
+                        .filter(|Highlight { injection_layer, .. }|
+                            injection_layer.is_none_or(|layer| layer == max_injection_layer)
+                        )
                         .map(|Highlight { scope, .. }| {
                             scope.0.iter().map(|s| &**s).collect::<Vec<_>>()
                         })

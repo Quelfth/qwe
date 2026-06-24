@@ -4,10 +4,11 @@ use std::time::{Duration, Instant};
 
 use mutx::Mutex;
 use thiserror::Error;
-use tree_sitter::{InputEdit, Tree};
+use tree_sitter::{InputEdit};
 
-use crate::document::tree::MetaTree;
+use crate::document::tree::{MetaTree, OptionTreeParseExt as _};
 use crate::global_config::GLOBAL_CONFIG;
+use crate::ts::QueryCx;
 use crate::{
     aprintln::aprintln, constants::TAB_WIDTH, document::{
         diagnostics::{Diagnostic, Severity},
@@ -54,7 +55,7 @@ impl Document {
     ) -> Self {
         let text: Rope = text.as_ref().into();
         Self {
-            tree: lang.map(|lang| parse_doc(&text, None, lang).unwrap()),
+            tree: lang.map(|lang| None::<MetaTree>.parse(Some(&QueryCx::empty()), lang, &text, None).unwrap()),
             language: lang,
             scroll: Ix::new(0),
             horizontal_scroll: Ix::new(0),
@@ -77,8 +78,8 @@ impl Document {
         }
     }
 
-    pub fn tree(&self) -> Option<&Tree> {
-        self.tree.as_ref().map(|tree| &tree.tree)
+    pub fn tree(&self) -> Option<&MetaTree> {
+        self.tree.as_ref()
     }
 
     pub fn language(&self) -> Option<Language> {
@@ -185,6 +186,12 @@ impl Document {
         }
         false
     }
+}
+
+pub macro query_parse($self: ident, $cx: ident) {
+    let Some(lang) = $self.language else {return};
+    let Ok(tree) = $self.tree.parse(Some(&$cx), lang, &$self.text, None) else {return};
+    $self.tree = Some(tree);
 }
 
 macro_rules! force_cursors {
@@ -620,11 +627,8 @@ impl Document {
         let insert_len = Ix::new(insert.len());
         self.upkeep_insert(byte_pos, insert);
         if let Some(lang) = self.language {
-            if let Some(tree) = &self.tree {
-                self.tree = Some(tree.reparse(None, lang, &self.text, None).unwrap());
-            } else {
-                self.tree = Some(MetaTree::parse(None, lang, &self.text, None).unwrap());
-            }
+            let cx = self.query_cx();
+            self.tree = Some(self.tree.parse(Some(&cx), lang, &self.text, None).unwrap());
             if GLOBAL_CONFIG.autosave_langs.lock().contains(&lang) {
                 self.prime_save();
             }

@@ -1,11 +1,11 @@
-use std::{collections::HashMap, fs, io::stdout, iter, path::Path, sync::Arc};
+use std::{collections::HashMap, fs, io::stdout, path::Path, sync::Arc};
 
 use crossterm::{ExecutableCommand, clipboard::CopyToClipboard};
 
 use crate::{
-    aprintln::aprintln, document::Document, editor::{
+    aprintln::aprintln, editor::{
         Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels, log::LogViewer, picker::Picker
-    }, ix::Ix, lang::Language, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection, util::{RangeOverlap, pretty_node}
+    }, ix::Ix, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection,
 };
 
 mod insert;
@@ -75,32 +75,7 @@ impl Editor {
         let [Ok(start), Ok(end)] = [start, end].map(|p| self.doc.text().byte_pos_of_pos(p)) else {
             return;
         };
-        self.open_gadget(Inspector::new(
-            Document::new(
-                None,
-                self.doc
-                    .semtoks
-                    .ranges()
-                    .filter(|(r, _)| r.overlaps(start..end))
-                    .map(|(_, s)| {
-                        iter::once((*s.r#type).to_owned())
-                            .chain(s.mods.iter().map(|m| " ".to_owned() + m))
-                            .collect::<String>()
-                            + "\n"
-                    })
-                    .collect::<String>(),
-                None,
-            ),
-            Document::new(
-                Some(Language::Query),
-                pretty_node(
-                    tree.root_node()
-                        .descendant_for_byte_range(start.inner(), end.inner())
-                        .unwrap(),
-                ),
-                None,
-            ),
-        ))
+        self.open_gadget(Inspector::new(self.doc.semtoks.ranges(), tree, start..end))
     }
 
     fn unredo(&mut self, dir: TimeDirection) {

@@ -510,6 +510,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ext-trait"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ccef4f53516d7589a8ed95216b6ebc9d519df033c1303b42125bfe57aa475d23"
+dependencies = [
+ "ext-trait-proc_macros",
+]
+
+[[package]]
+name = "ext-trait-proc_macros"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "025e48a9a5db92b84dbd3b6be37853a0e60c1ce9c7c03c08e6ac282766f3e3f0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "extension-trait"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -518,6 +538,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "extension-traits"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a7dae1256e3fea2900e1e674bae228edc852f5ce9ccb1c916a496a33cb9bc4cb"
+dependencies = [
+ "ext-trait",
 ]
 
 [[package]]
@@ -1078,6 +1107,7 @@ dependencies = [
  "culit",
  "dispa",
  "extension-trait",
+ "extension-traits",
  "include_optional",
  "jiff",
  "lsp-types",
@@ -1102,6 +1132,7 @@ dependencies = [
  "tree-sitter-mona",
  "tree-sitter-nu",
  "tree-sitter-rust",
+ "tree-sitter-rust-format-args",
  "tree-sitter-sulu",
  "tree-sitter-tsquery",
  "tree-sitter-yaml",
@@ -1641,6 +1672,15 @@ dependencies = [
 name = "tree-sitter-rust"
 version = "0.23.2"
 source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#54bd1697069f4cdd08dfa401c0b6d30691719b73"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-rust-format-args"
+version = "0.1.0"
+source = "git+https://github.com/Quelfth/tree-sitter-rust-format-args#d899dec809d044073bac7ae8e4cc238fa6d376c0"
 dependencies = [
  "cc",
  "tree-sitter-language",

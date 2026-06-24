@@ -61,7 +61,7 @@ pub trait Present {
         self.presenter().draw(self)
     }
     
-    fn poll_draw(&self) -> io::Result<()> {
+    fn poll_draw(&mut self) -> io::Result<()> {
         if let Some(defer) = self.presenter().draw_defer.get() && defer <= Instant::now() {
             self.draw()?;
         }

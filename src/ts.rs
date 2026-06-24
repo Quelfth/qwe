@@ -50,17 +50,25 @@ pub struct QueryCx<'s> {
     pub screen_lines: Range<Ix<Line>>,
 }
 
-pub fn query_captures<'t, 'c, 'x, 'r>(
+impl QueryCx<'static> {
+    pub fn empty() -> Self {
+        Self {
+            semtoks: RangeTree::default(),
+            screen_lines: Default::default(),
+        }
+    }
+}
+
+pub fn query_captures<'t, 'c>(
     tree: &'t Tree,
-    text: &'t Rope,
+    text: &Rope,
     cursor: &'c mut QueryCursor,
-    context: &'x QueryCx<'t>,
+    context: &QueryCx<'t>,
     query: &'static Query,
     cull_offscreen: bool,
 ) -> impl Iterator<Item = &'c QueryCapture<'t>>
 where
-    't: 'r + 'c,
-    'c: 'r,
+    't: 'c,
 {
     gen move {
         let semtoks = &context.semtoks;

@@ -1,27 +1,52 @@
 use std::range::Range;
 
-use tree_sitter::{QueryCapture, QueryCursor};
+use tree_sitter::QueryCursor;
 
 use crate::{
-    document::{Document, diagnostics::Severity}, ix::{Byte, Ix}, lang::{Highlights, Zebra}, ts, util::{CharClass, MapBounds, word_splits}
+    document::{Document, diagnostics::Severity, tree::MetaQueryCapture},
+    ix::{Byte, Ix},
+    lang::{Highlights, Zebra},
+    ts::QueryCx,
+    util::{CharClass, MapBounds, word_splits},
 };
 
 pub struct Highlight {
     pub range: Range<Ix<Byte>>,
     pub scope: Scope,
+    pub injection_layer: Option<u32>,
 }
 
 pub struct Scope(pub Vec<String>);
 
-impl Scope {
-    fn from_capture_name(name: &str) -> Self {
-        let name = if let Some((name, _)) = name.split_once("_") {
+pub struct ScopeWithProperties {
+    scope: Scope,
+    ilayer: u32,
+}
+
+impl ScopeWithProperties {
+    fn parse(name: &str) -> Self {
+        let mut ilayer = 0;
+        let name = if let Some((name, rest)) = name.split_once("_") {
+            if rest.starts_with(".") {
+                for section in rest.split(".") {
+                    if section.is_empty() || section.starts_with("_") {continue}
+                    if let Some((key, value)) = section.split_once("_") && key == "ilayer" {
+                        ilayer = value.parse::<u32>().unwrap_or_default();
+                    }
+                }
+            }
             name
         } else {
             name
         };
-        Self(name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>())
+        Self {
+            scope: Scope(name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>()),
+            ilayer,
+        }
     }
+}
+
+impl Scope {
 
     fn diagnostic(severity: Severity) -> Self {
         Self(vec![
@@ -46,9 +71,8 @@ impl Scope {
 }
 
 impl Document {
-    pub fn highlight(&self) -> Vec<Highlight> {
+    pub fn highlight(&self, cx: &QueryCx<'_>) -> Vec<Highlight> {
         let mut highlight_scopes = Vec::new();
-        let cx = self.query_capture_context();
 
         macro_rules! qc {
             () => {
@@ -57,18 +81,16 @@ impl Document {
         }
 
         if let Some(lang) = self.language() && let Some(tree) = self.tree() {
-            let hl_query = lang.query::<Highlights>();
-            for QueryCapture { node, index } in ts::query_captures(tree, self.text(), qc!(), &cx, hl_query, true) {
-                let name = hl_query.capture_names()[*index as usize];
+            for MetaQueryCapture { node, name, layer } in tree.query::<Highlights>(cx, qc!(), self.text(), lang) {
                 let range = Range::from(node.byte_range()).map_bounds(Ix::new);
+                let ScopeWithProperties { scope, ilayer } = ScopeWithProperties::parse(name);
                 highlight_scopes.push(Highlight {
-                    scope: Scope::from_capture_name(name),
+                    scope,
                     range,
+                    injection_layer: Some(layer + ilayer),
                 });
             }
-            let zebra = lang.query::<Zebra>();
-            for QueryCapture { node, index } in ts::query_captures(tree, self.text(), qc!(), &cx, zebra, true) {
-                let name = zebra.capture_names()[*index as usize];
+            for MetaQueryCapture { node, name, layer } in tree.query::<Zebra>(cx, qc!(), self.text(), lang) {
                 if name != "zebra" {
                     continue;
                 }
@@ -92,6 +114,7 @@ impl Document {
                             hl_scopes.push(Highlight {
                                 scope: Scope::zebra(),
                                 range: range.map_bounds(|b| b + start),
+                                injection_layer: Some(layer),
                             });
                         }
                         *even ^= true;
@@ -119,6 +142,7 @@ impl Document {
                                     highlight_scopes.push(Highlight {
                                         scope: Scope::zebra_boundary(),
                                         range: i..j,
+                                        injection_layer: Some(layer),
                                     });
                                     i = j;
                                 }
@@ -141,6 +165,7 @@ impl Document {
             highlight_scopes.push(Highlight {
                 range,
                 scope: Scope::diagnostic(diagnostic.severity),
+                injection_layer: None,
             })
         }
 
