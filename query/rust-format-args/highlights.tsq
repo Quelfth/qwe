@@ -5,6 +5,18 @@
 
 (format ["{" ":" "}"] @l.string.interpolation)
 
-(align ["<" "^" ">"] @o.sequence)
+(align) @o.sequence
 
-"$" @o
+["$" "*"] @o.access.field
+
+(integer) @l.number
+
+(fill) @l.string
+
+"0" @o.format.zero
+
+"#" @o.format.alternate
+["+" "-"] @o.format.signed
+"." @o.format.precision
+
+(type) @i.format
