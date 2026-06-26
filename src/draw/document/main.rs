@@ -28,7 +28,7 @@ impl Document {
 
         let highlight_scopes = self.highlight(&qcx);
 
-        let numbered_lines = self.text().max_line_number();
+        let numbered_lines = self.text().max_numbered_line();
         let gutter_width = if numbered_lines != Ix::new(0) {
             numbered_lines.inner().ilog10() as u16 + 1
         } else {

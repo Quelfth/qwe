@@ -1,36 +1,10 @@
 use std::{collections::HashMap, iter, range::Range};
 
-use thiserror::Error;
-use tree_sitter::{LanguageError, Parser, Query, QueryCapture, QueryCursor, QueryError, QueryMatch, StreamingIterator as _, Tree};
+use tree_sitter::{Query, QueryCapture, QueryCursor, QueryError, QueryMatch, StreamingIterator as _, Tree};
 
-use crate::{document::{semtoks::SemanticToken, tree::MetaTree}, ix::{Byte, Ix, Line}, lang::Language, range_tree::RangeTree, rope::Rope, ts::predicate::Predicate, util::{MapBounds as _, RangeOverlap as _}};
+use crate::{document::semtoks::SemanticToken, ix::{Byte, Ix, Line}, lang::Language, range_tree::RangeTree, rope::Rope, ts::predicate::Predicate, util::{MapBounds as _, RangeOverlap as _}};
 
 mod predicate;
-
-#[derive(Debug, Error)]
-pub enum ParseDocError {
-    #[error("{0}")]
-    Language(#[from] LanguageError),
-    #[error("no tree was parsed")]
-    NoTree,
-}
-
-pub fn parse_doc(
-    text: &Rope,
-    tree: Option<&MetaTree>,
-    language: Language,
-) -> Result<MetaTree, ParseDocError> {
-    use ParseDocError as E;
-    let mut parser = Parser::new();
-
-    parser.set_language(&language.ts_lang())?;
-
-    let tree = parser
-        .parse_with_options(&mut text.ts_callback(), tree.as_ref().map(|t| &t.tree), None)
-        .ok_or(E::NoTree)?;
-
-    Ok(MetaTree::simple(tree))
-}
 
 #[derive(Copy, Clone)]
 pub struct QuerySource {

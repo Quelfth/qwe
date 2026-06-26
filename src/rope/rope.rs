@@ -185,6 +185,10 @@ impl Rope {
         })
     }
 
+    pub fn max_numbered_line(&self) -> Ix<Line> {
+        self.line_count()
+    }
+
     pub fn line_of_byte(&self, byte_offset: Ix<Byte>) -> Option<Ix<Line>> {
         ixto!(byte_offset);
         if byte_offset > self.0.byte_len() {

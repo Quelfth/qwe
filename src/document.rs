@@ -18,7 +18,7 @@ use crate::{
         CursorIndex, CursorState, mirror_insert::InsertDirection, select::{SelectCursor, SelectCursors}
     }, grapheme::GraphemeExt, ix::{Byte, Column, Ix, Line}, lang::Language, pos::{Pos, Region, Utf16Pos}, range_sequence::RangeSequence, rope::{Rope, RopeSlice}, timeline::{
         TimeDirection, Timeline, document::{DocumentEvent, TimeStackPop}, global::GlobalCheckpoint
-    }, ts::parse_doc, util::{LinesColumnsExt, flip_delimiter, indent_string, is_right_delimiter}
+    }, util::{LinesColumnsExt, flip_delimiter, indent_string, is_right_delimiter}
 };
 
 mod actions;
@@ -87,7 +87,7 @@ impl Document {
     }
 
     pub fn gutter_width(&self) -> u16 {
-        let n = self.text.max_line_number().inner();
+        let n = self.text.max_numbered_line().inner();
         if n == 0 {
             return 0;
         }

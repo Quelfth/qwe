@@ -13,12 +13,6 @@ pub struct MetaTree {
 }
 
 impl MetaTree {
-    pub fn simple(tree: Tree) -> Self {
-        Self {
-            tree,
-            injections: Vec::new(),
-        }
-    }
 
     pub fn edit(&mut self, edit: &InputEdit) {
         self.tree.edit(edit);
