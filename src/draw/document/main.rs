@@ -1,4 +1,4 @@
-use std::{cmp::Ordering::*, iter};
+use std::{cmp::Ordering::*, collections::BTreeMap, iter};
 
 use crate::{
     color, custom_literal::integer::rgb, document::{Document}, draw::{cursor::CursorStyle, document::{highlight::Highlight, query::query_cx}, screen::Canvas}, grapheme::{Grapheme, GraphemeExt}, ix::{Column, Ix, Line}, style::{Style, Under}, theme::theme,
@@ -78,22 +78,30 @@ impl Document {
 
                     let max_injection_layer = hl_scopes
                         .iter().copied()
-                        .filter_map(|&Highlight { injection_layer, ..  }| injection_layer)
+                        .filter_map(|&Highlight { injection_layer, .. }| injection_layer)
                         .max()
                         .unwrap_or_default();
 
-                    let hl_scopes = hl_scopes
+                    let mut scopes = BTreeMap::<i32, Vec<_>>::new();
+
+                    hl_scopes
                         .iter()
                         .filter(|Highlight { injection_layer, .. }|
                             injection_layer.is_none_or(|layer| layer == max_injection_layer)
                         )
-                        .map(|Highlight { scope, .. }| {
-                            scope.0.iter().map(|s| &**s).collect::<Vec<_>>()
-                        })
-                        .collect::<Vec<_>>();
+                        .for_each(|Highlight { scope, priority, .. }| {
 
-                    let hl_style = (Style::fg(color::FG) + Style::bg(color::BG))
-                        + theme().highlight(&hl_scopes);
+                            scopes.entry(*priority).or_default().push(scope.0.iter().map(|s| &**s).collect::<Vec<_>>());
+                        });
+
+                    let mut hl_style = Style::fg(color::FG) + Style::bg(color::BG);
+
+                    for (_, scope) in scopes {
+                        hl_style =
+                            hl_style
+                            + theme().highlight(&scope);
+                    }
+
                     canvas[(i, j)] = Cell {
                         grapheme: if let Some(g) = grapheme && !g.is_whitespace() { g } else {Grapheme::SPACE},
                         style: {

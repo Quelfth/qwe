@@ -4,9 +4,19 @@
 (string ["\"" "'"] @l.string.quote)
 (regex ["/"] @l.string.quote)
 
+(number) @l.number
+
 "function" @o.declare.function
 (function_declaration body: (statement_block ["{" "}"] @o.declare.function))
 (formal_parameters ["(" "," ")"] @o.call)
+
+"const" @o.declare.value.variable
+";" @o.group
+
+"..." @o.sequence
+
+(lexical_declaration ";" @o.declare.value.variable)
+(variable_declarator "=" @o.declare.value.variable)
 
 ; Expression
 
@@ -20,8 +30,12 @@
 (pair ":" @o.key-value)
 
 (array ["[" "," "]"] @o.construct.list)
+(subscript_expression ["[" "]"] @o.sequence)
 
 (arrow_function "=>" @o.declare.function)
+
+(for_in_statement ["for" "(" "in" "of" ")"] @o.loop.for)
+(for_in_statement body: (statement_block ["{" "}"] @o.loop.for))
 
 "return" @o.control.return
 

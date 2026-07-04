@@ -15,6 +15,7 @@
 (named_node name: (_) @i.value.variant)
 
 (field_definition name: (_) @i.value.field)
+(negated_field (identifier) @i.value.field)
 
 (list ["[" "]"] @o.pattern.disjunct)
 

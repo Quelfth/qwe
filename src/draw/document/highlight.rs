@@ -14,6 +14,7 @@ pub struct Highlight {
     pub range: Range<Ix<Byte>>,
     pub scope: Scope,
     pub injection_layer: Option<u32>,
+    pub priority: i32,
 }
 
 pub struct Scope(pub Vec<String>);
@@ -21,17 +22,23 @@ pub struct Scope(pub Vec<String>);
 pub struct ScopeWithProperties {
     scope: Scope,
     ilayer: u32,
+    priority: i32,
 }
 
 impl ScopeWithProperties {
     fn parse(name: &str) -> Self {
         let mut ilayer = 0;
+        let mut priority = 0;
         let name = if let Some((name, rest)) = name.split_once("_") {
             if rest.starts_with(".") {
                 for section in rest.split(".") {
                     if section.is_empty() || section.starts_with("_") {continue}
-                    if let Some((key, value)) = section.split_once("_") && key == "ilayer" {
-                        ilayer = value.parse::<u32>().unwrap_or_default();
+                    if let Some((key, value)) = section.split_once("_") {
+                        match key {
+                            "ilayer" => ilayer = value.parse().unwrap_or_default(),
+                            "priority" => priority = value.parse().unwrap_or_default(),
+                            _ => ()
+                        }
                     }
                 }
             }
@@ -41,7 +48,7 @@ impl ScopeWithProperties {
         };
         Self {
             scope: Scope(name.split(".").map(|s| s.to_owned()).collect::<Vec<_>>()),
-            ilayer,
+            ilayer, priority,
         }
     }
 }
@@ -83,11 +90,12 @@ impl Document {
         if let Some(lang) = self.language() && let Some(tree) = self.tree() {
             for MetaQueryCapture { node, name, layer } in tree.query::<Highlights>(cx, qc!(), self.text(), lang) {
                 let range = Range::from(node.byte_range()).map_bounds(Ix::new);
-                let ScopeWithProperties { scope, ilayer } = ScopeWithProperties::parse(name);
+                let ScopeWithProperties { scope, ilayer, priority } = ScopeWithProperties::parse(name);
                 highlight_scopes.push(Highlight {
                     scope,
                     range,
                     injection_layer: Some(layer + ilayer),
+                    priority,
                 });
             }
             for MetaQueryCapture { node, name, layer } in tree.query::<Zebra>(cx, qc!(), self.text(), lang) {
@@ -115,6 +123,7 @@ impl Document {
                                 scope: Scope::zebra(),
                                 range: range.map_bounds(|b| b + start),
                                 injection_layer: Some(layer),
+                                priority: 0,
                             });
                         }
                         *even ^= true;
@@ -143,6 +152,7 @@ impl Document {
                                         scope: Scope::zebra_boundary(),
                                         range: i..j,
                                         injection_layer: Some(layer),
+                                        priority: 0,
                                     });
                                     i = j;
                                 }
@@ -166,6 +176,7 @@ impl Document {
                 range,
                 scope: Scope::diagnostic(diagnostic.severity),
                 injection_layer: None,
+                priority: 0,
             })
         }
 
