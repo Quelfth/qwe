@@ -35,11 +35,13 @@ pub enum EditorAction {
     Undo,
     Redo,
     Save,
-    
+
     Inspect,
     ViewLog,
 
     Navigator,
+
+    SystemCopy,
 
     Lsp(LspAction),
 }

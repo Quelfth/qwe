@@ -15,6 +15,7 @@ impl Action<&mut Editor> for EditorAction {
             EditorAction::Inspect => ed.inspect(),
             EditorAction::ViewLog => ed.view_log(),
             EditorAction::Navigator => return Some(AppSignal::Navigator),
+            EditorAction::SystemCopy => ed.system_copy(),
             EditorAction::Lsp(action) => match action {
                 LspAction::Hover => ed.hover(),
                 LspAction::CodeActions => ed.code_actions(),

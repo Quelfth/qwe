@@ -61,8 +61,18 @@ impl Editor {
         }
     }
 
+    fn copy_to_system_clipboard(&mut self, text: &str) {
+        _= stdout().execute(CopyToClipboard::to_clipboard_from(text));
+    }
+
     pub fn copy_file(&mut self) {
-        _= stdout().execute(CopyToClipboard::to_clipboard_from(&self.doc.text().to_string()));
+        self.copy_to_system_clipboard(&self.doc.text().to_string())
+    }
+
+    pub fn system_copy(&mut self) {
+        try {
+            self.copy_to_system_clipboard(&self.doc.copy_main_text()?)
+        };
     }
 
     pub fn view_log(&mut self) {

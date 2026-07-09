@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{
     constants::TAB_WIDTH,
     document::{Document, force_cursors},
-    editor::cursors::{CursorIndex, CursorState, Cursors, select::RangeCursorLine},
+    editor::cursors::{Cursor as _, CursorIndex, CursorState, Cursors, select::RangeCursorLine},
     ix::Ix,
     pos::Pos,
     util::indent_string,
@@ -70,24 +70,29 @@ impl Document {
             .flat_map(|i| self.copy_from_cursor(i))
     }
 
-    pub fn paste_at_cursor(&mut self, text: String, cursor: CursorIndex) {
+    pub fn copy_main_text(&self) -> Option<String> {
+        self.copy_from_cursor(CursorIndex::Main)
+    }
+
+    pub fn paste_at_cursor(&mut self, text: String, ix: CursorIndex) {
         force_cursors!(self);
         let cursors = &self.cursors.as_ref().unwrap();
         use CursorState::*;
 
         let pos = match cursors {
-            MirrorInsert(_) => todo!(),
+            MirrorInsert(_) => return,
             Insert(c) => {
-                let Some(cursor) = c.get(cursor) else { return };
+                let Some(cursor) = c.get(ix) else { return };
                 cursor.pos
             }
             Select(c) => {
-                let Some(cursor) = c.get(cursor) else { return };
+                let Some(cursor) = c.get(ix) else { return };
                 cursor.end_pos()
             }
             LineSelect(c) => {
-                let Some(cursor) = c.get(cursor) else { return };
+                let Some(cursor) = c.get(ix) else { return };
                 let line = cursor.end();
+                let height = cursor.height;
                 let indent = line
                     .checked_sub(Ix::new(1))
                     .map(|line| self.text.indent_on_line(line))
@@ -103,23 +108,30 @@ impl Document {
                     .collect::<String>();
                 let change = self.insert_change(pos, text);
                 self.do_change(change);
+                let Some(CursorState::LineSelect(c)) = &mut self.cursors else {panic!()};
+                c.get_mut(ix).unwrap().retract_down(height);
 
                 return;
             }
         };
-        let indent = self.text.indent_on_line(pos.line);
+        let indent = self.text.context_indent_inc(pos.line);
         let indent = indent_string(indent);
         let mut lines = text.lines();
         let text = gen {
-            if let Some(line) = lines.next() {
-                yield line.to_owned();
-            }
-            for line in lines {
-                yield format!("\n{indent}{line}");
-            }
-        }
-        .collect();
+                if let Some(line) = lines.next() {
+                    yield line.to_owned();
+                }
+                for line in lines {
+                    yield format!("\n{indent}{line}");
+                }
+            }.collect::<String>();
+
+
         let change = self.insert_change(pos, text);
+        if let Some(cursors) = &mut self.cursors
+            && let CursorState::Select(c) = cursors && let Some(cursor) = c.get_mut(ix){
+                cursor.collapse_to_end();
+            }
         self.do_change(change)
     }
 

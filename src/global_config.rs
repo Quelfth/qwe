@@ -118,6 +118,8 @@ impl Default for Keymaps {
                 [f6] => Inspect,
 
                 [n] => Navigator,
+
+                [ctrl c] => SystemCopy,
             }
         };
         let document_select = {
