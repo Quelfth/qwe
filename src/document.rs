@@ -126,6 +126,12 @@ impl Document {
         Some((s, m))
     }
 
+    pub fn diagnostics_under_cursor(&self) -> Vec<&Diagnostic> {
+        let Some(pos) = self.main_cursor_pos() else { return Vec::new() };
+        let Ok(pos) = self.text.byte_pos_of_pos(pos) else { return Vec::new() };
+        self.diagnostics.ranges().filter(|(r, _)| r.start <= pos && r.end >= pos).map(|(_, d)| d).collect()
+    }
+
     pub fn main_cursor_line(&self) -> Ix<Line> {
         let Some(cursors) = &self.cursors else {
             return Ix::new(0);
@@ -186,6 +192,7 @@ impl Document {
         }
         false
     }
+
 }
 
 pub macro query_parse($self: ident, $cx: ident) {

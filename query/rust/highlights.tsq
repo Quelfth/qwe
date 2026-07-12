@@ -202,6 +202,7 @@
     "for" @o.implement
     (type_parameters ["<" "," ">"] @o.implement)
 )
+(const_trait_bound ["[" "]"] @o.implement)
 
 (use_bound ["use" "<" "," ">"] @o.implement)
 
@@ -243,8 +244,9 @@
     "allow_internal_unstable" "allow_internal_unsafe" "rustc_eii_foreign_item"
 ] @i.attribute)
 
-(builtin_attribute ["(" ")"] @o.attribute)
-
+(builtin_attribute ["(" "," ")"] @o.attribute)
+(meta_name_value "=" @o.attribute)
+(meta_name_value . (name (identifier) @i.meta.name))
 
 (attribute_item ["#" "["] @o.lint-level (builtin_attribute (lint_level_attribute)) "]" @o.lint-level)
 (inner_attribute_item ["#" "!" "["] @o.lint-level (builtin_attribute (lint_level_attribute)) "]" @o.lint-level)
@@ -382,6 +384,8 @@
 (closure_expression "->" @o.declare.function)
 "async" @o.async
 (async_block (block ["{" "}"] @o.async))
+
+(const_block body: (block ["{" "}"] @o.const))
 
 (assignment_expression "=" @o.assign)
 (expression_statement [(assignment_expression) (compound_assignment_expr)] ";" @o.assign)

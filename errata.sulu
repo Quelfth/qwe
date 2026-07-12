@@ -150,6 +150,7 @@ i.macro.attribute = f.attribute-macro;
 i.macro.function = i b f.fn-macro;
 i.macro-parameter = f.metavar;
 i.macro-pattern = f.type-op;
+i.meta.name = f.field;
 i.mutable = u:line;  i.async = u:dotted;
 /i.mutable i.async = u:dashed;
 i.namespace = i f.namespace;

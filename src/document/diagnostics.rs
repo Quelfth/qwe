@@ -52,6 +52,7 @@ impl Severity {
     }
 }
 
+#[derive(Clone)]
 pub struct Diagnostic {
     pub severity: Severity,
     pub message: String,

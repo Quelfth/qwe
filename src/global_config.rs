@@ -120,6 +120,7 @@ impl Default for Keymaps {
                 [n] => Navigator,
 
                 [ctrl c] => SystemCopy,
+                ['"'] => ViewDiagnostics,
             }
         };
         let document_select = {

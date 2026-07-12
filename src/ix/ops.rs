@@ -112,4 +112,14 @@ impl<U, T: Step> Step for Ix<U, T> {
     fn backward_checked(start: Self, count: usize) -> Option<Self> {
         T::backward_checked(start.inner(), count).map(Ix::new)
     }
+
+    fn forward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let (result, overflow) = T::forward_overflowing(start.inner(), count);
+        (Ix::new(result), overflow)
+    }
+
+    fn backward_overflowing(start: Self, count: usize) -> (Self, bool) {
+        let (result, overflow) = T::backward_overflowing(start.inner(), count);
+        (Ix::new(result), overflow)
+    }
 }

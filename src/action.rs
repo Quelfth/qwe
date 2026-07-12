@@ -43,6 +43,7 @@ pub enum EditorAction {
 
     SystemCopy,
 
+    ViewDiagnostics,
     Lsp(LspAction),
 }
 
