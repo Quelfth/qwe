@@ -2,7 +2,7 @@ use std::{io, path::Path, sync::Arc};
 
 use thiserror::Error;
 
-use crate::{Args, PathedFile, pos::Pos};
+use crate::{Args, pathed_file::*, pos::Pos};
 
 
 pub fn init(args: Args) -> Result<InitState, InitError> {
@@ -37,7 +37,7 @@ pub fn init(args: Args) -> Result<InitState, InitError> {
             PathedFile::create(path.clone()).map_err(|e| CouldNotCreate(path, e))?
         } else {
             PathedFile::create_with_dirs(path.clone()).map_err(|e| {
-                use crate::CreateWithDirsPathedFileError::*;
+                use CreateWithDirsPathedFileError::*;
                 match e {
                     Dirs(e) => CouldNotCreateDirs(path, e),
                     File(e) => CouldNotCreate(path, e),

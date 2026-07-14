@@ -14,9 +14,7 @@
 
 use std::{
     cell::Cell,
-    fs, io,
-    path::{Path, PathBuf},
-    sync::{Arc},
+    path::PathBuf,
 };
 
 use clap::{
@@ -24,7 +22,6 @@ use clap::{
     Parser,
 };
 
-use thiserror::Error;
 
 use crate::{
     error::QweError,
@@ -57,6 +54,7 @@ mod log;
 mod lsp;
 mod markdown;
 mod navigator;
+mod pathed_file;
 mod pos;
 mod pred;
 mod presenter;
@@ -143,45 +141,4 @@ fn qwe(args: Args) -> Result<(), QweError> {
     result?;
 
     Ok(())
-}
-
-struct PathedFile {
-    path: Arc<Path>,
-    file: String,
-}
-
-impl PathedFile {
-    fn empty(path: Arc<Path>) -> Self {
-        Self {
-            file: "".to_owned(),
-            path,
-        }
-    }
-
-    fn open(path: Arc<Path>) -> io::Result<Self> {
-        Ok(Self {
-            file: fs::read_to_string(&path)?,
-            path,
-        })
-    }
-
-    fn create(path: Arc<Path>) -> io::Result<Self> {
-        fs::File::create_new(&path)?;
-        Ok(Self::empty(path))
-    }
-
-    fn create_with_dirs(path: Arc<Path>) -> Result<Self, CreateWithDirsPathedFileError> {
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).map_err(CreateWithDirsPathedFileError::Dirs)?;
-        }
-        Self::create(path).map_err(CreateWithDirsPathedFileError::File)
-    }
-}
-
-#[derive(Error, Debug)]
-enum CreateWithDirsPathedFileError {
-    #[error("{0}")]
-    Dirs(io::Error),
-    #[error("{0}")]
-    File(io::Error),
 }

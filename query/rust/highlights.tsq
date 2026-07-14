@@ -18,11 +18,20 @@
 (float_literal ["." "+" "-"] @l.number)
 (float_literal "e" @l.number.affix)
 
-(string_content) @l.string
-(string_literal "\"" @l.string.quote)
-(raw_string_literal "\"" @l.string.quote)
-(string_literal (literal_suffix) @l.string.suffix)
-(raw_string_literal (literal_suffix) @l.string.suffix)
+(string "\"" @l.source.quote)
+
+(string_literal [
+    (string [
+        (string_content) @l.string
+        "\"" @l.string.quote_.priority_1
+        (literal_suffix) @l.string.suffix
+    ])
+    (raw_string [
+        (string_content) @l.string
+        "\"" @l.string.quote_.priority_1
+        (literal_suffix) @l.string.suffix
+    ])
+])
 
 (literal_char) @l.string
 (char_literal [(char_prefix) "\'"] @l.string.quote)

@@ -21,11 +21,20 @@ pub macro log_err($result: expr) {
     $result.map_err(|e| log!(e))
 }
 
+pub macro log_msg($fmt: literal $(, $a: expr)* $(,)?) {
+    log!(DisplayLog(format_args!($fmt $(, $a)*)))
+}
+
 pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
     LOG.iter().rev()
 }
 
+#[derive(Clone, Debug)]
 pub struct DebugLog<T>(pub T);
+
+#[allow(unused)]
+#[derive(Clone)]
+pub struct DisplayLog<T>(pub T);
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogCategory {
@@ -136,6 +145,16 @@ impl<T: Debug> Log for DebugLog<T> {
 
     fn message(&self) -> String {
         format!("{:?}", self.0)
+    }
+
+    fn details(&self) -> String { String::new() }
+}
+
+impl<T: Display> Log for DisplayLog<T> {
+    fn category(&self) -> LogCategory { LogCategory::Debug }
+
+    fn message(&self) -> String {
+        format!("{}", self.0)
     }
 
     fn details(&self) -> String { String::new() }

@@ -12,8 +12,9 @@ impl Editor {
     pub fn view_diagnostics(&mut self) {
         let diagnostics = self.doc.diagnostics_under_cursor();
         let mut text = String::new();
-        for diagnostic in diagnostics {       
-            _= write!(text, "{}\n---\n", &*diagnostic.message);
+        for diagnostic in diagnostics {
+            let diagnostic = diagnostic.message.lines().map(|line| line.to_owned() + "\n\n").collect::<String>();
+            _= write!(text, "{}---\n\n", diagnostic);
         }
         self.open_gadget(MarkdownGadget::new(text))
     }

@@ -9,7 +9,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 
 use crate::{
-    app::AppSignal, PathedFile, action::Action as _, document::Document, editor::{
+    app::AppSignal, pathed_file::PathedFile, action::Action as _, document::Document, editor::{
         clipboard::Clipboard, cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
@@ -17,7 +17,15 @@ use crate::{
         documents::DocKey,
         gadget::Gadget,
         keymap::Keymaps,
-    }, global_config::{CharSpecial, GLOBAL_CONFIG}, ix::{Byte, Ix}, key::{KeyOrChar, key}, lang::Language, language_server::LspContext, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::Navigator, pos::{Pos, convert::TextConvertablePos}, presenter::{Present, Presenter}, timeline::{Timeline, global::GlobalEvent}
+    },
+    global_config::{CharSpecial, GLOBAL_CONFIG},
+    ix::{Byte, Ix},
+    key::{KeyOrChar, key},
+    lang::Language,
+    language_server::LspContext,
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    navigator::Navigator,
+    pos::{Pos, convert::TextConvertablePos}, presenter::{Presenter}, timeline::{Timeline, global::GlobalEvent}
 };
 
 use documents::Documents;
@@ -199,10 +207,10 @@ impl Editor {
         if let Some(gadget) = &mut self.gadget {
             if event == key![esc].into() {
                 self.gadget = None;
-                self.draw()?;
+                self.upkeep()?;
             } else if let Some(effect) = gadget.on_key(event) {
                 effect(self);
-                self.draw()?;
+                self.upkeep()?;
             }
             return Ok(None);
         }
@@ -218,7 +226,7 @@ impl Editor {
                         && let Some(action) = keymap.load()[key]
                     {
                         signal = action.act(self);
-                        self.draw()?;
+                        self.upkeep()?;
                     } else if let Some(char) = event.char() {
                         'insert: {
                             if matches!(cursors, Insert(_)) && let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
@@ -236,18 +244,18 @@ impl Editor {
                             }
                             self.insert(&String::from(char));
                         }
-                        self.draw()?;
+                        self.upkeep()?;
                     } else if let Some(char) = event.alt_char() && let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
                         match special {
                             CharSpecial::StrongLeft(right) | CharSpecial::WeakLeft(right) => {
                                 self.insert_pair(&String::from(char), &String::from(*right));
-                                self.draw()?;
+                                self.upkeep()?;
                             },
                             CharSpecial::Right => (),
                             CharSpecial::WeakPair => {
                                 let string = String::from(char);
                                 self.insert_pair(&string, &string);
-                                self.draw()?;
+                                self.upkeep()?;
                             },
                         }
                     }
@@ -255,13 +263,13 @@ impl Editor {
                 Select(_) => {
                     if let Some(key) = event.key() && let Some(action) = GLOBAL_CONFIG.keymaps.select.load()[key] {
                         signal = action.act(self);
-                        self.draw()?;
+                        self.upkeep()?;
                     }
                 }
                 LineSelect(_) => {
                     if let Some(key) = event.key() && let Some(action) = GLOBAL_CONFIG.keymaps.line_select.load()[key] {
                         signal = action.act(self);
-                        self.draw()?;
+                        self.upkeep()?;
                     }
                 }
             }
@@ -272,7 +280,7 @@ impl Editor {
 
     pub fn on_paste(&mut self, text: String) -> io::Result<()> {
         self.open_scratch_doc_with(text);
-        self.draw()
+        self.upkeep()
     }
 
     pub fn jump_to(&mut self, dest: Pos) {
@@ -310,6 +318,12 @@ impl Editor {
     }
 
     fn noop(&mut self) {}
+
+    fn upkeep(&mut self) -> io::Result<()> {
+        use crate::presenter::Present;
+        self.doc.upkeep();
+        self.draw()
+    }
 }
 
 impl Editor {

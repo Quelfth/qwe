@@ -13,7 +13,7 @@ impl LogViewer {
         use LogCategory::*;
         Self {
             scroll: 0,
-            categories: [EditorToLspMessage, LspError].into_iter().collect(),
+            categories: [EditorToLspMessage, LspError, Debug].into_iter().collect(),
         }
     }
 }

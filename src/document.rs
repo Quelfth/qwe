@@ -44,6 +44,7 @@ pub struct Document {
     pub diagnostics: RangeSequence<Ix<Byte>, Diagnostic>,
     pub lsp_version: i32,
     pub lsp_changes: Vec<LspChange>,
+    tree_reparse: bool,
     save_instant: Option<Instant>,
 }
 
@@ -67,6 +68,7 @@ impl Document {
             text,
             lsp_changes: Vec::new(),
             lsp_version: 1,
+            tree_reparse: false,
             save_instant: None,
         }
     }
@@ -614,6 +616,14 @@ impl Document {
         )
     }
 
+    pub fn upkeep(&mut self) {
+        if !self.tree_reparse {return}
+        let Some(lang) = self.language else {return};
+        let cx = self.query_cx();
+        self.tree = Some(self.tree.parse(Some(&cx), lang, &self.text, None).unwrap());
+        self.tree_reparse = false;
+    }
+
     pub fn change(
         &mut self,
         Change {
@@ -634,8 +644,7 @@ impl Document {
         let insert_len = Ix::new(insert.len());
         self.upkeep_insert(byte_pos, insert);
         if let Some(lang) = self.language {
-            let cx = self.query_cx();
-            self.tree = Some(self.tree.parse(Some(&cx), lang, &self.text, None).unwrap());
+            self.tree_reparse = true;
             if GLOBAL_CONFIG.autosave_langs.lock().contains(&lang) {
                 self.prime_save();
             }

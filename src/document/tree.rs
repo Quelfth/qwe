@@ -4,8 +4,7 @@ use extension_traits::extension;
 use thiserror::Error;
 use tree_sitter::{InputEdit, LanguageError, Node, Parser, QueryCapture, QueryCursor, Tree};
 
-use crate::{ix::{Byte, Ix}, lang::{Injections, Language, LanguageQuery}, rope::Rope, ts::{self, QueryCx}};
-
+use crate::{ix::{Byte, Ix}, lang::{Injections, Language, LanguageQuery}, log::log_msg, rope::Rope, ts::{self, QueryCx}};
 
 pub struct MetaTree {
     pub tree: Tree,
@@ -16,8 +15,25 @@ impl MetaTree {
 
     pub fn edit(&mut self, edit: &InputEdit) {
         self.tree.edit(edit);
-        for inj in &mut self.injections {
-            inj.tree.edit(edit);
+        let &InputEdit { start_byte, old_end_byte, new_end_byte, .. } = edit;
+        let start = Ix::<Byte>::new(start_byte);
+        let old_end = Ix::<Byte>::new(old_end_byte);
+        let new_end = Ix::<Byte>::new(new_end_byte);
+
+        for Injection { range, tree, .. } in &mut self.injections {
+            for pos in [&mut range.start, &mut range.end] {
+                if *pos < start { continue }
+                match (*pos <= old_end, *pos <= new_end) {
+                    (true, true) => (),
+                    (true, false) => *pos = new_end,
+                    _ => if new_end > old_end {
+                        *pos += new_end - old_end;
+                    } else {
+                        *pos -= old_end - new_end;
+                    },
+                }
+            }
+            tree.edit(edit);
         }
     }
 
@@ -109,6 +125,9 @@ fn query_injections(cx: &QueryCx<'_>, lang: Language, tree: &Tree, text: &Rope, 
 
     let mut previous_injections = previous.iter().flat_map(|p| &p.injections).peekable();
 
+    let mut parse_count = 0;
+    let total_injs = injections.len();
+
     let injections = injections.into_iter().map(|inj @ (range, lang)| {
         let old_tree = loop {
             let Some(&prev) = previous_injections.peek() else { break None };
@@ -118,6 +137,7 @@ fn query_injections(cx: &QueryCx<'_>, lang: Language, tree: &Tree, text: &Rope, 
                 break Some(&prev.tree);
             }
         };
+        if old_tree.is_none() { parse_count += 1};
 
         let tree = parse_meta_tree(Some(cx), lang, text, Some(range), old_tree)?;
 
@@ -127,6 +147,8 @@ fn query_injections(cx: &QueryCx<'_>, lang: Language, tree: &Tree, text: &Rope, 
             tree,
         })
     }).collect::<Result<Vec<_>, ParseTreeError>>()?;
+
+    log_msg!("reparsed injections: {parse_count}/{total_injs}");
 
     Ok(injections)
 }

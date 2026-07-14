@@ -1,3 +1,5 @@
 [
     (identifier)
 ] @zebra
+
+(meta_name_value (string (string_content) @zebra))

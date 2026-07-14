@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use crate::{app::{AppSignal, AppState}, PathedFile, action::Action as _, color, document::Document, draw::{Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::Keymaps}, global_config::GLOBAL_CONFIG, grapheme::{Grapheme, GraphemeExt}, key::{KeyOrChar, key}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
+use crate::{app::{AppSignal, AppState}, pathed_file::PathedFile, action::Action as _, color, document::Document, draw::{Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::Keymaps}, global_config::GLOBAL_CONFIG, grapheme::{Grapheme, GraphemeExt}, key::{KeyOrChar, key}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
 
 use crossterm::style::Color;
 use directory::Directory;
