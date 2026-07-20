@@ -1653,7 +1653,7 @@ checksum = "009994f150cc0cd50ff54917d5bc8bffe8cad10ca10d81c34da2ec421ae61782"
 [[package]]
 name = "tree-sitter-mona"
 version = "0.1.0"
-source = "git+https://github.com/Quelfth/tree-sitter-mona#81e50af94062110ced672ed9830d908376b81d20"
+source = "git+https://github.com/Quelfth/tree-sitter-mona#99bdd9b8731023ce4bac40ee3a2897e9aaf8a6d1"
 dependencies = [
  "cc",
  "tree-sitter-language",

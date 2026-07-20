@@ -11,7 +11,7 @@
 
 "\"" @l.string.quote
 (string_content) @l.string
-(string_interpolation ["{" "}"] @l.string.quote)
+(string_interpolation "'" @l.string.quote)
 (string_escape "\\" @l.string.escape)
 
 (string_escape (identifier) @l.string @_ (#any-of? @_ "\"" "\\" "{"))
@@ -29,7 +29,7 @@
 
 (named_entry "/" @o.scope)
 (symbolic_entry "\\" @o.association)
-(scope_symbol ["." "~" "/"] @i.namespace.keyword)
+(named_entry scope: ["." "~" "/"] @i.namespace.keyword)
 
 (parenthetical ["(" ")"] @o.group)
 
@@ -69,8 +69,6 @@
 (field_item name: (name (identifier) @i.value.field))
 
 (variant_item "|" @o.association.enum)
-(variant_item ["(" ")"] @o.declare.value.variant)
-(variant_item ":" @o.type)
 (variant_item name: (name (identifier) @i.value.variant))
 
 
