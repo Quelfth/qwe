@@ -2,11 +2,13 @@ use std::iter;
 use std::range::Range;
 use std::time::{Duration, Instant};
 
+use auto_enums::auto_enum;
 use mutx::Mutex;
 use thiserror::Error;
 use tree_sitter::{InputEdit};
 
 use crate::document::tree::{MetaTree, OptionTreeParseExt as _};
+use crate::editor::cursors::Cursors as _;
 use crate::global_config::GLOBAL_CONFIG;
 use crate::ts::QueryCx;
 use crate::{
@@ -195,6 +197,17 @@ impl Document {
         false
     }
 
+    #[auto_enum(Iterator)]
+    pub fn cursor_indices(&self) -> impl Iterator<Item = CursorIndex> + use<> {
+        match &self.cursors {
+            Some(c) => c.indices(),
+            None => iter::empty(),
+        }
+    }
+
+    pub fn cursor_line_range(&self, index: CursorIndex) -> Option<Range<Ix<Line>>> {
+        Some(self.cursors.as_ref()?.line_range_at(index))
+    }
 }
 
 pub macro query_parse($self: ident, $cx: ident) {

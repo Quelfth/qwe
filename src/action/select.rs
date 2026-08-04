@@ -4,20 +4,23 @@ use super::AnySelectAction;
 
 impl Action<&mut Editor> for AnySelectAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {
+        use AnySelectAction::*;
         match self {
-            AnySelectAction::Document(action) => return action.act(ed),
-            AnySelectAction::TabIn => ed.tab_lines_in(),
-            AnySelectAction::TabOut => ed.tab_lines_out(),
-            AnySelectAction::SyntaxExtend => ed.syntax_extend(),
-            AnySelectAction::SplitCursorsByLines => ed.cursor_line_split(),
-            AnySelectAction::CollapseToStart => ed.collapse_cursors_to_start(),
-            AnySelectAction::CollapseToEnd => ed.collapse_cursors_to_end(),
-            AnySelectAction::FlitForward => ed.doc_mut().flit_forward(),
-            AnySelectAction::FlitBackward => ed.doc_mut().flit_backward(),
-            AnySelectAction::Delete => ed.delete(),
-            AnySelectAction::Cut => ed.cut(),
-            AnySelectAction::Copy => ed.copy(),
-            AnySelectAction::Paste => ed.paste(),
+            Document(action) => return action.act(ed),
+            TabIn => ed.tab_lines_in(),
+            TabOut => ed.tab_lines_out(),
+            SyntaxExtend => ed.syntax_extend(),
+            SplitCursorsByLines => ed.cursor_line_split(),
+            CollapseToStart => ed.collapse_cursors_to_start(),
+            CollapseToEnd => ed.collapse_cursors_to_end(),
+            FlitForward => ed.doc_mut().flit_forward(),
+            FlitBackward => ed.doc_mut().flit_backward(),
+            Open => ed.doc_mut().open_lines(),
+            Close => ed.doc_mut().close_lines(),
+            Delete => ed.delete(),
+            Cut => ed.cut(),
+            Copy => ed.copy(),
+            Paste => ed.paste(),
         }
 
         None
@@ -27,30 +30,31 @@ impl Action<&mut Editor> for AnySelectAction {
 
 impl Action<&mut Editor> for SelectAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {
+        use SelectAction::*;
         match self {
-            SelectAction::Any(action) => return action.act(ed),
-            SelectAction::InsertBefore => ed.insert_before(),
-            SelectAction::InsertAfter => ed.insert_after(),
-            SelectAction::InsertBeforeLine => ed.insert_before_line(),
-            SelectAction::InsertAfterLine => ed.insert_after_line(),
-            SelectAction::MirrorInsertIn => ed.mirror_insert_in(),
-            SelectAction::MirrorInsertOut => ed.mirror_insert_out(),
-            SelectAction::WordExtend => ed.incremental_select(),
-            SelectAction::LineSelect => ed.line_select(),
-            SelectAction::TextualSelect => ed.text_select(),
-            SelectAction::BlockSelect => ed.block_select(),
-            SelectAction::MoveUp => ed.move_y(-1),
-            SelectAction::MoveDown => ed.move_y(1),
-            SelectAction::MoveLeft => ed.move_x(-1),
-            SelectAction::MoveRight => ed.move_x(1),
-            SelectAction::ExtendUp => ed.extend_up(1),
-            SelectAction::ExtendDown => ed.extend_down(1),
-            SelectAction::ExtendLeft => ed.extend_left(1),
-            SelectAction::ExtendRight => ed.extend_right(1),
-            SelectAction::RetractUp => ed.retract_up(1),
-            SelectAction::RetractDown => ed.retract_down(1),
-            SelectAction::RetractLeft => ed.retract_left(1),
-            SelectAction::RetractRight => ed.retract_right(1),
+            Any(action) => return action.act(ed),
+            InsertBefore => ed.insert_before(),
+            InsertAfter => ed.insert_after(),
+            InsertBeforeLine => ed.insert_before_line(),
+            InsertAfterLine => ed.insert_after_line(),
+            MirrorInsertIn => ed.mirror_insert_in(),
+            MirrorInsertOut => ed.mirror_insert_out(),
+            WordExtend => ed.incremental_select(),
+            LineSelect => ed.line_select(),
+            TextualSelect => ed.text_select(),
+            BlockSelect => ed.block_select(),
+            MoveUp => ed.move_y(-1),
+            MoveDown => ed.move_y(1),
+            MoveLeft => ed.move_x(-1),
+            MoveRight => ed.move_x(1),
+            ExtendUp => ed.extend_up(1),
+            ExtendDown => ed.extend_down(1),
+            ExtendLeft => ed.extend_left(1),
+            ExtendRight => ed.extend_right(1),
+            RetractUp => ed.retract_up(1),
+            RetractDown => ed.retract_down(1),
+            RetractLeft => ed.retract_left(1),
+            RetractRight => ed.retract_right(1),
         }
 
         None

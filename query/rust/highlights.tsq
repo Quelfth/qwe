@@ -73,6 +73,12 @@
 
 (visibility_modifier "pub" @o.visibility.middle "(" @o.visibility.middle ")" @o.visibility.middle)
 
+; Error Tokens
+
+(ERROR ["$" "#"] @o.call.macro.function)
+
+((ERROR ["$" "#"]) . (token_tree ["{" "}"] @o.call.macro.function_.ilayer_1))
+
 ; Modules
 
 "mod" @o.declare.module
@@ -320,9 +326,17 @@
     "meta" "pat" "pat_param" "path" "stmt" "tt" "ty" "vis"
 ] @i.macro-pattern)
 
+(macro_invocation (name) @_ @o.call.macro.function "!" @o.call.macro.function)
+
 (macro_invocation (name) @_ (#semantic? @_ Macro) "!" @i.macro.function)
 (macro_invocation (scoped_name name: (name) @_ (#semantic? @_ Macro)) "!" @i.macro.function)
 (macro_invocation (token_tree ["(" ")" "[" "]" "{" "}" "," ";" "=>"] @o.call.macro.function_.ilayer_2))
+
+(macro_invocation
+    (name) @o.branch.match_.priority_1 @_ (#eq? @_ "matches")
+    "!" @o.branch.match_.priority_1
+    (token_tree ["(" ")" "[" "]" "{" "}" ","] @o.branch.match_.ilayer_2.priority_1)
+)
 
 ; Statements
 
@@ -654,7 +668,10 @@
 ; Macro Names
 
 ((identifier) @i.macro.function @_ (#semantic? @_ Macro))
+((identifier) @i.macro.function @_ (#semantic? @_ ProcMacro))
 (use_declaration (scoped_name (name (identifier) @i.macro.attribute @_ (#semantic? @_ Decorator))))
+
+(function_item name: (name) @_ (#semantic? @_ ProcMacro) (parameters ["(" "," ")"] @o.call.macro.function))
 
 (lifetime (name) ) @i.lifetime
 (lifetime "'" @o.wildcard.lifetime "_" @o.wildcard.lifetime)

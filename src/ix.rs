@@ -23,6 +23,10 @@ impl<U, T: Clone> Clone for Ix<U, T> {
     }
 }
 
+pub const fn ix<U, T>(value: T) -> Ix<U, T> {
+    Ix(value, PhantomData)
+}
+
 impl<U, T> Ix<U, T> {
     pub const fn new(value: T) -> Self {
         Self(value, PhantomData)

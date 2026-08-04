@@ -135,6 +135,9 @@ pub enum AnySelectAction {
     FlitForward,
     FlitBackward,
 
+    Open,
+    Close,
+
     Delete,
     Cut,
     Copy,

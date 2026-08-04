@@ -1,3 +1,11 @@
-(macro_invocation (token_tree) @rust)
+(macro_invocation
+    (name) @_ (#not-any-of? @_ "expand" "json" "quote" "quote_spanned")
+    (token_tree) @rust
+)
 
-((string_literal) @rust-format-args (#semantic? FormatSpecifier))
+(macro_invocation
+    (scoped_name)
+    (token_tree) @rust
+)
+
+((string_literal) @rust-format-args @_ (#semantic? @_ FormatSpecifier))

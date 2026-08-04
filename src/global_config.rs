@@ -145,6 +145,7 @@ impl Default for Keymaps {
             [q] => CollapseToEnd,
             [alt 9] => FlitBackward,
             [alt 0] => FlitForward,
+            [backspace] => Close,
             [X] => Delete,
             [x] => Cut,
             [c] => Copy,

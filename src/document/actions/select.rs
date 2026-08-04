@@ -1,7 +1,5 @@
 use crate::{
-    document::{Document, force_cursors},
-    editor::cursors::{CursorIndex, CursorState, Cursors},
-    ix::{Column, Ix, Line},
+    document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorState, Cursors}, ix::{Column, Ix, Line, ix}, util::RangeLen as _
 };
 
 impl Document {
@@ -169,6 +167,40 @@ impl Document {
             && let Some(c) = &mut self.cursors {
                 c.syntax_extend(&self.text, &tree.tree)
             }
+    }
+
+    pub fn open_lines(&mut self) {
+
+    }
+
+    pub fn close_lines(&mut self) {
+        self.timeline.history.checkpoint();
+        for index in self.cursor_indices() {
+            let Some(range) = self.cursor_line_range(index) else {continue};
+            if range.len() < ix(2) { continue }
+            for line in (range.start + ix(1)..range.end).into_iter().rev() {
+                try {
+                    let byte = self.text.byte_of_line(line)?;
+                    let mut range = byte - ix(1)..byte;
+                    for char in self.text.byte_slice(..range.start)?.chars().rev() {
+                        if char.is_whitespace() {
+                            range.start -= ix(char.len_utf8());
+                        } else {
+                            break
+                        }
+                    }
+                    for char in self.text.byte_slice(range.end..)?.chars() {
+                        if char.is_whitespace() {
+                            range.end += ix(char.len_utf8());
+                        } else {
+                            break
+                        }
+                    }
+                    self.delete(range);
+                    self.direct_insert(self.text.pos_of_byte_pos(range.start)?, " ");
+                };
+            }
+        }
     }
 
     pub fn flit_forward(&mut self) {
