@@ -9,7 +9,7 @@ use crate::{
     document::CursorChange,
     editor::cursors::mirror_insert::MirrorInsertCursors,
     ix::{Byte, Column, Ix, Line},
-    pos::Region,
+    pos::{Pos, Region},
     rope::Rope,
 };
 
@@ -317,6 +317,16 @@ impl CursorState {
             Insert(c) => c[index].convex_range(),
             Select(c) => c[index].convex_range(),
             LineSelect(c) => c[index].convex_range(),
+        }
+    }
+
+    pub fn is_tangent_to_range(&self, index: CursorIndex, range: Range<Pos>) -> bool {
+        use CursorState::*;
+        match self {
+            MirrorInsert(_) => false,
+            Insert(_) => false,
+            Select(c) => c[index].is_tangent_to_range(range),
+            LineSelect(c) => c[index].is_tangent_to_range(range),
         }
     }
 

@@ -5,7 +5,7 @@ use crate::{
     document::{Document, force_cursors},
     editor::cursors::{CursorIndex, CursorState, Cursors},
     ix::{Byte, Column, Ix, Line, ix},
-    util::{MapBounds as _, RangeLen as _, indent_string, is_right_delimiter},
+    util::{MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
 };
 
 impl Document {
@@ -194,6 +194,8 @@ impl Document {
                         }
                         start -= ix(char.len_utf8());
                     }
+                    let pos_range = self.text.pos_of_byte_pos(start)?..self.text.pos_of_byte_pos(end)?;
+                    if !self.cursor_is_tangent(index, pos_range) {continue}
                     ws_ranges.push((start..end, newlines));
                 }
                 let start_line = self.text.line_of_byte(ix(node.byte_range().start))?;
@@ -214,14 +216,15 @@ impl Document {
                         }
                         start -= ix(char.len_utf8());
                     }
-                    close_range = Some((start..end, newlines));
+                    let pos_range = self.text.pos_of_byte_pos(start)?..self.text.pos_of_byte_pos(end)?;
+                    close_range = self.cursor_is_tangent(index, pos_range).then_some((start..end, newlines));
                 };
                 if let Some((range, newlines)) = close_range {
                     let newlines = iter::repeat_n("\n", newlines.max(1)).collect::<String>();
-                    self.direct_replace_byte(range, &format!("{newlines}{}", indent_string(indent_amount * TAB_WIDTH)))
+                    self.direct_replace_byte(range, &format!("{newlines}{}", indent_string(indent_amount)))
                 }
 
-                let indent = indent_string((indent_amount + ix(1)) * TAB_WIDTH);
+                let indent = indent_string(indent_amount + ix(TAB_WIDTH));
                 for (range, newlines) in ws_ranges.into_iter().rev() {
                     let newlines = iter::repeat_n("\n", newlines.max(1)).collect::<String>();
                     self.direct_replace_byte(range, &format!("{newlines}{indent}"))

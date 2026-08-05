@@ -8,7 +8,7 @@ use crate::{
     },
     ix::{Byte, Ix, Line},
     pos::{Pos, Region},
-    rope::Rope,
+    rope::Rope, util::RangeOverlap as _,
 };
 
 use super::insert::*;
@@ -224,6 +224,10 @@ impl LineCursor {
                 };
             }
         }
+    }
+
+    pub fn is_tangent_to_range(&self, range: Range<Pos>) -> bool {
+        (self.line..self.line + self.height).overlaps(range.start.line..range.end.line)
     }
 }
 

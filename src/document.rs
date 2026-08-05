@@ -212,6 +212,13 @@ impl Document {
     pub fn cursor_convex_range(&self, index: CursorIndex) -> Option<Region> {
         Some(self.cursors.as_ref()?.convex_range(index))
     }
+
+    pub fn cursor_is_tangent(&self, index: CursorIndex, range: Range<Pos>) -> bool {
+        try {
+            self.cursors.as_ref()?.is_tangent_to_range(index, range)
+        }
+        .unwrap_or_default()
+    }
 }
 
 pub macro query_parse($self: ident, $cx: ident) {

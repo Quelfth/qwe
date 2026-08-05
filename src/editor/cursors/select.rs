@@ -7,10 +7,10 @@ use crate::{
         line_select::{LineCursor, LineCursors},
         mirror_insert::{MirrorInsertCursor, MirrorInsertCursors},
     },
-    ix::{Byte, Column, Ix, Line, MappedRange, ixto},
+    ix::{Byte, Column, Ix, Line, MappedRange, ix, ixto},
     pos::{Pos, Region},
     rope::Rope,
-    util::MapBounds,
+    util::{MapBounds, RangeOverlap as _},
 };
 
 use super::insert::*;
@@ -281,6 +281,28 @@ impl SelectCursor {
         }
     }
 
+    pub fn is_tangent_to_range(&self, range: Range<Pos>) -> bool {
+        if range.start.line == range.end.line {
+            let Some(RangeCursorLine { start, end }) = self.on_line(range.start.line) else {return false};
+            return (start..end).overlaps(range.start.column..range.end.column)
+        }
+        if !(range.start.line..range.end.line).overlaps(self.line..self.line + self.last_line_ix() + ix(1)) {
+            return false;
+        }
+
+        if self.last_line_ix() == range.start.line {
+            let RangeCursorLine { end, .. } = self.last_line();
+            return end >= range.start.column;
+        }
+
+        if self.line == range.end.line {
+            let RangeCursorLine { start, .. } = self.last_line();
+            return range.end.column >= start;
+        }
+
+        true
+    }
+
     pub(super) fn to_insert_before(&self) -> InsertCursor {
         let Self {
             line, first_line, ..
@@ -357,7 +379,7 @@ impl SelectCursor {
     }
 
     fn last_line_ix(&self) -> Ix<Line> {
-        self.line + Ix::new(self.other_lines.len())
+        self.line + ix(self.other_lines.len())
     }
 
     pub fn start_pos(&self) -> Pos {

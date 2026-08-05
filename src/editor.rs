@@ -9,7 +9,11 @@ use tokio::sync::mpsc::UnboundedSender;
 
 
 use crate::{
-    app::AppSignal, pathed_file::PathedFile, action::Action as _, document::Document, editor::{
+    app::AppSignal,
+    pathed_file::PathedFile,
+    action::Action as _,
+    document::Document,
+    editor::{
         clipboard::Clipboard, cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
@@ -25,7 +29,9 @@ use crate::{
     language_server::LspContext,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     navigator::Navigator,
-    pos::{Pos, convert::TextConvertablePos}, presenter::{Presenter}, timeline::{Timeline, global::GlobalEvent}
+    pos::{Pos, convert::TextConvertablePos},
+    presenter::{Presenter},
+    timeline::{Timeline, global::GlobalEvent}
 };
 
 use documents::Documents;
@@ -332,14 +338,40 @@ impl Editor {
 
 impl Editor {
     pub fn into_navigator(self) -> Navigator {
-        let Self { filepath, doc, mut bg_docs, global_timeline, keymap, clipboard, lsp, presenter, .. } = self;
+        let Self {
+            filepath,
+            doc,
+            mut bg_docs,
+            global_timeline,
+            keymap,
+            clipboard,
+            lsp,
+            presenter,
+            ..
+        } = self;
         if let Some(fp) = filepath.clone() {
             bg_docs.insert_pathed(fp, doc);
         }
-        Navigator::new(filepath, bg_docs, global_timeline, keymap, clipboard, lsp, presenter)
+        Navigator::new(
+            filepath,
+            bg_docs,
+            global_timeline,
+            keymap,
+            clipboard,
+            lsp,
+            presenter,
+        )
     }
 
-    pub fn from_parts(doc: (Option<Arc<Path>>, Document), bg_docs: Documents, global_timeline: Timeline<GlobalEvent>, keymap: Keymaps, clipboard: Clipboard, lsp: Option<LspContext>, presenter: Presenter) -> Self {
+    pub fn from_parts(
+        doc: (Option<Arc<Path>>, Document),
+        bg_docs: Documents,
+        global_timeline: Timeline<GlobalEvent>,
+        keymap: Keymaps,
+        clipboard: Clipboard,
+        lsp: Option<LspContext>,
+        presenter: Presenter,
+    ) -> Self {
         let (filepath, doc) = doc;
         Self {
             filepath,
