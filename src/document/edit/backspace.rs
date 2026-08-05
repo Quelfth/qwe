@@ -8,9 +8,9 @@ use
             Document,
             PosError,
         },
-        ix::Ix,
+        ix::ix,
         pos::Pos,
-        util::{auto_removal_char, indent_string},
+        util::{auto_removal_char, indent_string, is_strict_right_delimiter},
     }
 ;
 
@@ -54,7 +54,7 @@ impl Document {
                             }
                         }
                     }
-                    let mut extra = Ix::new(0);
+                    let mut extra = ix(0);
                     if let Some(r_delim) = graphemes.next_back().and_then(|g| auto_removal_char(g.as_str())) {
                         let mut rest = self.text.byte_slice(byte..).unwrap().graphemes();
                         if rest.next().is_some_and(|n| n.is_newline()) {
@@ -62,7 +62,7 @@ impl Document {
                                 extra += g.len();
                                 if g.as_str() == r_delim { break }
                                 if !g.is_whitespace() {
-                                    extra = Ix::new(0);
+                                    extra = ix(0);
                                     break
                                 }
                             }
@@ -72,8 +72,8 @@ impl Document {
                 } else if no_content_before {
                     let to_remove = {
                         let rem = pos.column % TAB_WIDTH;
-                        if rem == Ix::new(0) {
-                            Ix::new(TAB_WIDTH)
+                        if rem == ix(0) {
+                            ix(TAB_WIDTH)
                         } else {
                             rem
                         }
@@ -85,19 +85,21 @@ impl Document {
                                 .take(to_remove.inner() - 1)
                                 .map(|g| g.len())
                                 .sum(),
-                        Ix::new(0),
+                        ix(0),
                     )
                 } else {
-                    (grapheme.len(), Ix::new(0))
+                    (grapheme.len(), ix(0))
                 }
+            } else if is_strict_right_delimiter(grapheme.as_str()) {
+                (ix(0), ix(0))
             } else {
-                let mut extra = Ix::new(0);
+                let mut extra = ix(0);
                 if let Some(char) = auto_removal_char(grapheme.as_str()) {
                     let rest = self.text.byte_slice(byte..).unwrap().graphemes();
                     for g in rest {
                         let is_char = g.as_str() == char;
                         if !(is_char || g.is_whitespace()) {
-                            extra = Ix::new(0);
+                            extra = ix(0);
                             break;
                         }
                         extra += g.len();
@@ -108,7 +110,7 @@ impl Document {
             };
             let new_whitespace = if in_indent 
                 && no_content_before 
-                && let Some(prev_line) = pos.line.checked_sub(Ix::new(1))
+                && let Some(prev_line) = pos.line.checked_sub(ix(1))
                 && !self.text.line_has_content(prev_line) 
                 && let Some(new_ws) = pos.column.checked_sub(self.text.columns_in_line(prev_line)) 
             {
@@ -124,27 +126,27 @@ impl Document {
         (
             change,
             match pos {
-                Pos { line, column } if line == Ix::new(0) && column == Ix::new(0) => None,
+                Pos { line, column } if line == ix(0) && column == ix(0) => None,
                 _ if no_content_before => {
                     if in_indent {
                         Some(CursorChange {
                             pos: Pos {
-                                line: pos.line - Ix::new(1),
+                                line: pos.line - ix(1),
                                 column: self
                                     .text
-                                    .line(pos.line - Ix::new(1))
+                                    .line(pos.line - ix(1))
                                     .map(|l| l.graphemes().map(|g| g.columns()).sum())
-                                    .unwrap_or(Ix::new(0)),
+                                    .unwrap_or(ix(0)),
                             },
                             kind: CursorChangeKind::Delete,
-                            lines: Ix::new(1),
-                            columns: Ix::new(0),
+                            lines: ix(1),
+                            columns: ix(0),
                         })
                     } else {
                         let amount = {
                             let rem = pos.column % TAB_WIDTH;
-                            if rem == Ix::new(0) {
-                                Ix::new(TAB_WIDTH)
+                            if rem == ix(0) {
+                                ix(TAB_WIDTH)
                             } else {
                                 rem
                             }
@@ -156,7 +158,7 @@ impl Document {
                                 column: pos.column - amount,
                             },
                             kind: CursorChangeKind::Delete,
-                            lines: Ix::new(0),
+                            lines: ix(0),
                             columns: amount,
                         })
                     }
@@ -164,11 +166,11 @@ impl Document {
                 _ => Some(CursorChange {
                     pos: Pos {
                         line: pos.line,
-                        column: pos.column - Ix::new(1),
+                        column: pos.column - ix(1),
                     },
                     kind: CursorChangeKind::Delete,
-                    lines: Ix::new(0),
-                    columns: Ix::new(1),
+                    lines: ix(0),
+                    columns: ix(1),
                 }),
             },
         )

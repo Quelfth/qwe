@@ -94,10 +94,12 @@ pub enum InsertAction {
     Document(DocumentAction),
     Select,
     Backspace,
+    ReverseBackspace,
     Return,
     TabIn,
     TabInOrComplete,
     TabOut,
+    Space,
 
     Paste,
 }

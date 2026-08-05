@@ -9,8 +9,8 @@ use crate::{
     document::{Change, CursorChange, CursorChangeKind, PosError},
     grapheme::Grapheme,
     ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
-    pos::{Pos, Utf16Pos},
-    rope::iter::{Graphemes, Lines},
+    pos::{Pos, Region, Utf16Pos},
+    rope::iter::{Graphemes, Lines}, util::MapBounds as _,
 };
 
 use super::{Rope, RopeSlice, range_bounds_to_start_end};
@@ -347,6 +347,26 @@ impl Rope {
                 bytes_in_line: line_len,
                 columns_in_line: line.column_count(),
             })
+        }
+    }
+
+    pub fn byte_pos_of_pos_clamped(&self, pos: Pos) -> Ix<Byte> {
+        match self.byte_pos_of_pos(pos) {
+            Ok(pos) => pos,
+            Err(e) => match e {
+                PosError::BadLine { .. } => self.byte_len(),
+                PosError::BadColumn { byte_of_line, bytes_in_line, .. } => byte_of_line + bytes_in_line,
+            },
+        }
+    }
+
+    pub fn region_to_byte_range(&self, region: Region) -> Range<Ix<Byte>> {
+        match region {
+            Region::Pos(range) => range.map_bounds(|pos| self.byte_pos_of_pos_clamped(pos)),
+            Region::Line(range) =>
+                self.byte_of_line(range.start).unwrap_or(self.byte_len())
+                        ..
+                    try {self.byte_of_line(range.start)? + self.line(range.end)?.byte_len()}.unwrap_or(self.byte_len()),
         }
     }
 

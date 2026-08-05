@@ -87,8 +87,8 @@ impl InsertCursor {
         }
     }
 
-    pub fn inspect_range(&self) -> Region {
-        todo!()
+    pub fn convex_range(&self) -> Region {
+        Region::Pos(self.pos..self.pos)
     }
 }
 

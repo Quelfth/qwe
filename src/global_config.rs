@@ -38,6 +38,12 @@ impl Default for GlobalConfig {
                     ('|', WeakPair),
                     ('/', WeakPair),
                     (' ', WeakPair),
+
+                    ('*', AltInsert),
+                    ('+', AltInsert),
+                    ('?', AltInsert),
+                    (',', AltInsert),
+                    (';', AltInsert),
                 ]))
             },
         }
@@ -49,6 +55,7 @@ pub enum CharSpecial {
     Right,
     WeakLeft(char),
     WeakPair,
+    AltInsert,
 }
 
 type Keymap<A> = ArcSwap<KeyMap<A>>;
@@ -82,9 +89,11 @@ impl Default for Keymaps {
         let common_insert = keymap!{
             [esc] => Insert::Select,
             [backspace] => Insert::Backspace,
+            [alt backspace] => Insert::ReverseBackspace,
             [return] => Insert::Return,
             [tab] => Insert::TabInOrComplete,
             [back tab] => Insert::TabOut,
+            [ ] => Insert::Space,
             [ctrl z] => EditorAction::Undo.into(),
             [ctrl v] => Insert::Paste,
         };
@@ -145,6 +154,7 @@ impl Default for Keymaps {
             [q] => CollapseToEnd,
             [alt 9] => FlitBackward,
             [alt 0] => FlitForward,
+            [return] => Open,
             [backspace] => Close,
             [X] => Delete,
             [x] => Cut,

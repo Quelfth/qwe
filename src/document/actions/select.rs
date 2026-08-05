@@ -1,5 +1,11 @@
+use std::{iter, range::Range};
+
 use crate::{
-    document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorState, Cursors}, ix::{Column, Ix, Line, ix}, util::RangeLen as _
+    constants::TAB_WIDTH,
+    document::{Document, force_cursors},
+    editor::cursors::{CursorIndex, CursorState, Cursors},
+    ix::{Byte, Column, Ix, Line, ix},
+    util::{MapBounds as _, RangeLen as _, indent_string, is_right_delimiter},
 };
 
 impl Document {
@@ -170,14 +176,65 @@ impl Document {
     }
 
     pub fn open_lines(&mut self) {
+        self.timeline.history.checkpoint();
+        for index in self.cursor_indices() {
+            try {
+                let range = self.text.region_to_byte_range(self.cursor_convex_range(index)?);
+                let tree = &self.tree.as_ref()?.tree;
+                let node = tree.root_node().named_descendant_for_byte_range(range.start.0, range.end.0)?;
+                let mut ws_ranges = Vec::new();
+                for child in node.named_children(&mut node.walk()) {
+                    let end: Ix<Byte> = ix(child.byte_range().start);
+                    let mut start = end;
+                    let mut newlines: usize = 0;
+                    for char in self.text.byte_slice(..end)?.chars().rev() {
+                        if !char.is_whitespace() {break}
+                        if char == '\n' {
+                            newlines += 1;
+                        }
+                        start -= ix(char.len_utf8());
+                    }
+                    ws_ranges.push((start..end, newlines));
+                }
+                let start_line = self.text.line_of_byte(ix(node.byte_range().start))?;
+                let indent_amount = self.text.indent_on_line(start_line);
+                let mut close_range = None;
+                if let Some(closer) = node.children(&mut node.walk()).last()
+                    && !closer.is_named()
+                    && let Some(slice) = self.text.byte_slice(Range::from(closer.byte_range()).map_bounds(ix))
+                    && is_right_delimiter(&slice.to_string())
+                {
+                    let end: Ix<Byte> = ix(closer.byte_range().start);
+                    let mut start = end;
+                    let mut newlines: usize = 0;
+                    for char in self.text.byte_slice(..end)?.chars().rev() {
+                        if !char.is_whitespace() {break}
+                        if char == '\n' {
+                            newlines += 1;
+                        }
+                        start -= ix(char.len_utf8());
+                    }
+                    close_range = Some((start..end, newlines));
+                };
+                if let Some((range, newlines)) = close_range {
+                    let newlines = iter::repeat_n("\n", newlines.max(1)).collect::<String>();
+                    self.direct_replace_byte(range, &format!("{newlines}{}", indent_string(indent_amount * TAB_WIDTH)))
+                }
 
+                let indent = indent_string((indent_amount + ix(1)) * TAB_WIDTH);
+                for (range, newlines) in ws_ranges.into_iter().rev() {
+                    let newlines = iter::repeat_n("\n", newlines.max(1)).collect::<String>();
+                    self.direct_replace_byte(range, &format!("{newlines}{indent}"))
+                }
+            };
+        }
     }
 
     pub fn close_lines(&mut self) {
         self.timeline.history.checkpoint();
         for index in self.cursor_indices() {
             let Some(range) = self.cursor_line_range(index) else {continue};
-            if range.len() < ix(2) { continue }
+            if range.len() < ix(2) {continue}
             for line in (range.start + ix(1)..range.end).into_iter().rev() {
                 try {
                     let byte = self.text.byte_of_line(line)?;

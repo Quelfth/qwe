@@ -176,8 +176,8 @@ impl Cursor for SelectCursor {
             let start = self.start_pos();
             let end = self.end_pos();
 
-            let start_byte = text.byte_pos_of_pos(start).ok()?.inner();
-            let end_byte = text.byte_pos_of_pos(end).ok()?.inner();
+            let start_byte = text.byte_pos_of_pos_clamped(start).inner();
+            let end_byte = text.byte_pos_of_pos_clamped(end).inner();
 
             let mut node = tree.root_node().descendant_for_byte_range(start_byte, end_byte)?;
             while node.range().start_byte == start_byte && node.range().end_byte == end_byte {
@@ -586,7 +586,7 @@ impl SelectCursor {
         }
     }
 
-    pub fn inspect_range(&self) -> Region {
+    pub fn convex_range(&self) -> Region {
         Region::Pos(
             Pos {
                 line: self.line,

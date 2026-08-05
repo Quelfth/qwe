@@ -207,7 +207,7 @@ impl LineCursor {
         Some(start..end)
     }
 
-    pub fn inspect_range(&self) -> Region {
+    pub fn convex_range(&self) -> Region {
         Region::Line(self.line..self.line + self.height)
     }
 

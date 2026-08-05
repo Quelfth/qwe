@@ -198,6 +198,10 @@ pub fn is_right_delimiter(delimiter: &str) -> bool {
     matches!(delimiter, ")" | "]" | "}" | ">")
 }
 
+pub fn is_strict_right_delimiter(delimiter: &str) -> bool {
+    matches!(delimiter, ")" | "]" | "}")
+}
+
 pub fn flip_delimiter(delimiter: &str) -> Option<&'static str> {
     Some(match delimiter {
         "(" => ")",

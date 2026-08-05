@@ -2,7 +2,7 @@ use std::{marker::PhantomData, ops::RangeBounds};
 
 mod ops;
 
-pub struct Ix<U, T = usize>(T, PhantomData<U>);
+pub struct Ix<U, T = usize>(pub T, PhantomData<U>);
 
 impl<U, T: std::fmt::Debug> std::fmt::Debug for Ix<U, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

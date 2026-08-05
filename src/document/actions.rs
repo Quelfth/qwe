@@ -196,19 +196,12 @@ impl Document {
         let mut done_lines = HashSet::new();
 
         for index in cursors.indices() {
-            for line in self.cursors.as_ref().unwrap().line_range_at(index) {
+            let Some(range) = self.cursor_line_range(index) else { continue };
+            for line in range {
                 if done_lines.contains(&line) {
                     continue;
                 }
                 done_lines.insert(line);
-
-                if self
-                    .text
-                    .line(line)
-                    .is_none_or(|l| l.chars().all(char::is_whitespace))
-                {
-                    continue;
-                }
 
                 self.do_change(self.tab_out_change(Pos {
                     line,

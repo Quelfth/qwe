@@ -1,8 +1,10 @@
+use std::range::Range;
+
 use crate::{
     constants::TAB_WIDTH,
     document::{Change, CursorChange, Document},
     editor::cursors::{CursorState, mirror_insert::InsertDirection},
-    ix::Ix,
+    ix::{Byte, Ix},
     pos::Pos,
     util::{flip_delimiter, indent_string, is_right_delimiter, mirror_string},
 };
@@ -25,6 +27,13 @@ impl Document {
         self.do_insert(|doc, pos, dir| match dir {
             InsertDirection::Forward => doc.backspace_change(pos),
             InsertDirection::Reverse => doc.reverse_backspace_change(pos),
+        })
+    }
+
+    pub fn reverse_backspace(&mut self) {
+        self.do_insert(|doc, pos, dir| match dir {
+            InsertDirection::Forward => doc.reverse_backspace_change(pos),
+            InsertDirection::Reverse => doc.backspace_change(pos),
         })
     }
 
@@ -97,6 +106,17 @@ impl Document {
             InsertDirection::Forward => doc.tab_out_change(pos),
             InsertDirection::Reverse => (None, None),
         })
+    }
+
+    pub fn direct_replace_byte(&mut self, range: Range<Ix<Byte>>, text: &str) {
+        self.delete(range);
+        self.direct_insert_byte(range.start, text);
+    }
+
+    pub fn direct_insert_byte(&mut self, pos: Ix<Byte>, text: &str) {
+        if let Some(pos) = self.text.pos_of_byte_pos(pos) {
+            self.direct_insert(pos, text);
+        }
     }
 
     pub fn direct_insert(&mut self, pos: Pos, text: &str) {

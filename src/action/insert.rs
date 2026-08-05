@@ -11,10 +11,12 @@ impl Action<&mut Editor> for InsertAction {
             InsertAction::Document(action) => return action.act(ed),
             InsertAction::Select => ed.select(),
             InsertAction::Backspace => ed.backspace(),
+            InsertAction::ReverseBackspace => ed.doc_mut().reverse_backspace(),
             InsertAction::Return => ed.insert_return(),
             InsertAction::TabIn => ed.tab_lines_in(),
             InsertAction::TabInOrComplete => ed.insert_tab_else_complete(),
             InsertAction::TabOut => ed.tab_lines_out(),
+            InsertAction::Space => ed.insert_space(),
             InsertAction::Paste => ed.paste(),
         }
 

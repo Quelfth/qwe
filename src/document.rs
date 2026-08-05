@@ -208,6 +208,10 @@ impl Document {
     pub fn cursor_line_range(&self, index: CursorIndex) -> Option<Range<Ix<Line>>> {
         Some(self.cursors.as_ref()?.line_range_at(index))
     }
+
+    pub fn cursor_convex_range(&self, index: CursorIndex) -> Option<Region> {
+        Some(self.cursors.as_ref()?.convex_range(index))
+    }
 }
 
 pub macro query_parse($self: ident, $cx: ident) {
@@ -379,7 +383,10 @@ impl CursorChange {
 #[derive(Debug, Error)]
 pub enum PosError {
     #[error("line was out of bounds, len was {len:?}")]
-    BadLine { len: Ix<Line> },
+    BadLine {
+        /// The number of actual lines in the text.
+        len: Ix<Line>
+    },
     #[error("column was out of bounds, len was {bytes_in_line:?}")]
     BadColumn {
         byte_of_line: Ix<Byte>,
