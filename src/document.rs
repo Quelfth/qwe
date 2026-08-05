@@ -751,7 +751,7 @@ impl Document {
 
     pub fn do_insert(
         &mut self,
-        change: impl Fn(&Document, Pos, InsertDirection) -> (Option<Change>, Option<CursorChange>),
+        change: impl Fn(&Document, Pos, Option<InsertDirection>) -> (Option<Change>, Option<CursorChange>),
     ) {
         let Some(cursors) = &self.cursors else { return };
         for i in cursors.indices() {
@@ -762,19 +762,19 @@ impl Document {
     pub fn do_insert_at_index(
         &mut self,
         index: CursorIndex,
-        change: impl Fn(&Document, Pos, InsertDirection) -> (Option<Change>, Option<CursorChange>),
+        change: impl Fn(&Document, Pos, Option<InsertDirection>) -> (Option<Change>, Option<CursorChange>),
     ) {
         let Some(cursors) = &self.cursors else { return };
         match cursors {
             CursorState::MirrorInsert(_) => {
                 let forward = self.cursors.as_ref().unwrap().assume_mirror_insert()[index].forward;
-                self.do_change(change(self, forward, InsertDirection::Forward));
+                self.do_change(change(self, forward, Some(InsertDirection::Forward)));
                 let reverse = self.cursors.as_ref().unwrap().assume_mirror_insert()[index].reverse;
-                self.do_change(change(self, reverse, InsertDirection::Reverse));
+                self.do_change(change(self, reverse, Some(InsertDirection::Reverse)));
             }
             CursorState::Insert(_) => {
                 let cursor = self.cursors.as_ref().unwrap().assume_insert()[index];
-                self.do_change(change(self, cursor.pos, InsertDirection::Forward))
+                self.do_change(change(self, cursor.pos, None))
             }
             _ => todo!(),
         }

@@ -241,7 +241,7 @@ impl Editor {
                                         self.insert_pair(&String::from(char), &String::from(*right));
                                         break 'insert;
                                     },
-                                    CharSpecial::Right | CharSpecial::AltInsert => {
+                                    CharSpecial::Right | CharSpecial::AltInsert | CharSpecial::WeakPair => {
                                         self.insert_reluctant(&String::from(char));
                                         break 'insert;
                                     },

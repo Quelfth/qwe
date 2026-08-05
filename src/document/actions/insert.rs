@@ -25,15 +25,17 @@ impl Document {
 
     pub fn backspace(&mut self) {
         self.do_insert(|doc, pos, dir| match dir {
-            InsertDirection::Forward => doc.backspace_change(pos),
-            InsertDirection::Reverse => doc.reverse_backspace_change(pos),
+            None => doc.backspace_change(pos, false),
+            Some(InsertDirection::Forward) => doc.backspace_change(pos, true),
+            Some(InsertDirection::Reverse) => doc.reverse_backspace_change(pos),
         })
     }
 
     pub fn reverse_backspace(&mut self) {
         self.do_insert(|doc, pos, dir| match dir {
-            InsertDirection::Forward => doc.reverse_backspace_change(pos),
-            InsertDirection::Reverse => doc.backspace_change(pos),
+            None => doc.reverse_backspace_change(pos),
+            Some(InsertDirection::Forward) => doc.reverse_backspace_change(pos),
+            Some(InsertDirection::Reverse) => doc.backspace_change(pos, true),
         })
     }
 
@@ -103,8 +105,8 @@ impl Document {
 
     pub fn tab_out(&mut self) {
         self.do_insert(|doc, pos, dir| match dir {
-            InsertDirection::Forward => doc.tab_out_change(pos),
-            InsertDirection::Reverse => (None, None),
+            None => doc.tab_out_change(pos),
+            _ => (None, None),
         })
     }
 
@@ -150,11 +152,11 @@ impl Document {
 
 fn insert_effect(
     str: &str,
-) -> impl Fn(&Document, Pos, InsertDirection) -> (Option<Change>, Option<CursorChange>) {
+) -> impl Fn(&Document, Pos, Option<InsertDirection>) -> (Option<Change>, Option<CursorChange>) {
     |doc, pos, dir| {
         let text = match dir {
-            InsertDirection::Forward => str.to_owned(),
-            InsertDirection::Reverse => mirror_string(str),
+            Some(InsertDirection::Reverse) => mirror_string(str),
+            _ => str.to_owned(),
         };
         doc.insert_change(pos, text)
     }

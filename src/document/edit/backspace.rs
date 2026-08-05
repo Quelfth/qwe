@@ -15,7 +15,7 @@ use
 ;
 
 impl Document {
-    pub fn backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
+    pub fn backspace_change(&self, pos: Pos, mirror: bool) -> (Option<Change>, Option<CursorChange>) {
         let indent = self.text.context_indent(pos.line);
         let no_content_before = self.text.line(pos.line).is_none_or(|l| {
             l.column_slice(..pos.column)
@@ -90,11 +90,11 @@ impl Document {
                 } else {
                     (grapheme.len(), ix(0))
                 }
-            } else if is_strict_right_delimiter(grapheme.as_str()) {
+            } else if !mirror && is_strict_right_delimiter(grapheme.as_str()) {
                 (ix(0), ix(0))
             } else {
                 let mut extra = ix(0);
-                if let Some(char) = auto_removal_char(grapheme.as_str()) {
+                if !mirror && let Some(char) = auto_removal_char(grapheme.as_str()) {
                     let rest = self.text.byte_slice(byte..).unwrap().graphemes();
                     for g in rest {
                         let is_char = g.as_str() == char;
