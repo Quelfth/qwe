@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, ffi::{OsStr, OsString}, fs, path::{Path, PathBuf}};
+use std::{collections::BTreeMap, ffi::{OsStr, OsString}, fs, iter::Sum, path::{Path, PathBuf}};
 
-use crate::editor::documents::{DocKey, Documents};
+use crate::{document::diagnostics::Severity, editor::documents::{DocKey, Documents}};
 
 pub struct Directory {
     entries: BTreeMap<OsString, Entry>,
@@ -71,5 +71,41 @@ impl Directory {
 
     pub fn get_mut(&mut self, dir: &OsStr) -> Option<&mut Entry> {
         self.entries.get_mut(dir)
+    }
+}
+
+#[derive(Copy, Clone, Default)]
+pub struct DiagnosticStatus {
+    pub warnings: usize,
+    pub errors: usize,
+}
+
+impl Sum for DiagnosticStatus {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::default(), |Self{warnings: w0, errors: e0}, Self{warnings: w1, errors: e1}| Self{warnings: w0 + w1, errors: e0 + e1})
+    }
+}
+
+impl Entry {
+    pub fn diagnostic_status(&self, docs: &Documents) -> DiagnosticStatus {
+        try {
+            match self {
+                Entry::Directory(directory) => directory.entries().values().map(|e| e.diagnostic_status(docs)).sum(),
+                Entry::File { doc: FileDocument::Text(key), .. } => {
+                    let diagnostics = &docs.by_key(*key)?.diagnostics;
+                    let mut warnings = 0;
+                    let mut errors = 0;
+                    for diagnostic in diagnostics.values() {
+                        match diagnostic.severity {
+                            Severity::Warn => warnings += 1,
+                            Severity::Err => errors += 1,
+                            _ => ()
+                        }
+                    }
+                    DiagnosticStatus { warnings, errors }
+                },
+                _ => None?,
+            }
+        }.unwrap_or_default()
     }
 }

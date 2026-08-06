@@ -7,7 +7,28 @@ use std::{
     sync::Arc,
 };
 
-use crate::{app::{AppSignal, AppState}, pathed_file::PathedFile, action::Action as _, color, document::Document, draw::{Rect, screen::Canvas}, editor::{Editor, clipboard::Clipboard, documents::Documents, keymap::Keymaps}, global_config::GLOBAL_CONFIG, grapheme::{Grapheme, GraphemeExt}, key::{KeyOrChar, key}, lang::Language, language_server::{LanguageServer, LspContext}, log::{DebugLog, log}, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, navigator::directory::{Entry, FileDocument}, presenter::{Present, Presenter}, range_sequence::RangeSequence, style::Style, timeline::{Timeline, global::GlobalEvent}, util::flip};
+use crate::{
+    action::Action as _,
+    app::{AppSignal, AppState, CommonState},
+    color,
+    document::Document,
+    draw::{Rect, screen::Canvas},
+    editor::{Editor, documents::Documents},
+    global_config::GLOBAL_CONFIG,
+    grapheme::{Grapheme, GraphemeExt},
+    key::{KeyOrChar, key},
+    lang::Language,
+    language_server::LanguageServer,
+    log::{DebugLog, log},
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    navigator::directory::{Entry, FileDocument},
+    pathed_file::PathedFile,
+    presenter::{Present, Presenter},
+    range_sequence::RangeSequence,
+    style::Style,
+    theme::theme,
+    util::flip,
+};
 
 use crossterm::style::Color;
 use directory::Directory;
@@ -25,11 +46,7 @@ pub struct Navigator {
 
     docs: Documents,
 
-    global_timeline: Timeline<GlobalEvent>,
-    keymap: Keymaps,
-    clipboard: Clipboard,
-    lsp: Option<LspContext>,
-    presenter: Presenter,
+    cmn: CommonState,
 
     name_box: Option<NameBox>,
 }
@@ -57,11 +74,7 @@ impl Navigator {
     pub fn new(
         path: Option<impl AsRef<Path>>,
         docs: Documents,
-        global_timeline: Timeline<GlobalEvent>,
-        keymap: Keymaps,
-        clipboard: Clipboard,
-        lsp: Option<LspContext>,
-        presenter: Presenter,
+        cmn: CommonState,
     ) -> Self {
         let home = std::env::home_dir();
         let cwd = std::env::current_dir().ok();
@@ -83,30 +96,22 @@ impl Navigator {
             path,
             docs,
 
-            global_timeline,
-            keymap,
-            clipboard,
-            lsp,
-            presenter,
+            cmn,
 
             name_box: None,
         }
     }
 
     pub fn into_editor(self) -> Editor {
-        let Self { path, mut docs, global_timeline, keymap, clipboard, lsp, presenter, .. } = self;
+        let Self { path, mut docs, cmn, .. } = self;
         let doc = docs.extract_by_path(&path)
             .map(|d| (Some(path.into()), d))
             .unwrap_or_default();
-        
+
         Editor::from_parts(
             doc,
             docs,
-            global_timeline,
-            keymap,
-            clipboard,
-            lsp,
-            presenter,
+            cmn,
         )
     }
 
@@ -225,7 +230,7 @@ impl Navigator {
         });
 
         *doc = if let Some(key) = doc_key { FileDocument::Text(key) } else { FileDocument::Binary };
-        if let Some(lsp) = &self.lsp
+        if let Some(lsp) = &self.cmn.lsp
             && let Some(key) = doc_key
             && let Some(doc) = self.docs.by_key(key)
             && let Some(lang) = doc.language()
@@ -257,7 +262,7 @@ impl Navigator {
 
 impl AppState for Navigator {
     fn poll(&mut self) -> io::Result<()> {
-        if let Some(lsp) = &self.lsp {
+        if let Some(lsp) = &self.cmn.lsp {
             while let Ok(msg) = lsp.rx.try_recv() {
                 use LspToEditorMessage::*;
                 match msg {
@@ -275,7 +280,7 @@ impl AppState for Navigator {
                             && let Some(servers) = lsp.servers.lock().get(&lang)
                         {
                             doc.semtoks = RangeSequence::from_abs_ordered(servers[0].translate_semtoks(tokens, doc.text()));
-                            self.presenter.defer_draw();
+                            self.cmn.presenter.defer_draw();
                         }
                     },
                     Diagnostics { .. } => (),
@@ -337,7 +342,10 @@ impl Navigator {
     fn main_draw(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
         let root_pane = self.root_pane();
         let root_text = root_pane.text();
-    
+
+        let warning_style = theme().highlight(&[&["diagnostic", "warning"]]);
+        let error_style = theme().highlight(&[&["diagnostic", "error"]]);
+
         let mut margin = 0;
         for (i, g) in (0..canvas.width()).into_iter().zip(root_text.graphemes()) {
             let cell = &mut canvas[(0, i)];
@@ -346,9 +354,9 @@ impl Navigator {
             margin = i;
         }
         let width = root_text.graphemes().count();
-    
+
         canvas[(0, width as u16)].style.bg = color::NAV_BG_ALT;
-    
+
         for j in 1..canvas.height() {
             for i in 0..canvas.width().min(width as u16) {
                 let cell = &mut canvas[(j, i)];
@@ -356,12 +364,12 @@ impl Navigator {
                 cell.style = (Style::fg(color::NAV_FG) + Style::bg(color::NAV_BG)).into();
             }
         }
-    
+
         let rel_path = self.path.strip_prefix(&self.root_path).unwrap_or(&self.path);
         let mut components = rel_path.components();
-    
+
         let mut alt = true;
-            
+
         let mut prev_margin = margin + 2;
         let mut next_dir = Ok(&self.root_dir);
         while let Ok(dir) = next_dir {
@@ -388,15 +396,28 @@ impl Navigator {
             let entries = dir.display_entries().collect::<Vec<_>>();
             let width = entries.iter().map(|(_, e)| e.graphemes().count()).max().unwrap_or_default() as u16;
             let next_margin = prev_margin + width;
+            let selected_ix = entries.iter().position(|&(n, _)| matches!(next_component, Some(component) if component.as_os_str() == n)).unwrap_or_default();
+            let scroll = selected_ix
+                .saturating_sub(canvas.height() as usize / 2)
+                .min(entries.len() - canvas.height() as usize);
             let mut rows = (0..canvas.height()).into_iter();
-            for (j, (n, e)) in entries.into_iter().zip(rows.by_ref()).map(flip) {
+            for (j, (n, e)) in entries.into_iter().skip(scroll).zip(rows.by_ref()).map(flip) {
                 let selected = matches!(next_component, Some(component) if component.as_os_str() == n);
+                let entry = dir.get(n).unwrap();
+                let diagnostic_status = entry.diagnostic_status(&self.docs);
+                let diagnostic_style = if diagnostic_status.errors > 0 {
+                    error_style
+                } else if diagnostic_status.warnings > 0 {
+                    warning_style
+                } else {
+                    Style::default()
+                };
                 let bg = decide_bg(alt != selected);
                 let mut cols = (prev_margin..next_margin).into_iter();
                 for (i, g) in e.graphemes().zip(cols.by_ref()).map(flip) {
                     let cell = &mut canvas[(j, i)];
                     cell.grapheme = g;
-                    cell.style = (Style::fg(color::NAV_FG) + Style::bg(bg)).into();
+                    cell.style = (Style::fg(color::NAV_FG) + Style::bg(bg) + diagnostic_style).into();
                 }
                 for i in cols {
                     let cell = &mut canvas[(j, i)];
@@ -413,9 +434,9 @@ impl Navigator {
                 }
             }
             prev_margin = next_margin + 1;
-            alt ^= true;
+            alt.toggle();
         }
-    
+
         if let Err(Some((_, doc))) = next_dir {
             match doc {
                 FileDocument::Text(doc_key) => {
@@ -434,7 +455,7 @@ impl Navigator {
 }
 
 impl Present for Navigator {
-    fn presenter(&self) -> &Presenter { &self.presenter }
+    fn presenter(&self) -> &Presenter { &self.cmn.presenter }
     fn bg_color(&self) -> Color { color::NAV_DEEP_BG }
 
     fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {

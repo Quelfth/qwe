@@ -55,6 +55,10 @@ impl<R, T> RangeSequence<R, T> {
         }
     }
 
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.0.iter().map(|(_, value)| value)
+    }
+
     /// This assumes that `R::default()` is 0.
     pub fn edit_insert(&mut self, pos: R, len: R)
     where

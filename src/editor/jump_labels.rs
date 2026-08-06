@@ -18,25 +18,21 @@ pub struct JumpLabels {
 }
 
 impl Gadget for JumpLabels {
-    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut Editor)>> {
-        macro xx($($tokens: tt)*) {
-            Some(Box::new($($tokens)*))
-        }
-        
+    fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut Editor)>> {    
         match event {
             key if let Some(char) = key.char() => {
                 if char == ' ' {
-                    return xx!(Editor::close_gadget);
+                    return Some(Box::new(Editor::close_gadget));
                 }
                 self.r#type(char);
 
                 match self.check() {
-                    Ok(jump) => xx!(move |e| {
+                    Ok(jump) => Some(Box::new(move |e| {
                         e.jump_to(jump);
                         e.close_gadget();
-                    }),
-                    Err(CheckFail::NotYet) => xx!(Editor::noop),
-                    Err(CheckFail::TooLong) => xx!(Editor::close_gadget),
+                    })),
+                    Err(CheckFail::NotYet) => Some(Box::new(Editor::noop)),
+                    Err(CheckFail::TooLong) => Some(Box::new(Editor::close_gadget)),
                 }
             }
             _ => None,

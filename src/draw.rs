@@ -47,7 +47,7 @@ impl<T> Rect<T> {
 impl Present for Editor {
 
     fn presenter(&self) -> &Presenter {
-        &self.presenter
+        &self.cmn.presenter
     }
 
     fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {

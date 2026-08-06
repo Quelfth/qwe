@@ -75,6 +75,7 @@ pub enum DocumentAction {
 
     Jump,
     Find,
+    LineJump,
 }
 
 impl From<ScrollAction> for DocumentAction {

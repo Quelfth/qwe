@@ -55,7 +55,7 @@ impl Editor {
     }
 
     pub fn send_positional_lsp_message(&mut self, message: impl FnOnce(Language, Arc<Path>, Utf16Pos) -> EditorToLspMessage) {
-        if let Some(cx) = &self.lsp
+        if let Some(cx) = &self.cmn.lsp
             && let Some(lang) = self.doc().language()
             && let Some(path) = self.filepath.clone()
             && let Some(pos) = self.doc().main_cursor_pos_utf16()
@@ -99,7 +99,7 @@ impl Editor {
             range.start
         });
         self.doc.timeline.history.checkpoint();
-        let cp = global.then(|| self.global_timeline.history.checkpoint());
+        let cp = global.then(|| self.cmn.global_timeline.history.checkpoint());
         let mut doc_edited = false;
         let mut bg_docs_edited = HashSet::<DocKey>::new();
         for edit in edits.into_iter().rev() {
@@ -115,7 +115,7 @@ impl Editor {
                 if !doc_edited {
                     if global {
                         doc.timeline.history.global_checkpoint();
-                        self.global_timeline.history.push_doc_change(self.filepath.clone().unwrap());
+                        self.cmn.global_timeline.history.push_doc_change(self.filepath.clone().unwrap());
                     } else {
                         doc.timeline.history.checkpoint();
                     }
@@ -131,7 +131,7 @@ impl Editor {
                 let doc = self.bg_docs.by_key_mut(key).unwrap();
                 if !bg_docs_edited.contains(&key) {
                     doc.timeline.history.global_checkpoint();
-                    self.global_timeline.history.push_doc_change(path);
+                    self.cmn.global_timeline.history.push_doc_change(path);
                     bg_docs_edited.insert(key);
                 }
                 doc

@@ -142,6 +142,7 @@ impl Default for Keymaps {
                 [8] => ScrollToMainCursor,
                 [ ] => Jump,
                 [f] => Find,
+                [ctrl l] => LineJump,
             }
         };
         let select = {use Select::*; keymap!{

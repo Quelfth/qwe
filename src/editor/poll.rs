@@ -16,7 +16,7 @@ use crate::{
 impl AppState for Editor {
     fn poll(&mut self) -> io::Result<()> {
         let mut action = None::<Box<dyn FnOnce(&mut Editor) -> io::Result<()>>>;
-        if let Some(cx) = &self.lsp {
+        if let Some(cx) = &self.cmn.lsp {
             while let Ok(msg) = cx.rx.try_recv() {
                 log!(msg);
                 use LspToEditorMessage::*;
@@ -42,14 +42,14 @@ impl AppState for Editor {
                                     .unwrap()[0]
                                     .translate_semtoks(tokens, self.doc.text()),
                             );
-                            self.presenter.defer_draw();
+                            self.cmn.presenter.defer_draw();
                         }
                     }
                     Diagnostics { uri, diagnostics } => {
                         let Some(path) = self.filepath.clone() else {continue};
                         let Ok(path) = path.canonicalize() else {continue};
                         let doc = if let Ok(x) = Url::from_file_path(&path) && x == uri {
-                            self.presenter.defer_draw();
+                            self.cmn.presenter.defer_draw();
                             &mut self.doc
                         } else if let Some(doc) = self.bg_docs.by_path_mut(&path) {
                             doc
@@ -177,7 +177,7 @@ impl AppState for Editor {
 
 impl Editor {
     pub fn send_doc_lsp_changes(&mut self) {
-        if let Some(lsp) = &self.lsp {
+        if let Some(lsp) = &self.cmn.lsp {
             let send_doc_updates = |path: Arc<Path>, doc: &mut Document| {
                 if !doc.lsp_changes.is_empty()
                     && let Some(lang) = doc.language() {

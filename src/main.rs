@@ -4,7 +4,8 @@
 #![feature(step_trait)]
 #![feature(decl_macro)]
 #![feature(new_range)]
-//#![feature(share_trait)]
+#![feature(vec_try_remove)]
+#![feature(bool_toggle)]
 
 #![allow(clippy::module_inception)]
 #![allow(clippy::type_complexity)]

@@ -123,7 +123,7 @@ pub fn run(InitState{ doc, pos, autosave }: InitState) -> io::Result<()> {
         state.poll()?;
     }
     if let State::Editor(editor) = state
-        && let Some(cx) = editor.lsp {
+        && let Some(cx) = editor.cmn.lsp {
             cx.tx.send(EditorToLspMessage::Exit).unwrap();
         }
 

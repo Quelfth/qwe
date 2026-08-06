@@ -54,7 +54,7 @@ impl Editor {
             self.bg_docs.by_path(&path).unwrap()
         };
         _ = fs::write(&path, doc.text().to_string().as_bytes());
-        if let Some(cx) = &self.lsp
+        if let Some(cx) = &self.cmn.lsp
             && let Some(lang) = doc.language()
         {
             _ = cx.tx.send(EditorToLspMessage::Save { lang, path });
@@ -90,9 +90,9 @@ impl Editor {
 
     fn unredo(&mut self, dir: TimeDirection) {
         let Err(cp) = self.doc.unredo(dir) else {return};
-        let docs = self.global_timeline[dir].pop(cp);
+        let docs = self.cmn.global_timeline[dir].pop(cp);
 
-        let cp = self.global_timeline[dir.rev()].checkpoint();
+        let cp = self.cmn.global_timeline[dir.rev()].checkpoint();
 
         let mut doc_counts = HashMap::<_, u32>::new();
 
@@ -102,7 +102,7 @@ impl Editor {
 
         for (doc, count) in doc_counts {
             let Ok(doc) = doc.canonicalize() else {continue};
-            self.global_timeline[dir.rev()].push_doc_change(doc.to_owned().into());
+            self.cmn.global_timeline[dir.rev()].push_doc_change(doc.to_owned().into());
             if self.filepath.as_ref().and_then(|f| f.canonicalize().ok()).is_some_and(|f| f == doc) {
                 self.doc.global_unredo(dir, cp, count);
             }
@@ -149,9 +149,9 @@ impl Editor {
     }
 
     pub fn copy(&mut self) {
-        self.clipboard.new_clip();
+        self.cmn.clipboard.new_clip();
         for text in self.doc.copy_text() {
-            self.clipboard.append(text);
+            self.cmn.clipboard.append(text);
         }
     }
 
@@ -159,14 +159,14 @@ impl Editor {
         self.doc.timeline.history.checkpoint();
         if let Some(cursors) = &self.doc.cursors {
             for cursor in cursors.indices() {
-                let text = self.clipboard.next_clip_elt();
+                let text = self.cmn.clipboard.next_clip_elt();
                 self.doc.paste_at_cursor(text.to_owned(), cursor);
             }
         }
     }
 
     pub fn refresh_lsp(&mut self) {
-        if let Some(cx) = &self.lsp {
+        if let Some(cx) = &self.cmn.lsp {
             for (path, doc) in self.bg_docs.pathed() {
                 if let Some(lang) = doc.language() {
                     _= cx.tx.send(EditorToLspMessage::OpenDoc{
@@ -219,13 +219,13 @@ impl Editor {
     }
 
     pub fn previous_file(&mut self) {
-        if let Some(file) = self.file_history.pop() {
+        if let Some(file) = self.cmn.file_history.pop() {
             _= self.reopen_file_doc(file);
         }
     }
     
     pub fn next_file(&mut self) {
-        if let Some(file) = self.file_future.pop() {
+        if let Some(file) = self.cmn.file_future.pop() {
             _= self.open_file_doc(file);
         }
     }

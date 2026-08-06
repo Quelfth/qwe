@@ -1,4 +1,4 @@
-use crate::{app::AppSignal, action::{Action, DocumentAction, ScrollAction}, document::Document, editor::Editor};
+use crate::{action::{Action, DocumentAction, ScrollAction}, app::AppSignal, document::Document, editor::{Editor, line_jumper::LineJumper}};
 
 impl Action<&mut Editor> for ScrollAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {
@@ -24,6 +24,7 @@ impl Action<&mut Editor> for DocumentAction {
             DocumentAction::DropNonMainCursors => ed.drop_other_selections(),
             DocumentAction::Jump => ed.jump(),
             DocumentAction::Find => ed.find(),
+            DocumentAction::LineJump => ed.open_gadget(LineJumper::new()),
         }
 
         None

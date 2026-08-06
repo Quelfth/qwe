@@ -9,18 +9,16 @@ use tokio::sync::mpsc::UnboundedSender;
 
 
 use crate::{
-    app::AppSignal,
-    pathed_file::PathedFile,
     action::Action as _,
+    app::{AppSignal, CommonState},
     document::Document,
     editor::{
-        clipboard::Clipboard, cursors::{
+        cursors::{
             CursorState,
             select::{SelectCursor, SelectCursors},
         },
         documents::DocKey,
         gadget::Gadget,
-        keymap::Keymaps,
     },
     global_config::{CharSpecial, GLOBAL_CONFIG},
     ix::{Byte, Ix},
@@ -29,9 +27,8 @@ use crate::{
     language_server::LspContext,
     lsp::channel::{EditorToLspMessage, LspToEditorMessage},
     navigator::Navigator,
+    pathed_file::PathedFile,
     pos::{Pos, convert::TextConvertablePos},
-    presenter::{Presenter},
-    timeline::{Timeline, global::GlobalEvent}
 };
 
 use documents::Documents;
@@ -51,21 +48,16 @@ pub mod markdown_view;
 pub mod picker;
 mod poll;
 pub mod renamer;
+pub mod line_jumper;
 pub mod log;
 
 #[derive(Default)]
 pub struct Editor {
     filepath: Option<Arc<Path>>,
     doc: Document,
-    file_history: Vec<Arc<Path>>,
-    file_future: Vec<Arc<Path>>,
-    global_timeline: Timeline<GlobalEvent>,
     bg_docs: Documents,
-    keymap: Keymaps,
     pub gadget: Option<Box<dyn Gadget>>,
-    pub clipboard: Clipboard,
-    pub lsp: Option<LspContext>,
-    pub presenter: Presenter,
+    pub cmn: CommonState,
 }
 
 impl Editor {
@@ -87,19 +79,19 @@ impl Editor {
     pub fn open_scratch_doc_with(&mut self, text: impl AsRef<str>) {
         self.replace_doc(Document::new(None, text, Some(Default::default())));
         if let Some(path) = self.filepath.take() {
-            self.file_history.push(path);
+            self.cmn.file_history.push(path);
         }
     }
 
     pub fn open_file_doc(&mut self, path: Arc<Path>) -> io::Result<()> {
         if let Some(path) = self.open_file_doc_impl(path)? {
-            self.file_history.push(path);
+            self.cmn.file_history.push(path);
         }
         Ok(())
     }
     pub fn reopen_file_doc(&mut self, path: Arc<Path>) -> io::Result<()> {
         if let Some(path) = self.open_file_doc_impl(path)? {
-            self.file_future.push(path);
+            self.cmn.file_future.push(path);
         }
         Ok(())
     }
@@ -135,7 +127,7 @@ impl Editor {
             Some(Default::default()),
         ));
 
-        if let Some(lsp) = &self.lsp
+        if let Some(lsp) = &self.cmn.lsp
             && let Some(lang) = self.doc.language()
         {
             lsp.tx
@@ -166,7 +158,7 @@ impl Editor {
             let lang = path.extension()
                 .and_then(|e| Language::from_file_ext(&e.to_string_lossy()));
 
-            if let Some(lsp) = &self.lsp
+            if let Some(lsp) = &self.cmn.lsp
                 && let Some(lang) = lang
             {
                 lsp.tx
@@ -198,7 +190,7 @@ impl Editor {
         send: UnboundedSender<EditorToLspMessage>,
         recv: Receiver<LspToEditorMessage>,
     ) {
-        self.lsp = Some(LspContext::new(recv, send));
+        self.cmn.lsp = Some(LspContext::new(recv, send));
     }
 
     pub fn doc(&self) -> &Document {
@@ -319,7 +311,7 @@ impl Editor {
         }
     }
 
-    fn open_gadget(&mut self, gadget: impl Gadget + 'static) {
+    pub fn open_gadget(&mut self, gadget: impl Gadget + 'static) {
         self.gadget = Some(Box::new(gadget))
     }
 
@@ -342,11 +334,7 @@ impl Editor {
             filepath,
             doc,
             mut bg_docs,
-            global_timeline,
-            keymap,
-            clipboard,
-            lsp,
-            presenter,
+            cmn,
             ..
         } = self;
         if let Some(fp) = filepath.clone() {
@@ -355,36 +343,22 @@ impl Editor {
         Navigator::new(
             filepath,
             bg_docs,
-            global_timeline,
-            keymap,
-            clipboard,
-            lsp,
-            presenter,
+            cmn,
         )
     }
 
     pub fn from_parts(
         doc: (Option<Arc<Path>>, Document),
         bg_docs: Documents,
-        global_timeline: Timeline<GlobalEvent>,
-        keymap: Keymaps,
-        clipboard: Clipboard,
-        lsp: Option<LspContext>,
-        presenter: Presenter,
+        cmn: CommonState,
     ) -> Self {
         let (filepath, doc) = doc;
         Self {
             filepath,
             doc,
-            file_history: Default::default(),
-            file_future: Default::default(),
-            global_timeline,
             bg_docs,
-            keymap,
             gadget: None,
-            clipboard,
-            lsp,
-            presenter,
+            cmn,
         }
     }
 }

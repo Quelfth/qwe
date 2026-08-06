@@ -181,7 +181,7 @@ impl Gadget for CodeActionsGadget {
             }
 
             Key(key![return] | key![ ]) => {
-                let action = self.actions.remove(self.selected);
+                let Some(action) = self.actions.try_remove(self.selected) else {return None};
                 Some(Box::new(move |editor| {
                     let CodeAction { edits, command: None, .. } = action else {return};
                     editor.apply_action_edits(edits);
