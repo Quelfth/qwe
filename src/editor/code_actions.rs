@@ -1,11 +1,32 @@
 use std::range::Range;
 
 use lsp_types::{
-    AnnotatedTextEdit, CodeAction as LspCodeAction, Command, CompletionTextEdit, CreateFile, DeleteFile, DocumentChanges, InsertReplaceEdit, OneOf, OptionalVersionedTextDocumentIdentifier, RenameFile, ResourceOp, TextDocumentEdit, TextEdit, Url, WorkspaceEdit
+    AnnotatedTextEdit,
+    CodeAction as LspCodeAction,
+    Command,
+    CompletionTextEdit,
+    CreateFile,
+    DeleteFile,
+    DocumentChanges,
+    InsertReplaceEdit,
+    OneOf,
+    OptionalVersionedTextDocumentIdentifier,
+    RenameFile,
+    ResourceOp,
+    TextDocumentEdit,
+    TextEdit,
+    Url,
+    WorkspaceEdit,
 };
 
 use crate::{
-    color, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, key::{KeyOrChar, key}, pos::Utf16Pos, style::Style
+    color,
+    draw::screen::Canvas,
+    editor::{Editor, gadget::Gadget},
+    grapheme::GraphemeExt,
+    key::{KeyOrChar, key},
+    pos::Utf16Pos,
+    style::Style,
 };
 
 #[derive(Clone, Debug)]
@@ -154,12 +175,6 @@ impl CodeActionsGadget {
 
 impl Gadget for CodeActionsGadget {
     fn on_key(&mut self, event: KeyOrChar) -> Option<Box<dyn FnOnce(&mut super::Editor)>> {
-        macro_rules! xx {
-            ($($tokens: tt)*) => {
-                Some(Box::new($($tokens)*))
-            };
-        }
-
         use KeyOrChar::Key;
 
         match event {
@@ -169,7 +184,7 @@ impl Gadget for CodeActionsGadget {
                     return None;
                 }
                 self.selected = (self.selected + 1) % self.actions.len();
-                xx!(Editor::noop)
+                Some(Box::new(Editor::noop))
             }
 
             Key(key![back tab]) => {
@@ -177,11 +192,11 @@ impl Gadget for CodeActionsGadget {
                     return None;
                 }
                 self.selected = self.selected.wrapping_sub(1) % self.actions.len();
-                xx!(Editor::noop)
+                Some(Box::new(Editor::noop))
             }
 
             Key(key![return] | key![ ]) => {
-                let Some(action) = self.actions.try_remove(self.selected) else {return None};
+                let action = self.actions.try_remove(self.selected)?;
                 Some(Box::new(move |editor| {
                     let CodeAction { edits, command: None, .. } = action else {return};
                     editor.apply_action_edits(edits);

@@ -219,6 +219,14 @@ impl Document {
         }
         .unwrap_or_default()
     }
+
+    #[auto_enum(Iterator)]
+    pub fn cursor_selection_ranges(&self, index: CursorIndex) -> impl Iterator<Item = Range<Ix<Byte>>> {
+        match &self.cursors {
+            Some(c) => c.selection_ranges_for_cursor(&self.text, index),
+            None => iter::empty(),
+        }
+    }
 }
 
 pub macro query_parse($self: ident, $cx: ident) {
@@ -840,7 +848,7 @@ impl Document {
     pub fn do_delete(&mut self) {
         self.timeline.history.checkpoint();
         if let Some(cursors) = &self.cursors {
-            let mut ranges = cursors.delete_ranges(&self.text).collect::<Vec<_>>();
+            let mut ranges = cursors.selection_ranges(&self.text).collect::<Vec<_>>();
             ranges.sort_unstable_by_key(|r| r.start);
             for range in ranges.into_iter().rev() {
                 self.delete(range);
@@ -850,7 +858,7 @@ impl Document {
 
     pub fn delete_at_cursor(&mut self, cursor: CursorIndex) {
         if let Some(cursors) = &self.cursors {
-            let mut ranges = cursors.delete_ranges_for_cursor(&self.text, cursor).collect::<Vec<_>>();
+            let mut ranges = cursors.selection_ranges_for_cursor(&self.text, cursor).collect::<Vec<_>>();
             ranges.sort_unstable_by_key(|r| r.start);
             for range in ranges.into_iter().rev() {
                 self.delete(range);

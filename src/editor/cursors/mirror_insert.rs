@@ -40,6 +40,17 @@ impl MirrorInsertCursor {
             SelectCursor::range(reverse..forward, text)
         }
     }
+
+    pub fn flip(self) -> Self {
+        Self {
+            forward: self.reverse,
+            reverse: self.forward,
+        }
+    }
+
+    pub fn flip_if(self, flip: bool) -> Self {
+        if flip { self.flip() } else { self }
+    }
 }
 
 impl Cursor for MirrorInsertCursor {

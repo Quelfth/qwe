@@ -11,6 +11,7 @@ use crate::{ts::QuerySource, util::leak};
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Language {
     Cpp,
+    CSharp,
     Css,
     Javascript,
     Mona,
@@ -32,36 +33,29 @@ pub struct LangLspInfo {
 
 impl Language {
     pub fn from_file_ext(ext: &str) -> Option<Self> {
-        Some(match ext {
-            "c" | "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
-            "css" => Self::Css,
-            "js" => Self::Javascript,
-            "mn" => Self::Mona,
-            "nu" => Self::Nu,
-            "tsq" => Self::Query,
-            "rs" => Self::Rust,
-            "sulu" => Self::Sulu,
-            "toml" => Self::Toml,
-            "yaml" => Self::Yaml,
-            _ => None::<!>?,
-        })
+        Self::from_identifier(ext)
     }
 
     pub fn from_injection_name(name: &str) -> Option<Self> {
+        Self::from_identifier(name)
+    }
+
+    pub fn from_identifier(name: &str) -> Option<Self> {
         Some(match name {
-            "c" | "cpp" => Self::Cpp,
+            "c" | "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
+            "cs" | "csharp" => Self::CSharp,
             "css" => Self::Css,
             "js" | "javascript" => Self::Javascript,
-            "mona" => Self::Mona,
+            "mn" | "mona" => Self::Mona,
             "nu" => Self::Nu,
             "tsq" => Self::Query,
-            "rust" => Self::Rust,
+            "rs" | "rust" => Self::Rust,
             "sulu" => Self::Sulu,
             "toml" => Self::Toml,
             "yaml" => Self::Yaml,
 
             "rust-format-args" => Self::RustFormatArgs,
-            _ => None::<!>?
+            _ => None::<!>?,
         })
     }
 
@@ -81,6 +75,11 @@ impl Language {
                     },
                 }})
             }),
+            Language::CSharp => Some(LangLspInfo {
+                id: "csharp",
+                command: "roslyn-ls --stdio",
+                options: None,
+            }),
             _ => None,
         }
     }
@@ -96,6 +95,7 @@ impl Language {
 queries! {
      {
         Cpp => "cpp"
+        CSharp => "csharp"
         Css => "css"
         Javascript => "js"
         Mona => "mona"
@@ -116,6 +116,7 @@ queries! {
 
 ts_lang! {
     Cpp => tree_sitter_cpp
+    CSharp => tree_sitter_c_sharp
     Css => tree_sitter_css_orchard
     Javascript => tree_sitter_javascript
     Mona => tree_sitter_mona

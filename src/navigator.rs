@@ -343,8 +343,8 @@ impl Navigator {
         let root_pane = self.root_pane();
         let root_text = root_pane.text();
 
-        let warning_style = theme().highlight(&[&["diagnostic", "warning"]]);
-        let error_style = theme().highlight(&[&["diagnostic", "error"]]);
+        let warning_style = theme().highlight(&sulu::highlight![diagnostic.warning]);
+        let error_style = theme().highlight(&sulu::highlight![diagnostic.error]);
 
         let mut margin = 0;
         for (i, g) in (0..canvas.width()).into_iter().zip(root_text.graphemes()) {

@@ -31,14 +31,6 @@ impl LineCursors {
         self.map_to(|c| c.to_select(doc))
     }
 
-    pub fn to_insert_around_in(&self, _: &Rope) -> InsertCursors {
-        todo!()
-    }
-
-    pub fn to_insert_around_out(&self, _: &Rope) -> InsertCursors {
-        todo!()
-    }
-
     pub fn to_block_select(&self, text: &Rope) -> SelectCursors {
         self.map_to(|c| c.to_block_select(text))
     }

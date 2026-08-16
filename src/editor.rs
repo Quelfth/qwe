@@ -2,11 +2,8 @@ use std::{
     io, mem,
     range::Range,
     path::Path,
-    sync::{Arc, mpsc::Receiver},
+    sync::Arc,
 };
-
-use tokio::sync::mpsc::UnboundedSender;
-
 
 use crate::{
     action::Action as _,
@@ -25,7 +22,7 @@ use crate::{
     key::{KeyOrChar, key},
     lang::Language,
     language_server::LspContext,
-    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    lsp::channel::{EditorToLspMessage, EditorToLspSender, LspToEditorReceiver},
     navigator::Navigator,
     pathed_file::PathedFile,
     pos::{Pos, convert::TextConvertablePos},
@@ -187,8 +184,8 @@ impl Editor {
 
     pub fn set_lsp_channels(
         &mut self,
-        send: UnboundedSender<EditorToLspMessage>,
-        recv: Receiver<LspToEditorMessage>,
+        send: EditorToLspSender,
+        recv: LspToEditorReceiver,
     ) {
         self.cmn.lsp = Some(LspContext::new(recv, send));
     }

@@ -331,7 +331,7 @@ impl CursorState {
     }
 
     #[auto_enum(Iterator)]
-    pub fn delete_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<Ix<Byte>>> {
+    pub fn selection_ranges(&self, text: &Rope) -> impl Iterator<Item = Range<Ix<Byte>>> {
         use CursorState::*;
         match self {
             MirrorInsert(_) => iter::empty(),
@@ -342,9 +342,9 @@ impl CursorState {
     }
 
     #[auto_enum(Iterator)]
-    pub fn delete_ranges_for_cursor(&self, text: &Rope, cursor: CursorIndex) -> impl Iterator<Item = Range<Ix<Byte>>> {
+    pub fn selection_ranges_for_cursor(&self, text: &Rope, cursor: CursorIndex) -> impl Iterator<Item = Range<Ix<Byte>>> {
         match self {
-            CursorState::Select(cursors) if let Some(cursor) = cursors.get(cursor) => cursor.delete_ranges(text),
+            CursorState::Select(cursors) if let Some(cursor) = cursors.get(cursor) => cursor.selection_ranges(text),
             CursorState::LineSelect(cursors) if let Some(cursor) = cursors.get(cursor) => cursor.text_range(text).into_iter(),
             _ => iter::empty()
         }

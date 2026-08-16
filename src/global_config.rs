@@ -161,6 +161,14 @@ impl Default for Keymaps {
             [x] => Cut,
             [c] => Copy,
             [v] => Paste,
+            [6] => CamelCase,
+            [^] => PascalCase,
+            [_] => SnakeCase,
+            [alt ^] => AdaCase,
+            [alt _] => ScreamingSnakeCase,
+            [-] => KebabCase,
+            [alt 6] => TrainCase,
+            [alt -] => CobolCase,
         }};
         Self {
             app: ArcSwap::from_pointee(keymap!{

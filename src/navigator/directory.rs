@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, ffi::{OsStr, OsString}, fs, iter::Sum, path::{Path, PathBuf}};
 
-use crate::{document::diagnostics::Severity, editor::documents::{DocKey, Documents}};
+use crate::{document::diagnostics::Severity, editor::documents::{DocKey, DocOrInfo, Documents}};
 
 pub struct Directory {
     entries: BTreeMap<OsString, Entry>,
@@ -92,15 +92,27 @@ impl Entry {
             match self {
                 Entry::Directory(directory) => directory.entries().values().map(|e| e.diagnostic_status(docs)).sum(),
                 Entry::File { doc: FileDocument::Text(key), .. } => {
-                    let diagnostics = &docs.by_key(*key)?.diagnostics;
+                    let doc = docs.by_key_or_info(*key)?;
                     let mut warnings = 0;
                     let mut errors = 0;
-                    for diagnostic in diagnostics.values() {
-                        match diagnostic.severity {
+                    let mut add_severity = |severity: Severity| {
+                        match severity {
                             Severity::Warn => warnings += 1,
                             Severity::Err => errors += 1,
                             _ => ()
                         }
+                    };
+                    match doc {
+                        DocOrInfo::Doc(document) => {
+                            for diagnostic in document.diagnostics.values() {
+                                add_severity(diagnostic.severity)
+                            }
+                        },
+                        DocOrInfo::Info(document_info) => {
+                            for (_, diagnostic) in &document_info.diagnostics {
+                                add_severity(diagnostic.severity)
+                            }
+                        },
                     }
                     DiagnosticStatus { warnings, errors }
                 },

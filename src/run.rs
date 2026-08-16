@@ -6,21 +6,20 @@ use crossterm::{
     terminal,
 };
 use dispa::dispatch;
-use tokio::sync::mpsc;
 
 use crate::{
+    action::Action as _,
     app::{
         AppSignal,
         AppState,
     },
-    action::Action as _,
     draw::screen::Canvas,
     editor::Editor,
     global_config::GLOBAL_CONFIG,
     init::InitState,
     ix::Ix,
     key::{Key, KeyOrChar},
-    lsp::{self, channel::EditorToLspMessage, run_lsp_thread},
+    lsp::{self, channel::{EditorToLspMessage, editor_to_lsp_channel, lsp_to_editor_channel}, run_lsp_thread},
     navigator::Navigator,
     presenter::{
         Present,
@@ -34,8 +33,8 @@ pub fn run(InitState{ doc, pos, autosave }: InitState) -> io::Result<()> {
     set_terminal_size(width, height);
 
     let mut editor = Editor::new();
-    let (send_lsp_to_editor, recv_lsp_to_editor) = std::sync::mpsc::channel();
-    let (send_editor_to_lsp, recv_editor_to_lsp) = mpsc::unbounded_channel();
+    let (send_lsp_to_editor, recv_lsp_to_editor) = lsp_to_editor_channel();
+    let (send_editor_to_lsp, recv_editor_to_lsp) = editor_to_lsp_channel();
     editor.set_lsp_channels(send_editor_to_lsp, recv_lsp_to_editor);
     if let Some(file) = doc {
         _= editor.open_file_doc(file.path);

@@ -100,12 +100,12 @@ impl JumpLabels {
                         while let Some(grapheme) = graphemes.peek()
                             && grapheme.is_ident()
                         {
+                            j += grapheme.columns();
                             graphemes.next();
-                            j += Ix::new(1);
                         }
                     }
 
-                    j += Ix::new(1);
+                    j += grapheme.columns();
                 }
             }
         }

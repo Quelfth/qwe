@@ -145,6 +145,15 @@ pub enum AnySelectAction {
     Cut,
     Copy,
     Paste,
+
+    CamelCase,           // camelCase
+    PascalCase,          // PascalCase
+    SnakeCase,           // snake_case
+    AdaCase,             // Ada_Case
+    ScreamingSnakeCase,  // SCREAMING_SNAKE_CASE
+    KebabCase,           // kebab-case
+    TrainCase,           // Train-Case
+    CobolCase,           // COBOL-CASE
 }
 
 impl From<DocumentAction> for AnySelectAction {

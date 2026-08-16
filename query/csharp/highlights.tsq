@@ -1,0 +1,115 @@
+
+(type_argument_list ["<" ">"] @x.angle-bracket)
+
+[(string_literal_content) (string_content)] @l.string
+"\"" @l.string.quote
+[(interpolation_start) (interpolation_brace)] @l.string.interpolation
+
+[(integer_literal) (real_literal)] @l.number
+
+";" @o.group
+
+"using" @o.use
+(using_directive ";" @o.use)
+
+(qualified_name "." @o.scope)
+
+"public" @o.visibility.public
+"protected" @o.visibility.middle
+"private" @o.visibility.private
+
+"sealed" @o.implement
+
+"static" @o.storage.static
+
+(base_list ":" @o.implement)
+
+(attribute_list ["[" "]"] @o.attribute)
+
+"namespace" @o.declare.module
+(namespace_declaration body: (declaration_list ["{" "}"] @o.declare.module))
+
+"class" @o.declare.type.struct
+(class_declaration body: (declaration_list ["{" "}"] @o.declare.type.struct))
+
+(predefined_type) @i.type.builtin.keyword
+((predefined_type) @i.type.void @_ (#eq? @_ "void"))
+
+(field_declaration ";" @o.declare.value)
+(variable_declarator "=" @o.declare.value)
+
+(method_declaration body: (block ["{" "}"] @o.declare.function))
+
+"this" @i.value.receiver
+(null_literal) @i.value.null
+
+(accessor_list ["{" "}"] @o.declare.function.property)
+(accessor_declaration ["get" "set"] @o.declare.function body: (block ["{" "}"] @o.declare.function))
+
+(arrow_expression_clause "=>" @o.declare.function)
+(property_declaration ";" @o.declare.function)
+
+; Expressions
+
+"new" @o.constructor
+
+(implicit_object_creation_expression "new" @o.initialize (_ ["(" "," ")"] @o.initialize))
+
+(implicit_array_creation_expression ["new" "[" "]"] @o.collection.list_.priority_1 (_ ["{" "," "}"] @o.collection.list))
+
+(parenthesized_expression ["(" ")"] @o.group)
+(block ["{" "}"] @o.group)
+
+(binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
+(binary_expression ["==" "!=" "<" ">" "<=" ">="] @o.comparison)
+(binary_expression ["<<" ">>" ">>>"] @o.sequence)
+(binary_expression ["&" "|" "^"] @o.logical)
+(binary_expression ["&&" "||"] @o.branch)
+
+(prefix_unary_expression ["!" "~"] @o.logical)
+(prefix_unary_expression ["+" "-"] @o.arithmetic)
+
+(prefix_unary_expression "^" @o.sequence)
+(range_expression ".." @o.sequence)
+
+(postfix_unary_expression ["++" "--"] @o.arithmetic.assign)
+(prefix_unary_expression ["++" "--"] @o.arithmetic.assign)
+
+(assignment_expression "=" @o.assign)
+(assignment_expression ["+=" "-=" "*=" "/=" "%="] @o.arithmetic.assign)
+(assignment_expression ["&=" "|=" "^="] @o.logical.assign)
+(assignment_expression ["<<=" ">>=" ">>>="] @o.sequence.assign)
+(expression_statement (assignment_expression) ";" @o.assign)
+
+(member_access_expression "." @o.access.field)
+(invocation_expression function: (member_access_expression "." @o.access.method))
+
+(bracketed_argument_list ["[" "," "]"] @o.sequence)
+
+"if" @o.branch.if
+(if_statement ["(" ")"] @o.branch.if)
+(if_statement consequence: (block ["{" "}"] @o.branch.if))
+
+"else" @o.branch.else
+(if_statement alternative: (block ["{" "}"] @o.branch.else))
+
+"for" @o.loop.for
+(for_statement ["(" ";" ")"] @o.loop.for)
+(for_statement body: (block ["{" "}"] @o.loop.for))
+
+"switch" @o.branch.match
+(switch_statement ["(" ")"] @o.branch.match)
+(switch_body ["{" "}"] @o.branch.match)
+
+"case" @o.branch.case
+(switch_section ":" @o.branch.case)
+(switch_section ":" . (block ["{" "}"] @o.branch.case))
+(switch_section "default" @o.branch.case)
+
+["is" "as"] @o.branch.match
+
+"return" @o.control.return
+(return_statement ";" @o.control.return)
+
+"break" @o.control.break
+(break_statement ";" @o.control.break)

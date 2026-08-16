@@ -1,11 +1,7 @@
 use std::{iter, range::Range};
 
 use crate::{
-    constants::TAB_WIDTH,
-    document::{Document, force_cursors},
-    editor::cursors::{CursorIndex, CursorState, Cursors},
-    ix::{Byte, Column, Ix, Line, ix},
-    util::{MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
+    constants::TAB_WIDTH, document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorState, Cursors, mirror_insert::{MirrorInsertCursor, MirrorInsertCursors}}, ix::{Byte, Column, Ix, Line, ix}, pos::Pos, util::{Case, MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
 };
 
 impl Document {
@@ -88,10 +84,12 @@ impl Document {
                 MirrorInsert(_) => (),
                 Insert(_) => (),
                 Select(c) => self.cursors = Some(c.to_mirror_insert_in().into()),
-                LineSelect(c) => self.cursors = Some(c.to_insert_around_in(&self.text).into()),
+                LineSelect(_) => self.insert_around_lines(false),
             }
         }
     }
+
+
     pub fn insert_around_out(&mut self) {
         if let Some(c) = &self.cursors {
             use CursorState::*;
@@ -99,9 +97,35 @@ impl Document {
                 MirrorInsert(_) => (),
                 Insert(_) => (),
                 Select(c) => self.cursors = Some(c.to_mirror_insert_out().into()),
-                LineSelect(c) => self.cursors = Some(c.to_insert_around_out(&self.text).into()),
+                LineSelect(_) => self.insert_around_lines(true),
             }
         }
+    }
+
+    fn insert_around_lines(&mut self, out: bool) {
+        self.timeline.history.checkpoint();
+        let mut new_cursors = Vec::new();
+        for i in self.cursor_indices() {
+            let Some(range) = self.cursor_line_range(i) else {continue};
+            let mut indent = None;
+            for line in range {
+                let line_indent = self.text.indent_on_line(line);
+                if indent.is_none_or(|indent| line_indent > indent) {
+                    indent = Some(line_indent);
+                }
+                self.tab_line_in(line);
+            }
+            let indent = indent.unwrap_or(ix(0));
+            let indent_nl = format!("{}\n", indent_string(indent));
+
+            self.direct_insert(Pos { line: range.end, column: ix(0) }, &indent_nl);
+            self.direct_insert(Pos { line: range.start, column: ix(0) }, &indent_nl);
+            let forward = Pos { line: range.start, column: indent };
+            let reverse = Pos { line: range.end + ix(1), column: indent };
+
+            new_cursors.push(MirrorInsertCursor { forward, reverse }.flip_if(out));
+        }
+        self.cursors = MirrorInsertCursors::from_iter(new_cursors).map(Into::into);
     }
 
     pub fn block_select(&mut self) {
@@ -291,5 +315,148 @@ impl Document {
 
         self.paste_at_cursor(main_text, CursorIndex::Main);
         self.paste_at_cursor(other_text, CursorIndex::Other(0));
+    }
+
+    pub fn apply_case(&mut self, case: Case) {
+        #[derive(Copy, Clone)]
+        enum WordPosition {
+            Partial,
+            Initial,
+            Subsequent,
+        }
+
+        struct Word {
+            position: WordPosition,
+            range: Range<Ix<Byte>>,
+        }
+
+        let mut words = Vec::<Word>::new();
+
+        fn is_word_char(char: char) -> bool {
+            char.is_alphanumeric() || matches!(char, '-' | '_')
+        }
+
+        fn word_boundary(before: Option<char>, current: char, next: Option<char>) -> Option<WordPosition> {
+            use WordPosition::*;
+            if !is_word_char(current) { return None }
+
+            let Some(before) = before else {return Some(Initial)};
+            if !is_word_char(before) { return Some(Initial) }
+
+            if matches!(current, '-' | '_') {
+                return Some(Subsequent)
+            }
+
+            if current.is_uppercase()
+                && (!before.is_uppercase() || !next.is_some_and(char::is_uppercase)) {
+                    return Some(Subsequent)
+                }
+
+            Some(Partial)
+        }
+
+        fn is_word_boundary(before: Option<char>, current: char, next: Option<char>) -> bool {
+            !matches!(word_boundary(before, current, next), Some(WordPosition::Partial))
+        }
+
+        for index in self.cursor_indices() {
+            for range in self.cursor_selection_ranges(index) {
+                let s = range.start;
+                let mut char_before = try {self.text.byte_slice(..s)?.chars().next_back()?};
+                let mut i: Ix<Byte> = ix(0);
+                let mut j: Ix<Byte> = ix(0);
+                let Some(text) = self.text.byte_slice(range) else {continue};
+
+                let Some(char) = text.chars().next() else {continue};
+                j += ix(char.len_utf8());
+
+                let mut next_char = text.byte_slice(j..).and_then(|s| s.chars().next());
+                if let Some(position) = word_boundary(char_before, char, next_char) {
+                    char_before = Some(char);
+                    while let Some(char) = next_char {
+                        j += ix(char.len_utf8());
+                        next_char = text.byte_slice(j..).and_then(|s| s.chars().next());
+                        if is_word_boundary(char_before.replace(char), char, next_char) {
+                            break;
+                        }
+                    }
+                    words.push(Word { position, range: s + i..s + j });
+                    i = j;
+                }
+
+                let mut position = None::<WordPosition>;
+
+                while let Some(char) = next_char {
+                    j += ix(char.len_utf8());
+                    next_char = text.byte_slice(j..).and_then(|s| s.chars().next());
+                    if let Some(new_position) = word_boundary(char_before.replace(char), char, next_char) {
+                        match new_position {
+                            WordPosition::Partial => continue,
+                            new_position => {
+                                if let Some(position) = position.replace(new_position) {
+                                    words.push(Word { position, range: s + i..s + j })
+                                }
+                            }
+                        }
+                    } else {
+                        position = None;
+                        i = j;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        words.sort_by_key(|w| w.range.start);
+
+        for Word { position, range } in words.into_iter().rev() {
+            let Some(word) = self.text.byte_slice(range) else {continue};
+            let word = word.to_string();
+            use Case::*;
+            let word = match position {
+                WordPosition::Partial => {
+                    match case {
+                        Snake | Kebab | Camel | Pascal => word.to_lowercase(),
+                        Ada | Train => if matches!(self.text.byte_slice(..range.start).and_then(|slice| slice.chars().next_back()), Some('-' | '_')) {
+                            let i = word.ceil_char_boundary(1);
+                            format!("{}{}", word[..i].to_uppercase(), word[i..].to_lowercase())
+                        } else {
+                            word.to_lowercase()
+                        },
+                        ScreamingSnake | Cobol => word.to_uppercase(),
+                    }
+                },
+                WordPosition::Initial => {
+                    match case {
+                        Camel | Snake | Kebab => word.to_lowercase(),
+                        Pascal | Ada | Train => {
+                            let i = word.ceil_char_boundary(1);
+                            format!("{}{}", word[..i].to_uppercase(), word[i..].to_lowercase())
+                        },
+                        ScreamingSnake | Cobol => word.to_uppercase(),
+                    }
+                },
+                WordPosition::Subsequent => {
+                    let word = word.strip_prefix('-').or_else(|| word.strip_prefix('_')).unwrap_or(&word);
+
+                    let word = match case {
+                        Snake | Kebab => word.to_lowercase(),
+                        Camel | Pascal | Ada | Train => {
+                            let i = word.ceil_char_boundary(1);
+                            format!("{}{}", word[..i].to_uppercase(), word[i..].to_lowercase())
+                        },
+                        ScreamingSnake | Cobol => word.to_uppercase(),
+                    };
+
+                    match case {
+                        Camel | Pascal => word,
+                        Snake | Ada | ScreamingSnake => format!("_{word}"),
+                        Kebab | Train | Cobol => format!("-{word}"),
+                    }
+                },
+            };
+
+            self.direct_replace_byte(range, &word);
+        }
     }
 }

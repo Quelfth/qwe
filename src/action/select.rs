@@ -1,4 +1,4 @@
-use crate::{app::AppSignal, action::{Action, SelectAction}, editor::Editor};
+use crate::{action::{Action, SelectAction}, app::AppSignal, editor::Editor, util::Case};
 
 use super::AnySelectAction;
 
@@ -21,6 +21,14 @@ impl Action<&mut Editor> for AnySelectAction {
             Cut => ed.cut(),
             Copy => ed.copy(),
             Paste => ed.paste(),
+            CamelCase => ed.doc_mut().apply_case(Case::Camel),
+            PascalCase => ed.doc_mut().apply_case(Case::Pascal),
+            SnakeCase => ed.doc_mut().apply_case(Case::Snake),
+            AdaCase => ed.doc_mut().apply_case(Case::Ada),
+            ScreamingSnakeCase => ed.doc_mut().apply_case(Case::ScreamingSnake),
+            KebabCase => ed.doc_mut().apply_case(Case::Kebab),
+            TrainCase => ed.doc_mut().apply_case(Case::Train),
+            CobolCase => ed.doc_mut().apply_case(Case::Cobol),
         }
 
         None

@@ -99,7 +99,7 @@ impl Document {
                     for (_, scope) in scopes {
                         hl_style =
                             hl_style
-                            + theme().highlight(&scope);
+                            + theme().highlight(&sulu::Highlight::from_iterators(scope));
                     }
 
                     canvas[(i, j)] = Cell {

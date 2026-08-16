@@ -82,7 +82,7 @@
 ; Modules
 
 "mod" @o.declare.module
-(mod_item name: (_) @i.namespace)
+(mod_item name: (name (identifier) @i.namespace))
 (mod_item body: (_ ["{" "}"] @o.declare.module))
 (mod_item ";" @o.declare.module)
 
@@ -672,6 +672,8 @@
 (use_declaration (scoped_name (name (identifier) @i.macro.attribute @_ (#semantic? @_ Decorator))))
 
 (function_item name: (name) @_ (#semantic? @_ ProcMacro) (parameters ["(" "," ")"] @o.call.macro.function))
+
+(function_item name: (name) @i.macro.attribute @_ (#semantic? @_ Decorator) (parameters ["(" "," ")"] @o.call.macro.attribute))
 
 (lifetime (name) ) @i.lifetime
 (lifetime "'" @o.wildcard.lifetime "_" @o.wildcard.lifetime)

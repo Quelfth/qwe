@@ -179,13 +179,7 @@ impl Document {
                     continue;
                 }
 
-                self.direct_insert(
-                    Pos {
-                        line,
-                        column: Ix::new(0),
-                    },
-                    &indent_string(Ix::new(TAB_WIDTH)),
-                );
+                self.tab_line_in(line);
             }
         }
     }

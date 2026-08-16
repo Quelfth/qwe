@@ -4,7 +4,7 @@ use crate::{
     constants::TAB_WIDTH,
     document::{Change, CursorChange, Document},
     editor::cursors::{CursorState, mirror_insert::InsertDirection},
-    ix::{Byte, Ix},
+    ix::{Byte, Ix, Line},
     pos::Pos,
     util::{flip_delimiter, indent_string, is_right_delimiter, mirror_string},
 };
@@ -95,7 +95,7 @@ impl Document {
                             success = true;
                         }
                     }
-                    _ => todo!(),
+                    _ => (),
                 }
             }
         }
@@ -119,6 +119,16 @@ impl Document {
         if let Some(pos) = self.text.pos_of_byte_pos(pos) {
             self.direct_insert(pos, text);
         }
+    }
+
+    pub fn tab_line_in(&mut self, line: Ix<Line>) {
+        self.direct_insert(
+            Pos {
+                line,
+                column: Ix::new(0),
+            },
+            &indent_string(Ix::new(TAB_WIDTH)),
+        )
     }
 
     pub fn direct_insert(&mut self, pos: Pos, text: &str) {

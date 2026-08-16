@@ -16,7 +16,9 @@ impl Editor {
     }
 
     pub fn insert_on_newline_after(&mut self) {
+        
         self.insert_newline_below();
+
         self.insert_after();
     }
 }

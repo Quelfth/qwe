@@ -251,3 +251,14 @@ pub fn completion_prefix_len(mut completion: &str, text: &RopeSlice<'_>) -> Ix<B
 
     Ix::new(completion.len())
 }
+
+pub enum Case {
+    Camel,
+    Pascal,
+    Snake,
+    Ada,
+    ScreamingSnake,
+    Kebab,
+    Train,
+    Cobol,
+}

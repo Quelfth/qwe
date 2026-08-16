@@ -1,11 +1,11 @@
 use std::{
-    range::Range, path::Path, sync::{Arc, mpsc::Sender}
+    range::Range,
+    path::Path,
+    sync::Arc,
 };
 
-use lsp_types::{
-    CodeAction, CompletionItem, Diagnostic, InitializeResult, Location, SemanticToken, TextDocumentContentChangeEvent, Url, WorkspaceEdit
-};
-use tokio::sync::mpsc::UnboundedReceiver;
+use expanda::declare_item;
+use lsp_types::*;
 
 use crate::{lang::Language, pos::Utf16Pos};
 
@@ -52,6 +52,7 @@ pub enum LspToEditorMessage {
     },
 }
 
+#[declare_item(EDITOR_TO_LSP_MESSAGE)]
 #[derive(Debug)]
 pub enum EditorToLspMessage {
     OpenDoc {
@@ -105,7 +106,22 @@ pub enum EditorToLspMessage {
     },
 }
 
+pub(crate) use EDITOR_TO_LSP_MESSAGE as editor_to_lsp_message_src;
+
+pub type EditorToLspSender = tokio::sync::mpsc::UnboundedSender<EditorToLspMessage>;
+pub type EditorToLspReceiver = tokio::sync::mpsc::UnboundedReceiver<EditorToLspMessage>;
+pub type LspToEditorSender = std::sync::mpsc::Sender<LspToEditorMessage>;
+pub type LspToEditorReceiver = std::sync::mpsc::Receiver<LspToEditorMessage>;
+
+pub fn editor_to_lsp_channel() -> (EditorToLspSender, EditorToLspReceiver) {
+    tokio::sync::mpsc::unbounded_channel()
+}
+
+pub fn lsp_to_editor_channel() -> (LspToEditorSender, LspToEditorReceiver) {
+    std::sync::mpsc::channel()
+}
+
 pub struct LspChannels {
-    pub incoming: UnboundedReceiver<EditorToLspMessage>,
-    pub outgoing: Sender<LspToEditorMessage>,
+    pub incoming: EditorToLspReceiver,
+    pub outgoing: LspToEditorSender,
 }

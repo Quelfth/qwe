@@ -1,5 +1,7 @@
 [
     (identifier)
+    "proc_macro"
+    "proc_macro_attribute"
 ] @zebra
 
 (meta_name_value (string (string_content) @zebra))

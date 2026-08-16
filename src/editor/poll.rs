@@ -4,12 +4,7 @@ use lsp_types::Url;
 
 use crate::{
     app::{AppSignal, AppState}, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
-        Editor,
-        code_actions::{ActionEdit, CodeAction, CodeActionsGadget},
-        completer::Completer,
-        markdown_view::MarkdownGadget,
-        picker::Picker,
-        renamer::Renamer,
+        Editor, code_actions::{ActionEdit, CodeAction, CodeActionsGadget}, completer::Completer, documents::{DocOrInfo, DocumentInfo}, markdown_view::MarkdownGadget, picker::Picker, renamer::Renamer
     }, key::KeyOrChar, language_server::LanguageServer, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::{MapBounds, uri_to_canon_path}
 };
 
@@ -48,39 +43,65 @@ impl AppState for Editor {
                     Diagnostics { uri, diagnostics } => {
                         let Some(path) = self.filepath.clone() else {continue};
                         let Ok(path) = path.canonicalize() else {continue};
+
+                        enum DocMut<'a> {
+                            Doc(&'a mut Document),
+                            OrInfo(&'a mut DocOrInfo),
+                        }
+
                         let doc = if let Ok(x) = Url::from_file_path(&path) && x == uri {
                             self.cmn.presenter.defer_draw();
-                            &mut self.doc
-                        } else if let Some(doc) = self.bg_docs.by_path_mut(&path) {
-                            doc
-                        } else { continue };
+                            DocMut::Doc(&mut self.doc)
+                        } else if let Some(doc) = self.bg_docs.by_path_mut_or_info(&path) {
+                            DocMut::OrInfo(doc)
+                        } else {
+                            self.bg_docs.insert_pathed_or_info(path.clone().into(), DocOrInfo::Info(DocumentInfo::default()));
+                            DocMut::OrInfo(self.bg_docs.by_path_mut_or_info(&path).unwrap())
+                        };
 
-                        doc.diagnostics = RangeSequence::from_abs(
-                            diagnostics
-                                .into_iter()
-                                .map(
-                                    |lsp_types::Diagnostic {
-                                         range: lsp_types::Range { start, end },
-                                         severity,
-                                         message,
-                                         ..
-                                     }| {
-                                        (
-                                            doc.text().byte_of_utf16_pos_saturating(
-                                                Utf16Pos::from_lsp_pos(start),
-                                            )
-                                                ..doc.text().byte_of_utf16_pos_saturating(
-                                                    Utf16Pos::from_lsp_pos(end),
-                                                ),
-                                            Diagnostic {
-                                                severity: Severity::from_lsp(severity),
-                                                message,
+                        match doc {
+                            DocMut::Doc(doc) | DocMut::OrInfo(DocOrInfo::Doc(doc)) => {
+                                doc.diagnostics = RangeSequence::from_abs(
+                                    diagnostics
+                                        .into_iter()
+                                        .map(
+                                            |lsp_types::Diagnostic {
+                                                 range: lsp_types::Range { start, end },
+                                                 severity,
+                                                 message,
+                                                 ..
+                                             }| {
+                                                (
+                                                    doc.text().byte_of_utf16_pos_saturating(
+                                                        Utf16Pos::from_lsp_pos(start),
+                                                    )
+                                                        ..doc.text().byte_of_utf16_pos_saturating(
+                                                            Utf16Pos::from_lsp_pos(end),
+                                                        ),
+                                                    Diagnostic {
+                                                        severity: Severity::from_lsp(severity),
+                                                        message,
+                                                    },
+                                                )
                                             },
                                         )
-                                    },
-                                )
-                                .collect(),
-                        );
+                                        .collect(),
+                                );
+                            },
+                            DocMut::OrInfo(DocOrInfo::Info(info)) => {
+                                info.diagnostics = diagnostics.into_iter().map(
+                                    |lsp_types::Diagnostic {
+                                        range: lsp_types::Range { start, end },
+                                        severity,
+                                        message,
+                                        ..
+                                    }| {
+                                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(severity), message })
+                                    }
+                                ).collect();
+                            },
+                        }
+
                     }
                     Hover { view } => {
                         self.gadget = Some(Box::new(MarkdownGadget::new(view)));
