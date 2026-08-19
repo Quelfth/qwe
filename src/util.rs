@@ -1,9 +1,9 @@
 use std::{
-    borrow::Borrow, fmt::Write, iter, ops::{RangeFull, RangeTo}, path::PathBuf, range::{Range, RangeFrom}
+    borrow::Borrow, fmt::Write, iter, ops::{RangeFull, RangeTo, Sub}, path::PathBuf, range::{Range, RangeFrom}
 };
 
 use auto_enums::auto_enum;
-use extension_trait::extension_trait;
+use extension_traits::extension;
 use tree_sitter::Node;
 
 use crate::{
@@ -125,17 +125,17 @@ pub fn indent_string(columns: Ix<Column>) -> String {
     unsafe { String::from_utf8_unchecked(vec![b' '; columns.inner()]) }
 }
 
-#[extension_trait]
-pub impl<T: Ord + Copy> RangeOverlap for Range<T> {
+#[extension(pub trait RangeOverlap)]
+impl<T: Ord + Copy> Range<T> {
     fn overlaps(&self, other: impl Borrow<Self>) -> bool {
         let other = other.borrow();
         self.start.max(other.start) <= self.end.min(other.end)
     }
 }
 
-#[extension_trait]
-pub impl<T: std::ops::Sub> RangeLen for Range<T> {
-    type Output = <T as std::ops::Sub>::Output;
+#[extension(pub trait RangeLen)]
+impl<T: Sub> Range<T> {
+    type Output = <T as Sub>::Output;
     fn len(self) -> Self::Output {
         self.end - self.start
     }
@@ -166,8 +166,8 @@ impl CharClass {
     }
 }
 
-#[extension_trait]
-pub impl LinesColumnsExt for str {
+#[extension(pub trait LinesColumnsExt)]
+impl str {
     fn lines_columns(&self) -> (Ix<Line>, Ix<Column>) {
         let lines = Ix::new(self.chars().filter(|&c| c == '\n').count());
         let columns = if !self.ends_with("\n")

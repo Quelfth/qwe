@@ -10,7 +10,6 @@ clap = { version = "4.5.54", features = ["derive"] }
 crop = { version = "0.4.3", features = ["graphemes", "utf16-metric"] }
 crossterm = { version = "0.29.0", features = ["osc52"] }
 culit = "0.6.2"
-extension-trait = "1.0.2"
 mutx.git = "https://github.com/Quelfth/mutx"
 sulu.git = "https://github.com/Quelfth/sulu"
 thiserror = "2.0.17"
@@ -20,13 +19,13 @@ tree-sitter-rust = { git = "https://github.com/Quelfth/tree-sitter-rust", branch
 #tree-sitter-rust.path = "../tree-sitter-rust"
 tree-sitter-sulu.git = "https://github.com/Quelfth/tree-sitter-sulu"
 unicode-segmentation = "1.12.0"
-regex = "1.12.2"
+#regex = "1.12.2"
 tree-sitter-yaml = "0.7.2"
 tree-sitter-css-orchard = "0.1.2"
 lsp-types = "0.95.0"
 serde_json = "1.0.149"
 serde = "1.0.228"
-async-lsp = { version = "0.2.2", features = ["client-monitor", "omni-trait", "stdio"] }
+async-lsp = { version = "0.2.2", default-features = false, features = ["omni-trait", "stdio"] }
 tokio = { version = "1.49.0", features = ["rt", "time", "sync"] }
 tower = "0.5.3"
 async-process = "2.5.0"
@@ -58,6 +57,7 @@ expanda = "0.3.3"
 tree-sitter-c-sharp = "0.23.5"
 tree-sitter-lua = "0.5.0"
 futures-lite = "2.6.1"
+ext-trait = "2.0.2"
 
 [profile.release]
 debug = true
