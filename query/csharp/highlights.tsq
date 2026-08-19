@@ -1,11 +1,15 @@
 
 (type_argument_list ["<" ">"] @x.angle-bracket)
 
+(comment) @comment
+
 [(string_literal_content) (string_content)] @l.string
 "\"" @l.string.quote
 [(interpolation_start) (interpolation_brace)] @l.string.interpolation
 
 [(integer_literal) (real_literal)] @l.number
+
+["true" "false"] @i.value.boolean
 
 ";" @o.group
 
@@ -49,6 +53,8 @@
 (arrow_expression_clause "=>" @o.declare.function)
 (property_declaration ";" @o.declare.function)
 
+(local_declaration_statement ";" @o.declare.value)
+
 ; Expressions
 
 "new" @o.constructor
@@ -56,6 +62,8 @@
 (implicit_object_creation_expression "new" @o.initialize (_ ["(" "," ")"] @o.initialize))
 
 (implicit_array_creation_expression ["new" "[" "]"] @o.collection.list_.priority_1 (_ ["{" "," "}"] @o.collection.list))
+
+(object_creation_expression (argument_list ["(" "," ")"] @o.call.type.struct))
 
 (parenthesized_expression ["(" ")"] @o.group)
 (block ["{" "}"] @o.group)
@@ -85,6 +93,13 @@
 (invocation_expression function: (member_access_expression "." @o.access.method))
 
 (bracketed_argument_list ["[" "," "]"] @o.sequence)
+(parameter_list ["(" "," ")"] @o.call.function.method)
+(argument_list ["(" "," ")"] @o.call.function.method)
+
+"typeof" @o.type
+(typeof_expression ["(" ")"] @o.type)
+
+"var" @o.declare.value.variable
 
 "if" @o.branch.if
 (if_statement ["(" ")"] @o.branch.if)
@@ -96,6 +111,10 @@
 "for" @o.loop.for
 (for_statement ["(" ";" ")"] @o.loop.for)
 (for_statement body: (block ["{" "}"] @o.loop.for))
+
+"foreach" @o.loop.for
+(foreach_statement ["(" "in" ")"] @o.loop.for)
+(foreach_statement body: (block ["{" "}"] @o.loop.for))
 
 "switch" @o.branch.match
 (switch_statement ["(" ")"] @o.branch.match)
@@ -113,3 +132,37 @@
 
 "break" @o.control.break
 (break_statement ";" @o.control.break)
+
+(generic_name (identifier) @_ (#semantic? @_ Class) (type_argument_list ["<" "," ">"] @o.generics.type.struct))
+(generic_name (identifier) @_ (#semantic? @_ Method) (type_argument_list ["<" "," ">"] @o.call.function.method))
+
+(member_access_expression "." @o.access.method name: (identifier) @_ (#semantic? @_ Property))
+
+(member_access_expression expression: (identifier) @_ (#semantic? @_ Struct) "." @o.association)
+(member_access_expression expression: (identifier) @_ (#semantic? @_ "!static" Class) "." @o.association)
+(member_access_expression expression: (identifier) @_ (#semantic? @_ Enum) "." @o.association)
+
+(member_access_expression expression: (identifier) @_ (#semantic? @_ Namespace) "." @o.scope)
+(member_access_expression expression: (identifier) @_ (#semantic? @_ static Class) "." @o.scope)
+
+((identifier) @i.reference @_ (#semantic? @_ "!static" Class))
+
+((identifier) @i.namespace @_ (#semantic? @_ Namespace))
+((identifier) @i.namespace.class @_ (#semantic? @_ static Class))
+
+((identifier) @i.value.field @_ (#semantic? @_ Field "!static"))
+((identifier) @i.value.associated @_ (#semantic? @_ static Field))
+((identifier) @i.value.local @_ (#semantic? @_ Variable))
+((identifier) @i.value.parameter @_ (#semantic? @_ Parameter))
+((identifier) @i.value.variant @_ (#semantic? @_ EnumMember))
+
+((identifier) @i.function.method @_ (#semantic? @_ "!static" Method))
+((identifier) @i.function.associated @_ (#semantic? @_ static Method))
+((identifier) @i.function.property @_ (#semantic? @_ Property))
+((identifier) @i.function.property.associated @_ (#semantic? @_ static Property))
+
+((identifier) @i.type.struct @_ (#semantic? @_ Class "!static"))
+((identifier) @i.type.struct @_ (#semantic? @_ Struct))
+((identifier) @i.type.enum @_ (#semantic? @_ Enum))
+
+(attribute name: (identifier) @i.attribute_.priority_1)

@@ -4,7 +4,6 @@ use std::{
     sync::Arc,
 };
 
-use expanda::declare_item;
 use lsp_types::*;
 
 use crate::{lang::Language, pos::Utf16Pos};
@@ -52,7 +51,6 @@ pub enum LspToEditorMessage {
     },
 }
 
-#[declare_item(EDITOR_TO_LSP_MESSAGE)]
 #[derive(Debug)]
 pub enum EditorToLspMessage {
     OpenDoc {
@@ -105,8 +103,6 @@ pub enum EditorToLspMessage {
         path: Arc<Path>,
     },
 }
-
-pub(crate) use EDITOR_TO_LSP_MESSAGE as editor_to_lsp_message_src;
 
 pub type EditorToLspSender = tokio::sync::mpsc::UnboundedSender<EditorToLspMessage>;
 pub type EditorToLspReceiver = tokio::sync::mpsc::UnboundedReceiver<EditorToLspMessage>;

@@ -1,30 +1,31 @@
 use std::{
-    boxed::Box,
     collections::HashSet,
     env,
     future::Future,
     io,
-    marker::Send,
-    ops::ControlFlow,
-    pin::Pin,
     process::Stdio,
-    result::Result,
 };
 
 use async_lsp::{
-    LanguageClient, LanguageServer, ResponseError, ServerSocket, concurrency::ConcurrencyLayer,
-    lsp_types::InitializeParams, panic::CatchUnwindLayer, router::Router, tracing::TracingLayer,
+    LanguageServer,
+    ServerSocket,
+    concurrency::ConcurrencyLayer,
+    lsp_types::InitializeParams,
+    panic::CatchUnwindLayer,
 };
 use async_process::Child;
+use futures_lite::{AsyncBufReadExt as _, StreamExt as _};
 use lsp_types::*;
 use serde_json as json;
 use tokio::{
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    sync::mpsc::UnboundedReceiver,
     task::JoinHandle,
 };
 use tower::ServiceBuilder;
 
-use crate::aprintln::aprintln;
+use crate::{
+    aprintln::aprintln, log::log_msg, lsp::{client::{Client, ClientMessage}, log::LogLayer}
+};
 
 use channel::{
     LspChannels,
@@ -34,6 +35,12 @@ use thread::lsp_thread;
 
 pub mod channel;
 mod thread;
+mod client;
+mod types;
+mod server;
+mod log;
+
+pub use server::SpecialBehavior;
 
 pub fn run_lsp_thread(channels: LspChannels) -> io::Result<std::thread::JoinHandle<()>> {
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -42,17 +49,18 @@ pub fn run_lsp_thread(channels: LspChannels) -> io::Result<std::thread::JoinHand
     let handle = std::thread::spawn(move || {
         let result = runtime.block_on(lsp_thread(channels));
         if let Err(e) = result {
-            aprintln!("{e:?}");
+            aprintln!("lsp errored: {e:?}");
         }
     });
     Ok(handle)
 }
-struct Server {
+pub struct Server {
     join: JoinHandle<async_lsp::Result<()>>,
     socket: ServerSocket,
     caps: ServerCaps,
     client_channel: UnboundedReceiver<ClientMessage>,
     docs: HashSet<Url>,
+    #[expect(unused)]
     tx: LspToEditorSender,
     _process: Child,
 }
@@ -87,27 +95,37 @@ impl From<&ServerCapabilities> for ServerCaps {
 }
 
 impl Server {
-    fn spawn(command: &str, tx: LspToEditorSender) -> async_lsp::Result<Self> {
+    fn spawn(command: &str, args: &[&str], tx: LspToEditorSender) -> async_lsp::Result<Self> {
         let (send, recv) = tokio::sync::mpsc::unbounded_channel();
         let (r#loop, socket) = async_lsp::MainLoop::new_client(|_| {
             ServiceBuilder::new()
-                .layer(TracingLayer::default())
+                .layer(LogLayer)
                 .layer(CatchUnwindLayer::default())
                 .layer(ConcurrencyLayer::default())
                 .service(Client { channel: send }.into_router())
         });
 
         let mut process = async_process::Command::new(command)
+            .args(args)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null())
+            .stderr(Stdio::piped())
             .kill_on_drop(true)
             .spawn()?;
 
         let lsp_out = process.stdout.take().unwrap();
         let lsp_in = process.stdin.take().unwrap();
+        let lsp_err = process.stderr.take().unwrap();
 
         let join = tokio::spawn(r#loop.run_buffered(lsp_out, lsp_in));
+        tokio::spawn(async move {
+            let mut lines = futures_lite::io::BufReader::new(lsp_err).lines();
+            while let Some(line) = lines.next().await {
+                if let Ok(msg) = line {
+                    log_msg!(LspMessage, "{msg}");
+                }
+            }
+        });
 
         Ok(Self {
             _process: process,
@@ -139,7 +157,7 @@ impl Server {
                             relative_pattern_support: None,
                         }),
                         diagnostic: Some(DiagnosticWorkspaceClientCapabilities {
-                            refresh_support: Some(false),
+                            refresh_support: Some(true),
                         }),
                         ..Default::default()
                     }),
@@ -230,6 +248,10 @@ impl Server {
                             prepare_support: Some(true),
                             ..Default::default()
                         }),
+                        diagnostic: Some(DiagnosticClientCapabilities {
+                            dynamic_registration: Some(true),
+                            ..Default::default()
+                        }),
                         ..Default::default()
                     }),
                     window: Some(WindowClientCapabilities {
@@ -274,91 +296,5 @@ impl Server {
         
             Ok(None)
         }
-    }
-}
-
-
-
-enum ClientMessage {
-    PublishDiagnostics {
-        uri: Url,
-        diagnostics: Vec<Diagnostic>,
-    },
-    SemanticTokensRefresh,
-}
-
-pub struct Client {
-    channel: UnboundedSender<ClientMessage>,
-}
-
-impl Client {
-    fn into_router(self) -> Router<Self> {
-        let mut router = Router::from_language_client(self);
-        router.event(Self::on_stop);
-        router
-    }
-
-    fn on_stop(&mut self, _: Stop) -> ControlFlow<async_lsp::Result<()>> {
-        ControlFlow::Break(Ok(()))
-    }
-}
-
-pub struct Stop;
-
-type Response<T> = Pin<Box<dyn Future<Output = Result<T, ResponseError>> + Send + 'static>>;
-
-impl LanguageClient for Client {
-    type Error = ResponseError;
-    type NotifyResult = ControlFlow<async_lsp::Result<()>>;
-
-    fn publish_diagnostics(&mut self, params: PublishDiagnosticsParams) -> Self::NotifyResult {
-        let PublishDiagnosticsParams {
-            uri, diagnostics, ..
-        } = params;
-        _ = self
-            .channel
-            .send(ClientMessage::PublishDiagnostics { uri, diagnostics });
-
-        ControlFlow::Continue(())
-    }
-
-    fn show_message(&mut self, _: ShowMessageParams) -> Self::NotifyResult {
-        ControlFlow::Continue(())
-    }
-
-    fn work_done_progress_create(&mut self, _: WorkDoneProgressCreateParams) -> Response<()> {
-        Box::pin(async move { Ok(()) })
-    }
-
-    fn progress(&mut self, _: ProgressParams) -> Self::NotifyResult {
-        ControlFlow::Continue(())
-    }
-
-    fn semantic_tokens_refresh(&mut self, (): ()) -> Response<()> {
-        let channel = self.channel.clone();
-        Box::pin(async move {
-            channel.send(ClientMessage::SemanticTokensRefresh).unwrap();
-            Ok(())
-        })
-    }
-
-    fn configuration(&mut self, _: ConfigurationParams) -> Response<Vec<json::Value>> {
-        Box::pin(async { Ok(vec![]) })
-    }
-
-    fn workspace_folders(&mut self, (): ()) -> Response<Option<Vec<WorkspaceFolder>>> {
-        Box::pin(async { Ok(None) })
-    }
-
-    fn show_document(&mut self, _: ShowDocumentParams) -> Response<ShowDocumentResult> {
-        Box::pin(async { Ok(ShowDocumentResult { success: false }) })
-    }
-
-    fn log_message(&mut self, _: LogMessageParams) -> Self::NotifyResult {
-        ControlFlow::Continue(())
-    }
-
-    fn log_trace(&mut self, _: LogTraceParams) -> Self::NotifyResult {
-        ControlFlow::Continue(())
     }
 }

@@ -21,9 +21,16 @@ pub macro log_err($result: expr) {
     $result.map_err(|e| log!(e))
 }
 
-pub macro log_msg($fmt: literal $(, $a: expr)* $(,)?) {
-    log!(DisplayLog(format_args!($fmt $(, $a)*)))
+macro_rules! log_msg {
+    ($cat: ident, $fmt: literal $(, $a: expr)* $(,)?) => {{
+        let msg = format_args!($fmt $(, $a)*);
+        $crate::log::log!($crate::log::DisplayLog::new($crate::log::LogCategory::$cat, msg))
+    }};
+    ($fmt: literal $(, $a: expr)* $(,)?) => {
+        log_msg!(Debug, $fmt $(, $a)*)
+    };
 }
+pub(crate) use log_msg;
 
 pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
     LOG.iter().rev()
@@ -32,9 +39,22 @@ pub fn log_iter() -> impl Iterator<Item = &'static LogEntry> {
 #[derive(Clone, Debug)]
 pub struct DebugLog<T>(pub T);
 
-#[allow(unused)]
 #[derive(Clone)]
-pub struct DisplayLog<T>(pub T);
+pub struct DisplayLog<T, D>{
+    pub category: LogCategory,
+    pub message: T,
+    pub details: D,
+}
+
+impl<T> DisplayLog<T, &'static str> {
+    pub fn new(category: LogCategory, message: T) -> Self {
+        Self {
+            category,
+            message,
+            details: "",
+        }
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogCategory {
@@ -42,6 +62,10 @@ pub enum LogCategory {
     EditorToLspMessage,
     LspToEditorMessage,
     LspError,
+    LspMessage,
+    LspNotification,
+    LspEvent,
+    LspRequest,
 }
 
 #[derive(Debug)]
@@ -70,7 +94,6 @@ pub struct LogEntry {
     pub time: jiff::Zoned,
     pub source: LogSource,
     pub message: String,
-    #[expect(unused)]
     pub details: String,
 }
 
@@ -150,12 +173,12 @@ impl<T: Debug> Log for DebugLog<T> {
     fn details(&self) -> String { String::new() }
 }
 
-impl<T: Display> Log for DisplayLog<T> {
-    fn category(&self) -> LogCategory { LogCategory::Debug }
+impl<T: Display, D: Display> Log for DisplayLog<T, D> {
+    fn category(&self) -> LogCategory { self.category }
 
     fn message(&self) -> String {
-        format!("{}", self.0)
+        format!("{}", self.message)
     }
 
-    fn details(&self) -> String { String::new() }
+    fn details(&self) -> String { format!("{}", self.details) }
 }

@@ -1,0 +1,29 @@
+
+(string_content) @l.string
+"\"" @l.string.quote
+
+(number) @l.number
+
+[(true) (false)] @i.value.boolean
+
+(table_constructor ["{" "," "}"] @o.construct.map)
+
+(field "=" @o.declare.value.field)
+(field name: (identifier) @i.value.field)
+
+(arguments ["(" "," ")"] @o.call.function)
+(arguments . (table_constructor ["{" "," "}"] @o.call.function_.priority_1))
+(arguments "(" (table_constructor ["{" "," "}"] @o.construct.map_.priority_2))
+
+(function_call name: (identifier) @i.function)
+(function_call name: (dot_index_expression field: (identifier) @i.function))
+
+(dot_index_expression "." @o.access.field)
+
+"local" @o.declare.value
+
+(variable_declaration (assignment_statement "=" @o.declare.value))
+
+"function" @o.declare.function
+(parameters ["(" "," ")"] @o.call.function)
+(function_definition "end" @o.declare.function)

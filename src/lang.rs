@@ -6,7 +6,7 @@ use mutx::Mutex;
 use serde_json::{Value, json};
 use tree_sitter::Query;
 
-use crate::{ts::QuerySource, util::leak};
+use crate::{lsp::SpecialBehavior, ts::QuerySource, util::leak};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Language {
@@ -14,6 +14,7 @@ pub enum Language {
     CSharp,
     Css,
     Javascript,
+    Lua,
     Mona,
     Nu,
     Query,
@@ -28,6 +29,8 @@ pub enum Language {
 pub struct LangLspInfo {
     pub id: &'static str,
     pub command: &'static str,
+    pub args: &'static [&'static str],
+    pub special_init: SpecialBehavior,
     pub options: Option<Value>,
 }
 
@@ -46,6 +49,7 @@ impl Language {
             "cs" | "csharp" => Self::CSharp,
             "css" => Self::Css,
             "js" | "javascript" => Self::Javascript,
+            "lua" => Self::Lua,
             "mn" | "mona" => Self::Mona,
             "nu" => Self::Nu,
             "tsq" => Self::Query,
@@ -64,11 +68,15 @@ impl Language {
             Language::Cpp => Some(LangLspInfo {
                 id: "cpp",
                 command: "clangd",
+                args: &[],
+                special_init: SpecialBehavior::NoOp,
                 options: None,
             }),
             Language::Rust => Some(LangLspInfo {
                 id: "rust",
                 command: "rust-analyzer",
+                args: &[],
+                special_init: SpecialBehavior::NoOp,
                 options: Some(json!{{
                     "check": {
                         "command": "clippy",
@@ -76,8 +84,10 @@ impl Language {
                 }})
             }),
             Language::CSharp => Some(LangLspInfo {
-                id: "csharp",
-                command: "roslyn-ls --stdio",
+                id: "cs",
+                command: "roslyn-language-server",
+                args: &["--stdio"],
+                special_init: SpecialBehavior::Roslyn,
                 options: None,
             }),
             _ => None,
@@ -98,6 +108,7 @@ queries! {
         CSharp => "csharp"
         Css => "css"
         Javascript => "js"
+        Lua => "lua"
         Mona => "mona"
         Nu => "nu"
         Query => "query"
@@ -119,6 +130,7 @@ ts_lang! {
     CSharp => tree_sitter_c_sharp
     Css => tree_sitter_css_orchard
     Javascript => tree_sitter_javascript
+    Lua => tree_sitter_lua
     Mona => tree_sitter_mona
     Nu => tree_sitter_nu
     Query => tree_sitter_tsquery

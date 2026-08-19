@@ -1,14 +1,13 @@
 
 use std::{
     collections::{HashMap, hash_map::Entry},
-    io,
     time::Duration,
 };
 
 use async_lsp::LanguageServer as _;
 use lsp_types::*;
 use tokio::time::timeout;
-use tracing::Level;
+//use tracing::Level;
 
 use crate::{
     lang::{LangLspInfo, Language},
@@ -49,11 +48,11 @@ impl LspThread {
 }
 
 pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
-    tracing_subscriber::fmt()
-        .with_max_level(Level::DEBUG)
-        .with_ansi(false)
-        .with_writer(io::stderr)
-        .init();
+    //tracing_subscriber::fmt()
+    //    .with_max_level(Level::DEBUG)
+    //    .with_ansi(false)
+    //    .with_writer(io::stderr)
+    //    .init();
     
     let mut cx = LspThread::new(channels);
 
@@ -76,17 +75,20 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     let Some(LangLspInfo {
                         id: lang_id,
                         command,
+                        args,
+                        special_init,
                         options,
                     }) = lang.lsp_info()
                     else {
                         continue;
                     };
                     if let Entry::Vacant(e) = cx.servers.entry(lang) {
-                        let Ok(mut server) = log_err!(Server::spawn(command, cx.tx.clone())) else {continue};
+                        let Ok(mut server) = log_err!(Server::spawn(command, args, cx.tx.clone())) else {continue};
                         let Ok(init_result) = log_err!(server.initialize(options).await) else {continue};
                         server.caps = (&init_result.capabilities).into();
                         cx.tx.send(LspToEditorMessage::NewLsp { lang, init_result })?;
                         _=log_err!(server.initialized());
+                        server.special_init(special_init).await;
                         e.insert(server);
                     }
                     let server = cx.servers.get_mut(&lang).unwrap();
