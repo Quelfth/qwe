@@ -548,33 +548,33 @@ dependencies = [
 
 [[package]]
 name = "expanda"
-version = "0.3.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c7a66eb6dad4dab7d4d7a59e33a88a4fed9a94132ae0f920ae4ba2c39c43ffc"
+checksum = "9afe7737e8222ac03fed3925b06a11b1ed3d8dee19aa0cbddc33cf9f38082a62"
 dependencies = [
  "expanda-macros",
 ]
 
 [[package]]
 name = "expanda-macros"
-version = "0.3.1"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e26f2212ba694dcb57d58ce7ed4f074e9fbb23718b0768985b0d5faa56f048ff"
+checksum = "7c2528aea50197dfc199b264ca1596b4b2f0b48c50c39f209c1f6400836d8367"
 
 [[package]]
 name = "ext-trait"
-version = "2.0.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ccef4f53516d7589a8ed95216b6ebc9d519df033c1303b42125bfe57aa475d23"
+checksum = "15163672571e44a88159d5afd2fea753f3017168b54295f8277e10f245a6edea"
 dependencies = [
  "ext-trait-proc_macros",
 ]
 
 [[package]]
 name = "ext-trait-proc_macros"
-version = "2.0.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "025e48a9a5db92b84dbd3b6be37853a0e60c1ce9c7c03c08e6ac282766f3e3f0"
+checksum = "269138e4c79e27f7f8ad0d468d396d09e3f03859989bc27e65c14e3ea4543692"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -583,9 +583,9 @@ dependencies = [
 
 [[package]]
 name = "extension-traits"
-version = "2.0.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7dae1256e3fea2900e1e674bae228edc852f5ce9ccb1c916a496a33cb9bc4cb"
+checksum = "0055a91dde1f7ca946af595528442dee50b2a2b5b68b60ea785a32cb518ed6d8"
 dependencies = [
  "ext-trait",
 ]
@@ -1141,7 +1141,6 @@ dependencies = [
  "culit",
  "dispa",
  "expanda",
- "ext-trait",
  "extension-traits",
  "futures-lite",
  "include_optional",
@@ -1664,7 +1663,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-rust"
 version = "0.23.2"
-source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#c25a79e9289b122b4524312c893a57e81941e69d"
+source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#6b9c5a1c7e9391a7e7b103a193183ebaacf8d452"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1881,9 +1880,9 @@ dependencies = [
 
 [[package]]
 name = "zerovec"
-version = "0.11.7"
+version = "0.11.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94b5c6b5976d66c1d703c4fd17d3f5e43c8cedaacf604961b171adc7130896d8"
+checksum = "bb0464e17806c1d976d5cba29399c7f08e516e279e2ba493f63123b5fca67dd8"
 dependencies = [
  "yoke",
  "zerofrom",

@@ -48,12 +48,6 @@ impl LspThread {
 }
 
 pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
-    //tracing_subscriber::fmt()
-    //    .with_max_level(Level::DEBUG)
-    //    .with_ansi(false)
-    //    .with_writer(io::stderr)
-    //    .init();
-    
     let mut cx = LspThread::new(channels);
 
     fn refresh_semantic_tokens(server: &mut Server, doc: Url, tx: LspToEditorSender) {

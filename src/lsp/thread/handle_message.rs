@@ -3,7 +3,7 @@
 use std::ops::ControlFlow;
 
 
-use expanda::{expand, using};
+use expanda::{expand};
 
 use crate::lsp::{
     channel::{

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use concat_into::concat_into;
+use expanda::{declare_item, expand};
 use include_optional::include_str_optional;
 use mutx::Mutex;
 use serde_json::{Value, json};
@@ -8,6 +8,7 @@ use tree_sitter::Query;
 
 use crate::{lsp::SpecialBehavior, ts::QuerySource, util::leak};
 
+#[declare_item(LANGUAGE)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Language {
     Cpp,
@@ -102,76 +103,72 @@ impl Language {
     }
 }
 
-queries! {
-     {
-        Cpp => "cpp"
-        CSharp => "csharp"
-        Css => "css"
-        Javascript => "js"
-        Lua => "lua"
-        Mona => "mona"
-        Nu => "nu"
-        Query => "query"
-        Rust => "rust"
-        Sulu => "sulu"
-        Toml => "toml"
-        Yaml => "yaml"
-
-        RustFormatArgs => "rust-format-args"
+impl Language {
+    pub fn ts_lang(self) -> tree_sitter::Language {
+        expand! {
+            match self {
+                <--for $pair in
+                    (Cpp tree_sitter_cpp)
+                    (CSharp tree_sitter_c_sharp)
+                    (Css tree_sitter_css_orchard)
+                    (Javascript tree_sitter_javascript)
+                    (Lua tree_sitter_lua)
+                    (Mona tree_sitter_mona)
+                    (Nu tree_sitter_nu)
+                    (Query tree_sitter_tsquery)
+                    (Rust tree_sitter_rust)
+                    (Sulu tree_sitter_sulu)
+                    (Toml tree_sitter_toml)
+                    (Yaml tree_sitter_yaml)
+                    (RustFormatArgs tree_sitter_rust_format_args)
+                {
+                    <--let ($lang. $ts.) = $pair
+                    Language::$lang => $ts::LANGUAGE.into(),
+                }
+            }
+        }
     }
-
-    Highlights "highlights"
-    Injections "injections"
-    Zebra "zebra"
-}
-
-ts_lang! {
-    Cpp => tree_sitter_cpp
-    CSharp => tree_sitter_c_sharp
-    Css => tree_sitter_css_orchard
-    Javascript => tree_sitter_javascript
-    Lua => tree_sitter_lua
-    Mona => tree_sitter_mona
-    Nu => tree_sitter_nu
-    Query => tree_sitter_tsquery
-    Rust => tree_sitter_rust
-    Sulu => tree_sitter_sulu
-    Toml => tree_sitter_toml
-    Yaml => tree_sitter_yaml
-    RustFormatArgs => tree_sitter_rust_format_args
 }
 
 pub trait LanguageQuery<Q> {
     fn query(self) -> &'static Query;
 }
 
-macro_rules! queries {
-    ($m:tt $($q:ident $file:literal)* ) => { $(
-        query! {
-            $q $file $m
-        }
-    )* }
-}
-use queries;
+expand! {
+    <--use LANGUAGE
+    <--let env CARGO_MANIFEST_DIR
 
-macro_rules! query {
-    ($q:ident $file:literal { $($lang:ident => $dir:literal )* }) => {
+    <--let ($*^({$*.}). {$*($langs. ,)}) = $LANGUAGE
+
+    <--for $q in
+        Highlights
+        Injections
+        Zebra
+    {
         pub enum $q {}
         impl LanguageQuery<$q> for Language {
             fn query(self) -> &'static Query {
-                static CACHE: LazyLock<Mutex<HashMap<Language, &'static Query>>> =
-                    LazyLock::new(Default::default);
+                static CACHE: LazyLock<Mutex<HashMap<Language, &'static Query>>> = LazyLock::new(Default::default);
                 CACHE.lock().entry(self).or_insert_with(|| {
                     leak(
                         QuerySource {
-                            source: match self { $(
-                                Language::$lang => const {
-                                    match concat_into!(CARGO_MANIFEST_DIR "/query/" $dir "/" $file ".tsq" => include_str_optional) {
-                                        Some(x) => x,
-                                        None => "",
-                                    }
-                                },
-                            )* },
+                            source: match self {
+                                <--for $lang in $langs {
+                                    Language::$lang => const {
+                                        match include_str_optional!(${
+                                            CARGO_MANIFEST_DIR
+                                            ("/query/")
+                                            lang.snake_case.stringify.to_dashes
+                                            ("/")
+                                            q.snake_case.stringify.to_dashes
+                                            (".tsq")
+                                        }) {
+                                            Some(x) => x,
+                                            None => "",
+                                        }
+                                    },
+                                }
+                            },
                             lang: self,
                         }
                         .build()
@@ -180,19 +177,8 @@ macro_rules! query {
                 })
             }
         }
-    };
+    }
 }
-use query;
 
-macro_rules! ts_lang {
-    ($($lang:ident => $ts_lang:ident)*) => {
-        impl Language {
-            pub fn ts_lang(self) -> tree_sitter::Language {
-                match self {
-                    $(Language::$lang => $ts_lang::LANGUAGE.into(),)*
-                }
-            }
-        }
-    };
-}
-use ts_lang;
+
+

@@ -211,9 +211,9 @@
 "where" @o.implement
 (where_clause "," @o.implement)
 
-(trait_bounds [":" "+"] @o.implement)
+(bounds "+" @o.implement)
 (removed_trait_bound "?" @o.implement)
-(higher_ranked_trait_bound 
+(for_binder
     "for" @o.implement
     (type_parameters ["<" "," ">"] @o.implement)
 )
@@ -635,7 +635,6 @@
 
 (generic_type type: (type_name) @_ (#semantic? @_ Interface) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
 
-(bounded_type "+" @o.implement)
 (type_binding "=" @o.type)
 
 ; Names
