@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+use expanda::declare_item;
 use lsp_types::*;
 
 use crate::{lang::Language, pos::Utf16Pos};
@@ -51,6 +52,7 @@ pub enum LspToEditorMessage {
     },
 }
 
+#[declare_item(#[allow(unused)] pub(crate) EDITOR_TO_LSP_MESSAGE)]
 #[derive(Debug)]
 pub enum EditorToLspMessage {
     OpenDoc {

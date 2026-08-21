@@ -1,7 +1,6 @@
 
 use std::{
-    collections::{HashMap, hash_map::Entry},
-    time::Duration,
+    collections::{HashMap, hash_map::Entry}, sync::mpsc::SendError, time::Duration
 };
 
 use async_lsp::LanguageServer as _;
@@ -12,7 +11,7 @@ use tokio::time::timeout;
 use crate::{
     lang::{LangLspInfo, Language},
     log::{log, log_err},
-    pos::Utf16Pos,
+    pos::Utf16Pos, util::uri_from_path,
 };
 
 use super::{
@@ -47,19 +46,19 @@ impl LspThread {
     }
 }
 
-pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
-    let mut cx = LspThread::new(channels);
+#[derive(Debug)]
+pub enum Error {
+    Send(#[allow(unused)] Box<SendError<LspToEditorMessage>>),
+}
 
-    fn refresh_semantic_tokens(server: &mut Server, doc: Url, tx: LspToEditorSender) {
-        let future = server.semantic_tokens(doc.clone());
-        tokio::spawn(async move {
-            let Ok(Some(semtoks)) = future.await.map_err(|e| log!(e)) else { return };
-            tx.send(LspToEditorMessage::SemanticTokens {
-                uri: doc.clone(),
-                tokens: semtoks,
-            }).unwrap();
-        });
+impl From<SendError<LspToEditorMessage>> for Error {
+    fn from(value: SendError<LspToEditorMessage>) -> Self {
+        Self::Send(Box::new(value))
     }
+}
+
+pub async fn lsp_thread(channels: LspChannels) -> Result<(), Error> {
+    let mut cx = LspThread::new(channels);
 
     loop {
         if let Ok(Some(msg)) = timeout(Duration::from_millis(20), cx.rx.recv()).await {
@@ -87,24 +86,24 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     }
                     let server = cx.servers.get_mut(&lang).unwrap();
                     let doc_uri = Url::from_file_path(path.canonicalize().unwrap()).unwrap();
-                    server.socket.did_open(DidOpenTextDocumentParams {
+                    _= log_err!(server.socket.did_open(DidOpenTextDocumentParams {
                         text_document: TextDocumentItem {
                             uri: doc_uri.clone(),
                             language_id: lang_id.to_owned(),
                             version: 1,
                             text,
                         },
-                    })?;
+                    }));
                     if !server.docs.contains(&doc_uri) {
                         server.docs.insert(doc_uri.clone());
                     }
-                    refresh_semantic_tokens(server, doc_uri, cx.tx.clone());
+                    server.refresh_semantic_tokens(doc_uri);
                 }
                 EditorToLspMessage::Exit => break,
                 EditorToLspMessage::RefreshSemanticTokens => {
                     for server in cx.servers.values_mut() {
                         for doc in server.docs.clone() {
-                            refresh_semantic_tokens(server, doc, cx.tx.clone());
+                            server.refresh_semantic_tokens(doc);
                         }
                     }
                 }
@@ -114,7 +113,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     pos: Utf16Pos { line, column },
                 } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize().unwrap_or((*path).to_owned())).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         if let Ok(Some(Hover { contents, .. })) = log_err!(server
                             .socket
                             .hover(HoverParams {
@@ -160,7 +159,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     pos: Utf16Pos { line, column },
                 } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         if let Ok(Some(response)) = log_err!(server
                             .socket
                             .completion(CompletionParams {
@@ -192,7 +191,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     kind,
                 } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         use channel::GotoKind::*;
                         let text_document_position_params = TextDocumentPositionParams {
                             text_document: TextDocumentIdentifier { uri },
@@ -242,7 +241,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     pos: Utf16Pos { line, column },
                 } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         let pos = Position {
                             line: line.inner() as _,
                             character: column.inner() as _,
@@ -287,7 +286,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     pos: Utf16Pos { line, column },
                 } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         if let Ok(Some(response)) = log_err!(server.socket.prepare_rename(TextDocumentPositionParams {
                             text_document: TextDocumentIdentifier { uri },
                             position: Position {
@@ -309,7 +308,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 }
                 EditorToLspMessage::CompleteRename { lang, path, pos: Utf16Pos { line, column }, name } => {
                      if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                         let Some(uri) = uri_from_path(&path) else {continue};
                         if let Ok(Some(edit)) = log_err!(server.socket.rename(RenameParams{ 
                             text_document_position: TextDocumentPositionParams {
                                 text_document: TextDocumentIdentifier { uri },
@@ -332,7 +331,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                     version,
                 } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         _=log_err!(server.socket.did_change(DidChangeTextDocumentParams {
                             text_document: VersionedTextDocumentIdentifier {
                                 uri: uri.clone(),
@@ -340,12 +339,12 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                             },
                             content_changes: changes,
                         }));
-                        refresh_semantic_tokens(server, uri, cx.tx.clone());
+                        server.refresh_semantic_tokens(uri);
                     }
                 }
                 EditorToLspMessage::Save { lang, path } => {
                     if let Some(server) = cx.servers.get_mut(&lang) {
-                        let uri = Url::from_file_path(path.canonicalize()?).unwrap();
+                        let Some(uri) = uri_from_path(&path) else {continue};
                         _=log_err!(server.socket.did_save(DidSaveTextDocumentParams {
                             text_document: TextDocumentIdentifier { uri: uri.clone() },
                             text: None,
@@ -369,7 +368,7 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
                 match msg {
                     ClientMessage::SemanticTokensRefresh => {
                         for doc in server.docs.clone() {
-                            refresh_semantic_tokens(server, doc.clone(), cx.tx.clone());
+                            server.refresh_semantic_tokens(doc.clone());
                         }
                     }
                     ClientMessage::PublishDiagnostics { uri, diagnostics } => {
@@ -382,7 +381,8 @@ pub async fn lsp_thread(channels: LspChannels) -> anyhow::Result<()> {
     }
 
     for server in cx.servers.into_values() {
-        server.join.await??;
+        let Ok(j) = server.join.await else {continue};
+        _= log_err!(j);
     }
 
     Ok(())

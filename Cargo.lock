@@ -72,12 +72,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "anyhow"
-version = "1.0.104"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
-
-[[package]]
 name = "append-only-vec"
 version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -456,6 +450,7 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.119",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -1121,7 +1116,6 @@ name = "qwe"
 version = "0.1.0"
 dependencies = [
  "adot-tree-sitter-toml",
- "anyhow",
  "append-only-vec",
  "arc-swap",
  "async-lsp",
@@ -1133,6 +1127,7 @@ dependencies = [
  "crop",
  "crossterm",
  "culit",
+ "derive_more",
  "dispa",
  "expanda",
  "extension-traits",
@@ -1717,6 +1712,12 @@ name = "unicode-segmentation"
 version = "1.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6f5d3c3b1bf09027a88a6bc961fc00497d651009560b5463668dc81b0fa87a8"
+
+[[package]]
+name = "unicode-xid"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
 name = "url"

@@ -21,7 +21,6 @@ async-lsp = { version = "0.2.2", default-features = false, features = ["omni-tra
 tokio = { version = "1.49.0", features = ["rt", "time", "sync"] }
 tower = "0.5.3"
 async-process = "2.5.0"
-anyhow = "1.0.100"
 convert_case = "0.11.0"
 dispa.git = "https://github.com/Quelfth/dispa"
 include_optional = { version = "1.1.1", features = ["nightly"] }
@@ -37,6 +36,7 @@ arc-swap = "1.9.1"
 extension-traits = "0.2.3"
 expanda = "0.4.4"
 futures-lite = "2.6.1"
+derive_more = { version = "2.1.1", features = ["display", "from", "error"] }
 
 tree-sitter = "0.26.3"
 tree-sitter-tsquery.git = "https://github.com/Quelfth/tree-sitter-query"

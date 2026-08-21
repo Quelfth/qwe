@@ -1,5 +1,5 @@
 use std::{
-    borrow::Borrow, fmt::Write, iter, ops::{RangeFull, RangeTo, Sub}, path::PathBuf, range::{Range, RangeFrom}
+    borrow::Borrow, fmt::Write, iter, ops::{RangeFull, RangeTo, Sub}, path::{Path, PathBuf}, range::{Range, RangeFrom}
 };
 
 use auto_enums::auto_enum;
@@ -221,6 +221,10 @@ pub fn uri_to_canon_path(uri: lsp_types::Url) -> Option<PathBuf> {
         uri.to_file_path().ok()?
             .canonicalize().ok()
     )?
+}
+
+pub fn uri_from_path(path: &Path) -> Option<lsp_types::Url> {
+    lsp_types::Url::from_file_path(path.canonicalize().ok()?).ok()
 }
 
 #[allow(unused)]
