@@ -53,11 +53,11 @@ impl Editor {
             doc.declare_saved();
             self.bg_docs.by_path(&path).unwrap()
         };
-        _ = fs::write(&path, doc.text().to_string().as_bytes());
+        _= fs::write(&path, doc.text().to_string().as_bytes());
         if let Some(cx) = &self.cmn.lsp
             && let Some(lang) = doc.language()
         {
-            _ = cx.tx.send(EditorToLspMessage::Save { lang, path });
+            _= cx.tx.send(EditorToLspMessage::Save { lang, path });
         }
     }
 

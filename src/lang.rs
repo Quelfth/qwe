@@ -22,6 +22,7 @@ pub enum Language {
     Rust,
     Sulu,
     Toml,
+    Wesl,
     Yaml,
 
     RustFormatArgs,
@@ -57,6 +58,7 @@ impl Language {
             "rs" | "rust" => Self::Rust,
             "sulu" => Self::Sulu,
             "toml" => Self::Toml,
+            "wgsl" | "wesl" => Self::Wesl,
             "yaml" => Self::Yaml,
 
             "rust-format-args" => Self::RustFormatArgs,
@@ -119,6 +121,7 @@ impl Language {
                     (Rust tree_sitter_rust)
                     (Sulu tree_sitter_sulu)
                     (Toml tree_sitter_toml)
+                    (Wesl tree_sitter_wesl)
                     (Yaml tree_sitter_yaml)
                     (RustFormatArgs tree_sitter_rust_format_args)
                 {

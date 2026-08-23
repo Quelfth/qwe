@@ -1,0 +1,34 @@
+
+[(template_args_start) (template_args_end)] @x.angle-bracket
+
+(decimal_int_literal) @l.number
+
+"@" @o.attribute
+(attribute ["(" ")"] @o.attribute)
+(attribute name: (identifier) @i.attribute)
+
+["let" "var"] @o.declare.variable
+(variable_decl (template_list [(template_args_start) (template_args_end)] @o.declare.variable))
+(variable_or_value_statement "=" @o.declare.variable)
+(global_variable_decl ";" @o.declare.variable)
+(statement (variable_or_value_statement) ";" @o.declare.variable)
+
+":" @o.type
+
+"fn" @o.declare.function
+(function_header name: (identifier) @i.function)
+(function_header ["(" ")"] @o.call.function)
+(param_list "," @o.call.function)
+(function_header "->" @o.declare.function)
+(function_decl body: (compound_statement ["{" "}"] @o.declare.function))
+
+"struct" @o.declare.type.struct
+(struct_decl name: (identifier) @i.type.struct)
+(struct_body ["{" "," "}"] @o.declare.type.struct)
+
+(binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
+
+(indexing_expression ["[" "]"] @o.sequence)
+
+"return" @o.control.return
+(statement (return_statement) ";" @o.control.return)
