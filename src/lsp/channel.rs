@@ -52,7 +52,7 @@ pub enum LspToEditorMessage {
     },
 }
 
-#[declare_item(#[allow(unused)] pub(crate) EDITOR_TO_LSP_MESSAGE)]
+#[declare_item(pub(crate) EDITOR_TO_LSP_MESSAGE)]
 #[derive(Debug)]
 pub enum EditorToLspMessage {
     OpenDoc {

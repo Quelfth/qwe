@@ -611,6 +611,7 @@
 (array_type ["[" ";" "]"] @o.construct.list)
 
 (function_type "->" @o.declare.function)
+(function_trait "->" @o.declare.function)
 
 ((identifier) @i.type.builtin (#semantic? @i.type.builtin BuiltinType))
 ((identifier) @i.type.struct (#semantic? @i.type.struct Struct))

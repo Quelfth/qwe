@@ -2,7 +2,14 @@ use std::{env, path::Path, sync::Arc};
 use lsp_types::DiagnosticSeverity;
 
 use crate::{
-    color, document::diagnostics::Severity, draw::screen::Canvas, editor::{Editor, gadget::Gadget}, grapheme::GraphemeExt, key::{KeyOrChar, key}, pos::{Pos, Utf16Pos, convert::ConvertableToPos}, style::Style
+    color,
+    document::diagnostics::Severity,
+    draw::screen::Canvas,
+    editor::{Editor, gadget::Gadget},
+    grapheme::GraphemeExt,
+    key::{KeyOrChar, key},
+    pos::{Pos, Utf16Pos, convert::ConvertableToPos},
+    style::Style,
 };
 
 use super::gadget::ScreenRegion;
