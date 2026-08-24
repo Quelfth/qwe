@@ -9,6 +9,7 @@ pub mod badges;
 pub mod highlight;
 pub mod main;
 pub mod query;
+pub mod locals;
 
 impl Document {
     pub fn draw(&self, mut canvas: Canvas<'_>) {

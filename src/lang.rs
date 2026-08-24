@@ -146,6 +146,7 @@ expand! {
     <--for $q in
         Highlights
         Injections
+        Locals
         Zebra
     {
         pub enum $q {}

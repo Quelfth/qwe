@@ -1689,6 +1689,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-wesl"
 version = "0.0.1"
+source = "git+https://github.com/Quelfth/tree-sitter-wesl#1fabba7517b5909cae2ade98e4ca566c8d32f6f5"
 dependencies = [
  "cc",
  "tree-sitter-language",

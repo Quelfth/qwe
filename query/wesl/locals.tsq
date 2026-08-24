@@ -1,0 +1,82 @@
+
+(identifier) @reference
+
+(_
+    (global_decl
+        (global_variable_decl
+            (variable_decl
+                name: (identifier) @declare.global
+            )
+        )
+    )
+) @scope
+
+(_
+    (global_decl
+        (global_value_decl
+            name: (identifier) @declare.constant
+        )
+    )
+) @scope
+
+(_
+    (global_decl
+        (struct_decl
+            name: (identifier) @declare.struct
+        )
+    )
+) @scope
+
+(_
+    (global_decl
+        (function_decl
+            (function_header
+                name: (identifier) @declare.function
+            )
+        )
+    )
+) @scope
+
+(function_decl
+    (function_header
+        (param_list
+            (param
+                name: (identifier) @declare.parameter
+            )
+        )
+    )
+    body: (compound_statement) @scope
+)
+
+(
+    (statement
+        (variable_or_value_statement
+            "let"
+            name: (identifier) @declare.local
+        )
+    )
+    (_)* @scope
+)
+
+(
+    (statement
+        (variable_or_value_statement
+            (variable_decl
+                "var"
+                name: (identifier) @declare.mutable_local
+            )
+        )
+    )
+    (_)* @scope
+)
+
+(for_statement
+    (for_header
+        (variable_or_value_statement
+            (variable_decl
+                "var"
+                name: (identifier) @declare.mutable_local
+            )
+        )
+    )
+) @scope

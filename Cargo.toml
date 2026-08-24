@@ -54,8 +54,8 @@ tree-sitter-c-sharp = "0.23.5"
 tree-sitter-lua = "0.5.0"
 adot-tree-sitter-toml = "0.1.0"
 tree-sitter-nu.git = "https://github.com/nushell/tree-sitter-nu"
-#tree-sitter-wesl.git = "https://github.com/webgpu-tools/tree-sitter-wesl"
-tree-sitter-wesl.path = "../tree-sitter-wesl"
+tree-sitter-wesl.git = "https://github.com/Quelfth/tree-sitter-wesl"
+#tree-sitter-wesl.path = "../tree-sitter-wesl"
 
 [profile.release]
 debug = true

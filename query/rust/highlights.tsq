@@ -121,6 +121,7 @@
 (scoped_type_name "::" @o.association.enum name: (_) @_ (#semantic? @_ EnumMember))
 
 (use_wildcard (name) @_ (#semantic? @_ "!Enum") "::" @o.scope)
+(use_wildcard (scoped_name name: (name) @_ (#semantic? @_ "!Enum")) "::" @o.scope)
 (use_wildcard (keyword_scope) "::" @o.scope)
 
 (use_wildcard (name) @_ (#semantic? @_ Enum) "::" @o.association.enum)
@@ -142,7 +143,7 @@
 (declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated)))
 (declaration_list (function_item (type_parameters ["<" "," ">"] @o.call.function.associated)))
 
-(declaration_list (function_item name: (_) @i.function.method))
+(declaration_list (function_item name: (_ (identifier) @i.function.method)))
 
 (function_signature_item ["fn" "->" ";"] @o.declare.function)
 (function_signature_item (parameters ["(" "," ")"] @o.call.function.associated.extension))
@@ -170,8 +171,8 @@
 (struct_item (ordered_field_declaration_list ["(" "," ")"] @o.declare.type.struct))
 (struct_item ";" @o.declare.type.struct)
 
-(struct_item name: (_) @i.type.struct)
-(field_declaration name: (_) @i.value.field)
+(struct_item name: (_ (identifier) @i.type.struct))
+(field_declaration name: (_ (identifier) @i.value.field))
 (field_declaration ":" @o.type)
 
 ; Enum

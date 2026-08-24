@@ -1,19 +1,33 @@
+(line_comment) @comment
 
 [(template_args_start) (template_args_end)] @x.angle-bracket
 
-(decimal_int_literal) @l.number
+[(decimal_int_literal) (float_literal)] @l.number
 
 "@" @o.attribute
 (attribute ["(" ")"] @o.attribute)
-(attribute name: (identifier) @i.attribute)
+(attribute name: (identifier) @i.attribute_.priority_1)
+
+(attribute name: (identifier) @_ (#eq? @_ builtin) (argument_list (identifier) @i.value.variant))
 
 ["let" "var"] @o.declare.variable
 (variable_decl (template_list [(template_args_start) (template_args_end)] @o.declare.variable))
+(global_variable_decl (variable_decl (template_list [(template_args_start) (template_args_end)] @o.declare.value.static)))
 (variable_or_value_statement "=" @o.declare.variable)
-(global_variable_decl ";" @o.declare.variable)
+(variable_decl ":" @o.type)
+
+(global_variable_decl (variable_decl "var" @o.declare.value.static))
+(global_variable_decl ";" @o.declare.value.static)
 (statement (variable_or_value_statement) ";" @o.declare.variable)
 
-":" @o.type
+(variable_decl (template_list (identifier) @o.storage @_ (#any-of? @_
+    function private workgroup uniform storage
+    read write read_write
+)))
+
+"const" @o.const
+(global_value_decl "=" @o.declare.value)
+(global_value_decl "const" ";" @o.const)
 
 "fn" @o.declare.function
 (function_header name: (identifier) @i.function)
@@ -21,14 +35,155 @@
 (param_list "," @o.call.function)
 (function_header "->" @o.declare.function)
 (function_decl body: (compound_statement ["{" "}"] @o.declare.function))
+(param ":" @o.type)
 
 "struct" @o.declare.type.struct
 (struct_decl name: (identifier) @i.type.struct)
 (struct_body ["{" "," "}"] @o.declare.type.struct)
+(struct_member ":" @o.type)
+
+(struct_member name: (identifier) @i.value.field)
+
+(paren_expression ["(" ")"] @o.group)
+(compound_statement ["{" "}"] @o.group)
 
 (binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
+(binary_expression ["==" "!=" (less_than) (greater_than) (less_than_equal) (greater_than_equal)] @o.comparison)
+(binary_expression ["&" "|" "^"] @o.logical)
+(binary_expression [(shift_left) (shift_right)] @o.sequence)
+(binary_expression ["&&" "||"] @o.branch)
+
+(assignment_statement operator: "=" @o.assign)
+(assignment_statement ["+=" "-=" "*=" "/=" "%="] @o.arithmetic.assign)
+(statement (assignment_statement) ";" @o.assign)
 
 (indexing_expression ["[" "]"] @o.sequence)
 
+(named_component_expression "." @o.access.field)
+
+(named_component_expression component: (identifier) @i.value.field)
+
+"if" @o.branch.if
+(if_clause body: (compound_statement ["{" "}"] @o.branch.if))
+
+"for" @o.loop.for
+(for_statement ["(" ")"] @o.loop.for)
+(for_header ";" @o.loop.for)
+(for_statement body: (compound_statement ["{" "}"] @o.loop.for))
+
+"switch" @o.branch.match
+(switch_body ["{" "}"] @o.branch.match)
+
+"case" @o.branch.case
+(case_clause ["," ":"] @o.branch.case)
+(case_clause body: (compound_statement ["{" "}"] @o.branch.case))
+(default_alone_clause ["default" ":"] @o.branch.case)
+(default_alone_clause body: (compound_statement ["{" "}"] @o.branch.case))
+
 "return" @o.control.return
 (statement (return_statement) ";" @o.control.return)
+
+"discard" @o.control.discard
+(statement (discard_statement) ";" @o.control.discard)
+
+((identifier) @i.mutable @_ (#local? @_ mutable))
+
+((identifier) @i.value.global @_ (#local? @_ global))
+((identifier) @i.value.parameter @_ (#local? @_ parameter))
+((identifier) @i.value.local @_ (#local? @_ local))
+((identifier) @i.value.constant @_ (#local? @_ constant))
+
+((identifier) @i.function @_ (#local? @_ function))
+
+((identifier) @i.type.struct @_ (#local? @_ struct))
+
+((call_expression (identifier) @_ (#local? @_ struct) "(" @o.call.type.struct (argument_list "," @o.call.type.struct)? ")" @o.call.type.struct))
+
+((call_expression (identifier) @_ (#local? @_ function) "(" @o.call.function (argument_list "," @o.call.function)? ")" @o.call.function))
+
+((identifier) @i.type.builtin @_ (#any-of? @_
+    bool
+    i32 u32 f16 f32
+
+    vec2 vec3 vec4
+    vec2i vec3i vec4i
+    vec2u vec3u vec4u
+    vec2f vec3f vec4f
+    vec2h vec3h vec4h
+
+    mat2x2 mat2x3 mat2x4 mat3x2 mat3x3 mat3x4 mat4x2 mat4x3 mat4x4
+    mat2x2f mat2x3f mat2x4f mat3x2f mat3x3f mat3x4f mat4x2f mat4x3f mat4x4f
+    mat2x2h mat2x3h mat2x4h mat3x2h mat3x3h mat3x4h mat4x2h mat4x3h mat4x4h
+
+    atomic array
+
+    texture_1d texture_2d texture_2d_array texture_3d texture_cube texture_cube_array
+    texture_multisampled_2d texture_depth_multisampled_3d
+    texture_external
+    texture_storage_1d texture_storage_2d texture_storage_2d_array texture_storage_3d
+    texture_depth_2d texture_depth_2d_array texture_depth_cube texture_depth_cube_array
+    sampler sampler_comparison
+))
+
+((identifier) @_ (#any-of? @_
+    vec2 vec3 vec4
+
+    mat2x2 mat2x3 mat2x4 mat3x2 mat3x3 mat3x4 mat4x2 mat4x3 mat4x4
+
+    atomic array
+
+    texture_1d texture_2d texture_2d_array texture_3d texture_cube texture_cube_array
+    texture_multisampled_2d texture_depth_multisampled_3d
+    texture_external
+    texture_storage_1d texture_storage_2d texture_storage_2d_array texture_storage_3d
+    texture_depth_2d texture_depth_2d_array texture_depth_cube texture_depth_cube_array
+    sampler sampler_comparison
+) . (template_list [(template_args_start) "," (template_args_end)] @o.generics.type.builtin))
+
+(call_expression (identifier) @_ (#any-of? @_
+    bool
+    i32 u32 f16 f32
+
+    vec2 vec3 vec4
+    vec2i vec3i vec4i
+    vec2u vec3u vec4u
+    vec2f vec3f vec4f
+    vec2h vec3h vec4h
+
+    mat2x2 mat2x3 mat2x4 mat3x2 mat3x3 mat3x4 mat4x2 mat4x3 mat4x4
+    mat2x2f mat2x3f mat2x4f mat3x2f mat3x3f mat3x4f mat4x2f mat4x3f mat4x4f
+    mat2x2h mat2x3h mat2x4h mat3x2h mat3x3h mat3x4h mat4x2h mat4x3h mat4x4h
+
+    array
+) "(" @o.call.type.builtin (argument_list "," @o.call.type.builtin)? ")" @o.call.type.builtin)
+
+(call_expression (identifier) @i.function.builtin @_ (#any-of? @_
+    bitcast
+    all any select
+    arrayLength
+    abs acos acosh asin asinh atan atan2 ceil clamp cos cosh
+    countLeadingZeros countOneBits countTrailingZeros
+    cross degrees determinant distance dot dot4U8Packed dot4I8Packed
+    exp exp2 extractBits faceForward firstLeadingBit firstTrailingBit
+    floor fma fract frexp insertBits inverseSqrt ldexp length
+    log log2 max min mix modf normalize pow quantizeToF16
+    radians reflect refract reverseBits round saturate sign
+    sin sinh smoothstep sqrt step tan tanh transpose trunc
+    dpdx dpdxCoarse dpdxFine dpdy dpdyCoarse dpdyFine fwidth fwidthCoarse fwidthFine
+    textureDimensions textureGather textureGatherCompare textureLoad textureNumLayers
+    textureNumLevels textureNumSamples textureSample textureSampleBias textureSampleCompare
+    textureSampleCompareLevel textureSampleGrad textureSampleLevel textureSampleBaseClampToEdge
+    textureStore
+    atomicLoad atomicStore
+    atomicAdd atomicSub atomicMax atomicMin atomicAnd atomicOr atomicXor
+    atomicExchange atomicCompareExchangeWeak
+    pack4x8snorm pack4x8unorm pack4xI8 pack4xU8 pack4xI8Clamp pack4xU8Clamp pack2x16snorm pack2x16unorm pack2x16float
+    unpack4x8snorm unpack4x8unorm unpack4xI8 unpack4xU8 unpack2x16snorm unpack2x16unorm unpack2x16float
+    storageBarrier textureBarrier workgroupBarrier workgroupUniformLoad
+    subgroupAdd subgroupExclusiveAdd subgroupInclusiveAdd
+    subgroupAll subgroupAnd subgroupAny subgroupBallot subgroupBroadcast subgroupBroadcastFirst subgroupElect
+    subgroupMax subgroupMin subgroupMul subgroupExclusiveMul subgroupInclusiveMul subgroupOr subgroupShuffle
+    subgroupShuffleDown subgroupShuffleUp subgroupShuffleXor
+    quadBroadcast quadSwapDiagonal quadSwapX quadSwapY
+    bufferView bufferArrayView bufferLength
+) "(" @o.call.function.builtin (argument_list "," @o.call.function.builtin)? ")" @o.call.function.builtin)

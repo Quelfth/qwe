@@ -1,8 +1,16 @@
-use std::{collections::HashMap, iter, range::Range};
+use std::{collections::HashMap, iter, ops::Deref, range::Range, sync::Arc};
 
 use tree_sitter::{Query, QueryCapture, QueryCursor, QueryError, QueryMatch, StreamingIterator as _, Tree};
 
-use crate::{document::semtoks::SemanticToken, ix::{Byte, Ix, Line}, lang::Language, range_tree::RangeTree, rope::Rope, ts::predicate::Predicate, util::{MapBounds as _, RangeOverlap as _}};
+use crate::{
+    document::semtoks::SemanticToken,
+    ix::{Byte, Ix, Line},
+    lang::Language,
+    range_tree::RangeTree,
+    rope::Rope,
+    ts::predicate::Predicate,
+    util::{MapBounds as _, RangeOverlap as _}
+};
 
 mod predicate;
 
@@ -20,6 +28,7 @@ impl QuerySource {
 }
 
 pub struct QueryCx<'s> {
+    pub locals: HashMap<tree_sitter::Node<'s>, Arc<[String]>>,
     pub semtoks: RangeTree<Ix<Byte>, &'s SemanticToken>,
     pub screen_lines: Range<Ix<Line>>,
 }
@@ -27,6 +36,7 @@ pub struct QueryCx<'s> {
 impl QueryCx<'static> {
     pub fn empty() -> Self {
         Self {
+            locals: Default::default(),
             semtoks: RangeTree::default(),
             screen_lines: Default::default(),
         }
@@ -46,15 +56,13 @@ where
 {
     gen move {
         let semtoks = &context.semtoks;
+        let locals = &context.locals;
         let root = tree.root_node();
 
-        let mut matches = cursor.matches_with_options(
+        let mut matches = cursor.matches(
             query,
             root,
             text,
-            tree_sitter::QueryCursorOptions {
-                progress_callback: None,
-            },
         );
 
         'matches:
@@ -99,6 +107,12 @@ where
                             continue 'matches;
                         }
                     }
+                    Predicate::Local { capture, predicate } => {
+                        let node = capture_nodes[&capture];
+                        if !predicate.check(&locals.get(node).iter().flat_map(|x| &***x).map(Deref::deref).collect()) {
+                            continue 'matches
+                        }
+                    },
                 }
             }
 

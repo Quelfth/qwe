@@ -2,6 +2,7 @@ use crate::{document::Document, ts::QueryCx};
 
 pub macro query_cx($self: ident) {
     crate::ts::QueryCx {
+        locals: $self.resolve_locals(),
         semtoks: $self.semtoks.ranges().collect::<crate::range_tree::RangeTree<_, _>>(),
         screen_lines: $self.screen_line_range(),
     }

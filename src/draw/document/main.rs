@@ -1,7 +1,14 @@
 use std::{cmp::Ordering::*, collections::BTreeMap, iter};
 
 use crate::{
-    color, custom_literal::integer::rgb, document::{Document}, draw::{cursor::CursorStyle, document::{highlight::Highlight, query::query_cx}, screen::Canvas}, grapheme::{Grapheme, GraphemeExt}, ix::{Column, Ix, Line}, style::{Style, Under}, theme::theme,
+    color,
+    custom_literal::integer::rgb,
+    document::Document,
+    draw::{cursor::CursorStyle, document::{highlight::Highlight, query::query_cx}, screen::Canvas},
+    grapheme::{Grapheme, GraphemeExt},
+    ix::{Column, Ix, Line},
+    style::{Style, Under},
+    theme::theme,
 };
 
 use super::{super::screen::Cell, CursorRange};
