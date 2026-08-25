@@ -60,13 +60,13 @@
 (field_expression field: (name (identifier) @i.value.field))
 (field_referent field: (name (identifier) @i.value.field))
 
-(method_call_expression "." @o.access.method)
+(method_call_expression ["." "|>" "<>" "<|"] @o.access.method)
 (method_referent "." @o.access.method)
 (method_call_expression method: (name (identifier) @i.function.method))
 (method_call_expression argument: (_ ["(" ")"] @o.call.function.method))
 (method_referent method: (name (identifier) @i.function.method))
 (method_referent ["(" ")"] @o.call.function.method)
-
+(method_chain_expression method: (name (identifier) @i.function.method))
 
 (variable_statement "=" @o.declare.variable)
 (field_item "=" @o.declare.field)

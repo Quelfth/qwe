@@ -1,0 +1,19 @@
+(identifier) @reference
+
+(function_declaration
+    parameters: (formal_parameters
+        (identifier) @declare.parameter
+    )
+    body: (_) @scope
+)
+
+(arrow_function
+    parameter: (identifier) @declare.parameter
+    body: (_) @scope
+)
+
+(lexical_declaration
+    (variable_declarator
+        name: (identifier) @declare.local
+    )
+) @scope.after

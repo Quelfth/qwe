@@ -33,8 +33,15 @@ impl Document {
             while let Some(QueryMatch { captures, .. }) = matches.next() {
                 let scopes = captures
                     .iter()
-                    .filter(|c| query.capture_names()[c.index as usize] == "scope")
-                    .map(|c| Range::from(c.node.byte_range()).map_bounds(ix))
+                    .filter_map(|c| match query.capture_names()[c.index as usize] {
+                        "scope" => Some(Range::from(c.node.byte_range()).map_bounds(ix)),
+                        "scope.after" => Some({
+                            let range = c.node.byte_range();
+                            let parent_range = c.node.parent()?.byte_range();
+                            ix(range.end)..ix(parent_range.end)
+                        }),
+                        _ => None
+                    })
                     .collect::<Arc<[_]>>();
 
                 for QueryCapture { node, index } in *captures {

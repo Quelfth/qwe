@@ -48,3 +48,7 @@
 (function_declaration name: (identifier) @i.function)
 
 (property_identifier) @i.value.field
+
+
+((identifier) @i.value.parameter @_ (#local? @_ parameter))
+((identifier) @i.value.local @_ (#local? @_ local))

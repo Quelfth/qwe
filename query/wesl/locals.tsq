@@ -54,8 +54,7 @@
             "let"
             name: (identifier) @declare.local
         )
-    )
-    (_)* @scope
+    ) @scope.after
 )
 
 (
@@ -66,8 +65,7 @@
                 name: (identifier) @declare.mutable_local
             )
         )
-    )
-    (_)* @scope
+    ) @scope.after
 )
 
 (for_statement

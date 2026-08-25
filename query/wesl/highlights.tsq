@@ -47,6 +47,10 @@
 (paren_expression ["(" ")"] @o.group)
 (compound_statement ["{" "}"] @o.group)
 
+(unary_expression "-" @o.arithmetic)
+(unary_expression ["!" "~"] @o.logical)
+(unary_expression ["*" "&"] @o.access.reference)
+
 (binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
 (binary_expression ["==" "!=" (less_than) (greater_than) (less_than_equal) (greater_than_equal)] @o.comparison)
 (binary_expression ["&" "|" "^"] @o.logical)
@@ -55,6 +59,11 @@
 
 (assignment_statement operator: "=" @o.assign)
 (assignment_statement ["+=" "-=" "*=" "/=" "%="] @o.arithmetic.assign)
+(assignment_statement ["&=" "|=" "^="] @o.logical.assign)
+(assignment_statement [(shift_left_assign) (shift_right_assign)] @o.sequence.assign)
+(increment_statement "++" @o.arithmetic.assign)
+(decrement_statement "--" @o.arithmetic.assign)
+
 (statement (assignment_statement) ";" @o.assign)
 
 (indexing_expression ["[" "]"] @o.sequence)
@@ -65,6 +74,10 @@
 
 "if" @o.branch.if
 (if_clause body: (compound_statement ["{" "}"] @o.branch.if))
+(else_if_clause body: (compound_statement ["{" "}"] @o.branch.if))
+"else" @o.branch.else
+(else_clause body: (compound_statement ["{" "}"] @o.branch.else))
+
 
 "for" @o.loop.for
 (for_statement ["(" ")"] @o.loop.for)
