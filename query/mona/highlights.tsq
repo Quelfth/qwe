@@ -32,7 +32,6 @@
 (named_entry scope: ["." "~" "/"] @i.namespace.keyword)
 
 (parenthetical ["(" ")"] @o.group)
-(parenthesized_symbol ["(" ")"] @o.group)
 
 (function ["{" "}"] @o.declare.function)
 (object "[" @o.call.type.struct ("," @o.call.type.struct)? [(field_item) (rest_item)] ("," @o.call.type.struct)? "]" @o.call.type.struct)
@@ -50,7 +49,7 @@
 
 (function_item ["fn" "->" "{" "}"] @o.declare.function)
 (function_item !receiver name: (name (identifier) @i.function))
-(function_item !receiver (generics ["<" "," ">"] @o.call))
+(function_item !receiver (generics ["@" "<" "," ">"] @o.call))
 
 (variable_binding ":" @o.type)
 
@@ -92,6 +91,9 @@
 (function_item name: (name (identifier) @i.function.method) receiver: (_))
 (function_item generics: (generics ["<" "," ">"] @o.call.function.method) receiver: (_))
 
+(abstract_item generics: (generics ["@" "<" "," ">"] @o.implement))
+(impl_item generics: (generics ["@" "<" "," ">"] @o.implement))
+
 (call_expression
     argument: [
         (parenthetical ["(" ")"] @o.call)
@@ -100,3 +102,7 @@
 )
 
 (boolean_type "?" @o.type.error)
+
+((identifier) @i.type.parameter @_ (#local? @_ generic))
+
+((identifier) @i.type.struct @_ (#local? @_ struct))

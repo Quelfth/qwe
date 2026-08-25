@@ -1635,7 +1635,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-mona"
 version = "0.1.0"
-source = "git+https://github.com/Quelfth/tree-sitter-mona#01c90df589a0921f13aaa0a942cba2be29780eac"
+source = "git+https://github.com/Quelfth/tree-sitter-mona#eaee0ba4085116249dd4ec60c387472496517ac7"
 dependencies = [
  "cc",
  "tree-sitter-language",

@@ -1,0 +1,7 @@
+(identifier) @reference
+
+(_
+    generics: (generics (name (identifier) @declare.generic))
+) @scope
+
+(_ (type_item name: (name (identifier) @declare.struct) (object (field_item)))) @scope
