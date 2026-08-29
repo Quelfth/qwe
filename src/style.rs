@@ -68,6 +68,25 @@ impl FlatStyle {
     }
 }
 
+impl Add<Style> for FlatStyle {
+    type Output = Self;
+
+    fn add(self, rhs: Style) -> Self::Output {
+        let Self { fg, bg, italic, bold, under, uc, strikethrough, overline, ag } = self;
+        Self {
+            fg: rhs.fg.unwrap_or(fg),
+            bg: rhs.bg.unwrap_or(bg),
+            italic: rhs.italic.unwrap_or(italic),
+            bold: rhs.bold.unwrap_or(bold),
+            under: rhs.under.unwrap_or(under),
+            uc: rhs.uc.unwrap_or(uc),
+            strikethrough: rhs.strikethrough.unwrap_or(strikethrough),
+            overline,
+            ag: rhs.ag.unwrap_or(ag),
+        }
+    }
+}
+
 #[derive(Default, Copy, Clone, PartialEq)]
 pub struct Style {
     pub fg: Option<Color>,

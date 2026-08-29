@@ -21,10 +21,10 @@ pub enum AppAction {
 
 #[derive(Copy, Clone)]
 pub enum ScrollAction {
-    Up,
-    Down,
-    Left,
-    Right,
+    Up(usize),
+    Down(usize),
+    Left(usize),
+    Right(usize),
 }
 
 #[derive(Copy, Clone)]
@@ -75,7 +75,9 @@ pub enum DocumentAction {
 
     Jump,
     Find,
+    FindAll,
     LineJump,
+    GotoDiagnostic,
 }
 
 impl From<ScrollAction> for DocumentAction {

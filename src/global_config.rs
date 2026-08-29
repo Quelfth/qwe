@@ -16,7 +16,7 @@ pub struct GlobalConfig {
 impl Default for GlobalConfig {
     fn default() -> Self {
         Self {
-            autosave_langs: Default::default(),
+            autosave_langs: Mutex::new(Language::ALL.into_iter().filter(|l| l.autosave()).collect()),
             keymaps: Default::default(),
             special_chars: {
                 use CharSpecial::*;
@@ -77,14 +77,18 @@ impl Default for Keymaps {
             AnySelectAction as Select,
         };
         let scroll = keymap!{
-            [ctrl d] => Scroll::Down,
-            [scroll down] => Scroll::Down,
-            [ctrl u] => Scroll::Up,
-            [scroll up] => Scroll::Up,
-            [ctrl r] => Scroll::Right,
-            [scroll right] => Scroll::Right,
-            [ctrl a] => Scroll::Left,
-            [scroll left] => Scroll::Left,
+            [ctrl d] => Scroll::Down(4),
+            [scroll down] => Scroll::Down(4),
+            [ctrl alt d] => Scroll::Down(10),
+            [ctrl u] => Scroll::Up(4),
+            [scroll up] => Scroll::Up(4),
+            [ctrl alt u] => Scroll::Up(10),
+            [ctrl r] => Scroll::Right(4),
+            [scroll right] => Scroll::Right(4),
+            [ctrl alt r] => Scroll::Right(10),
+            [ctrl a] => Scroll::Left(4),
+            [scroll left] => Scroll::Left(4),
+            [ctrl alt a] => Scroll::Left(10),
         };
         let common_insert = keymap!{
             [esc] => Insert::Select,
@@ -116,7 +120,7 @@ impl Default for Keymaps {
             use EditorAction::*;
             keymap! {
                 ..lsp_select,
-                [F] => OpenFile,
+                [ctrl o] => OpenFile,
                 ['('] => PreviousFile,
                 [')'] => NextFile,
                 [z] => Undo,
@@ -142,7 +146,9 @@ impl Default for Keymaps {
                 [8] => ScrollToMainCursor,
                 [ ] => Jump,
                 [f] => Find,
+                [F] => FindAll,
                 [ctrl l] => LineJump,
+                [1] => GotoDiagnostic,
             }
         };
         let select = {use Select::*; keymap!{

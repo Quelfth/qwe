@@ -1,0 +1,76 @@
+
+(type_arguments ["<" ">"] @x.angle-bracket)
+
+(number_literal) @l.number
+
+(string_content) @l.string
+"\"" @l.string.quote
+
+"package" @o.declare.module
+"import" @o.use
+
+["super" "this"] @i.value.keyword
+
+"override" @o.implement
+
+(annotation "@" @o.attribute (user_type (identifier) @i.attribute_.priority_1))
+
+(qualified_identifier (identifier) @_ (#semantic? @_ Namespace) . "." @o.scope)
+
+"fun" @o.declare.function
+(function_body (block ["{" "}"] @o.declare.function))
+(lambda_literal ["{" "}"] @o.declare.function)
+(parameter ":" @o.type)
+
+"class" @o.declare.type.struct
+(class_declaration "class" (class_body ["{" "}"] @o.declare.type.struct))
+(class_declaration ":" @o.implement)
+
+"interface" @o.declare.type.interface
+(class_declaration "interface" (class_body ["{" "}"] @o.declare.type.interface))
+
+["var" "val"] @o.declare.value
+(variable_declaration ":" @o.type)
+
+(property_declaration "=" @o.declare.value)
+
+(nullable_type "?" @o.type.error)
+
+(value_argument "=" @o.key-value)
+
+(navigation_expression "." @o.access.field)
+(navigation_expression "." @o.access.method . (identifier) @_ (#semantic? @_ Method))
+;(navigation_expression "." @o.access.method . (identifier) @_ (#semantic? @_ Property))
+
+(navigation_expression (identifier) @_ (#semantic? @_ Type) . "." @o.association)
+(navigation_expression (identifier) @_ (#semantic? @_ Class) . "." @o.association)
+
+
+(function_declaration name: (identifier) @_ (#semantic? @_ Method) (function_value_parameters ["(" "," ")"] @o.call.function.method))
+
+(user_type (identifier) @_ (#semantic? @_ Class) (type_arguments ["<" "," ">"] @o.generics.type.struct))
+(user_type (identifier) @_ (#semantic? @_ Interface) (type_arguments ["<" "," ">"] @o.generics.type.interface))
+
+(call_expression (identifier) @_ (#semantic? @_ Function) (value_arguments ["(" "," ")"] @o.call.function))
+(call_expression (identifier) @_ (#semantic? @_ Function) (annotated_lambda (lambda_literal ["{" "}"] @o.call.function_.priority_1)))
+
+(call_expression (identifier) @_ (#semantic? @_ Method) (value_arguments ["(" "," ")"] @o.call.function.method))
+
+(call_expression (navigation_expression (identifier) @_ (#semantic? @_ Function) .) (value_arguments ["(" "," ")"] @o.call.function))
+(call_expression (navigation_expression (identifier) @_ (#semantic? @_ Method) .) (value_arguments ["(" "," ")"] @o.call.function.method))
+
+(constructor_invocation (user_type (identifier) @_ (#semantic? @_ Method)) (value_arguments ["(" "," ")"] @o.call.function.method))
+
+
+((identifier) @i.namespace @_ (#semantic? @_ Namespace))
+
+((identifier) @i.value.parameter @_ (#semantic? @_ Parameter))
+((identifier) @i.value.local @_ (#semantic? @_ Variable))
+((identifier) @i.value.field @_ (#semantic? @_ "!static" Property))
+((identifier) @i.value.global @_ (#semantic? @_ static Property))
+
+((identifier) @i.type.struct @_ (#semantic? @_ Class))
+((identifier) @i.type.interface @_ (#semantic? @_ Interface))
+
+((identifier) @i.function @_ (#semantic? @_ Function))
+((identifier) @i.function.method @_ (#semantic? @_ Method))

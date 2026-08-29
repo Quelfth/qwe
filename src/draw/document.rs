@@ -10,6 +10,7 @@ pub mod highlight;
 pub mod main;
 pub mod query;
 pub mod locals;
+pub mod annotations;
 
 impl Document {
     pub fn draw(&self, mut canvas: Canvas<'_>) {
@@ -20,6 +21,7 @@ impl Document {
                 .unwrap_or_default()
         };
         self.main_draw(canvas.reborrow(), cursors);
+        self.draw_annotations(canvas.reborrow());
         self.draw_edge_indicators(canvas);
     }
 }

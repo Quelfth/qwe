@@ -15,6 +15,7 @@ pub enum Language {
     CSharp,
     Css,
     Javascript,
+    Kotlin,
     Lua,
     Mona,
     Nu,
@@ -51,6 +52,7 @@ impl Language {
             "cs" | "csharp" => Self::CSharp,
             "css" => Self::Css,
             "js" | "javascript" => Self::Javascript,
+            "kt" | "kotlin" => Self::Kotlin,
             "lua" => Self::Lua,
             "mn" | "mona" => Self::Mona,
             "nu" => Self::Nu,
@@ -93,8 +95,20 @@ impl Language {
                 special_init: SpecialBehavior::Roslyn,
                 options: None,
             }),
+            Language::Kotlin => Some(LangLspInfo {
+                id: "kotlin",
+                command: "intellij-server",
+                args: &["--stdio"],
+                special_init: SpecialBehavior::NoOp,
+                options: None,
+            }),
             _ => None,
         }
+    }
+
+    pub fn autosave(self) -> bool {
+        use Language::*;
+        matches!(self, Rust | Javascript | Lua | Wesl)
     }
 
     pub fn query<Q>(self) -> &'static Query
@@ -114,6 +128,7 @@ impl Language {
                     (CSharp tree_sitter_c_sharp)
                     (Css tree_sitter_css_orchard)
                     (Javascript tree_sitter_javascript)
+                    (Kotlin tree_sitter_kotlin)
                     (Lua tree_sitter_lua)
                     (Mona tree_sitter_mona)
                     (Nu tree_sitter_nu)
@@ -130,6 +145,18 @@ impl Language {
                 }
             }
         }
+    }
+
+    expand! {
+        <--use LANGUAGE
+
+        <--let ($*^({$*.}). {$*($langs. ,)}) = $LANGUAGE
+
+        pub const ALL: [Self; ${langs.len}] = [
+            <--for $lang in $langs {
+                Self::$lang,
+            }
+        ];
     }
 }
 

@@ -50,6 +50,11 @@ impl Severity {
     pub fn style(self) -> Style {
         Style::fg(self.fg()) + Style::bg(self.bg())
     }
+
+    pub fn is_bad(self) -> bool {
+        use Severity::*;
+        matches!(self, Err | Warn)
+    }
 }
 
 #[derive(Clone)]

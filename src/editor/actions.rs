@@ -135,6 +135,16 @@ impl Editor {
         self.open_gadget(Finder::new(self.doc.find_haystacks()));
     }
 
+    pub fn find_all(&mut self) {
+        self.open_gadget(Finder::new(vec![self.doc.full_haystack()]))
+    }
+
+    pub fn find_in(&mut self) {
+        let haystacks = self.doc.cursor_haystacks();
+        if haystacks.is_empty() { return }
+        self.open_gadget(Finder::new(haystacks));
+    }
+
     pub fn pick_file(&mut self) {
         self.open_gadget(Picker::file());
     }

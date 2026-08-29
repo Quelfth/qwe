@@ -34,7 +34,7 @@ jiff = "0.2.23"
 strum = { version = "0.28.0", features = ["derive"] }
 arc-swap = "1.9.1"
 extension-traits = "0.2.3"
-expanda = "0.4.4"
+expanda = "0.4.5"
 futures-lite = "2.6.1"
 derive_more = { version = "2.1.1", features = ["display", "from", "error"] }
 
@@ -43,10 +43,11 @@ tree-sitter-tsquery.git = "https://github.com/Quelfth/tree-sitter-query"
 tree-sitter-rust = { git = "https://github.com/Quelfth/tree-sitter-rust", branch = "main" }
 #tree-sitter-rust.path = "../tree-sitter-rust"
 tree-sitter-sulu.git = "https://github.com/Quelfth/tree-sitter-sulu"
-tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
-#tree-sitter-mona.path = "../tree-sitter-mona"
+#tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
+tree-sitter-mona.path = "../tree-sitter-mona"
 tree-sitter-rust-format-args.git = "https://github.com/Quelfth/tree-sitter-rust-format-args"
 tree-sitter-javascript = "0.25.0"
+tree-sitter-kotlin = { package = "tree-sitter-kotlin-ng", version = "1.1.0" }
 tree-sitter-yaml = "0.7.2"
 tree-sitter-css-orchard = "0.1.2"
 tree-sitter-cpp = "0.23.4"

@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl Document {
-    fn full_haystack(&self) -> Haystack {
+    pub fn full_haystack(&self) -> Haystack {
         Haystack {
             text: self.text().to_string(),
             offset: 0,
@@ -39,10 +39,19 @@ impl Document {
     }
 
     pub fn find_haystacks(&self) -> Vec<Haystack> {
+        let haystacks = self.cursor_haystacks();
+        if haystacks.is_empty() {
+            vec![self.full_haystack()]
+        } else {
+            haystacks
+        }
+    }
+
+    pub fn cursor_haystacks(&self) -> Vec<Haystack> {
         let Some(cursors) = &self.cursors else {
-            return vec![self.full_haystack()];
+            return Vec::new();
         };
-        let haystacks = match cursors {
+        match cursors {
             CursorState::MirrorInsert(_) | CursorState::Insert(_) => vec![self.full_haystack()],
             CursorState::Select(c) => c
                 .iter()
@@ -55,11 +64,6 @@ impl Document {
                 .iter()
                 .flat_map(|c| (c.line..c.line + c.height).into_iter().flat_map(|l| self.line_haystack(l)))
                 .collect(),
-        };
-        if haystacks.is_empty() {
-            vec![self.full_haystack()]
-        } else {
-            haystacks
         }
     }
 }

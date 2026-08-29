@@ -172,6 +172,7 @@ impl Document {
         }
 
         for (range, diagnostic) in self.diagnostics.ranges() {
+            if self.text().line_of_byte(range.start) != self.text().line_of_byte(range.end) {continue}
             highlight_scopes.push(Highlight {
                 range,
                 scope: Scope::diagnostic(diagnostic.severity),

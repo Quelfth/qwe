@@ -1,7 +1,15 @@
 (identifier) @reference
 
 (_
-    generics: (generics (name (identifier) @declare.generic))
+    generics: (generics (type_generic (name (identifier) @declare.generic)))
 ) @scope
 
 (_ (type_item name: (name (identifier) @declare.struct) (object (field_item)))) @scope
+
+(variable_statement (variable_binding (name (identifier) @declare.local))) @scope.after
+
+(_ (function_item name: (name (identifier) @declare.function) !receiver)) @scope
+
+(_ (function_item name: (name (identifier) @declare.method) receiver: (_))) @scope
+(_ (function_item name: (name (identifier) @declare.reference) receiver: (_ ["." "~"]))) @scope
+(_ (function_item name: (name (identifier) @declare.mutable) receiver: (_ ["~" "<>" "<|"]))) @scope

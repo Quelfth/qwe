@@ -11,6 +11,7 @@ use crate::document::tree::{MetaTree, OptionTreeParseExt as _};
 use crate::editor::cursors::Cursors as _;
 use crate::global_config::GLOBAL_CONFIG;
 use crate::ts::QueryCx;
+use crate::util::MapBounds as _;
 use crate::{
     aprintln::aprintln, constants::TAB_WIDTH, document::{
         diagnostics::{Diagnostic, Severity},
@@ -226,6 +227,15 @@ impl Document {
             Some(c) => c.selection_ranges_for_cursor(&self.text, index),
             None => iter::empty(),
         }
+    }
+
+    pub fn goto_diagnostic(&mut self) {
+        let main_cursor = try {self.text.byte_pos_of_pos(self.main_cursor_pos()?).ok()?};
+        let Some((range, _)) = self.diagnostics.ranges().filter(|(r, _)| main_cursor.is_none_or(|m| r.start > m)).chain(self.diagnostics.ranges()).next() else {return};
+        let range = range.map_bounds(|bound| self.text.pos_of_byte_pos(bound));
+        let Some(range) = (try { range.start?..range.end? }) else {return};
+        self.cursors = Some(SelectCursors::one(SelectCursor::range(range, &self.text)).into());
+        self.scroll_to_main_cursor();
     }
 }
 

@@ -1,4 +1,3 @@
-#![feature(never_type)]
 #![feature(gen_blocks)]
 #![feature(try_blocks)]
 #![feature(step_trait)]

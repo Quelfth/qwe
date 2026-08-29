@@ -538,18 +538,18 @@ dependencies = [
 
 [[package]]
 name = "expanda"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9afe7737e8222ac03fed3925b06a11b1ed3d8dee19aa0cbddc33cf9f38082a62"
+checksum = "7a6022dd715c2c07d30c50bf198d9b54d62c90d5965dd3c9f30bd06f975d5c4a"
 dependencies = [
  "expanda-macros",
 ]
 
 [[package]]
 name = "expanda-macros"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c2528aea50197dfc199b264ca1596b4b2f0b48c50c39f209c1f6400836d8367"
+checksum = "0f227be533ebc31db79cb394ccc7849ada4fbdd538da84954c519f419a9c4b6f"
 
 [[package]]
 name = "ext-trait"
@@ -1151,6 +1151,7 @@ dependencies = [
  "tree-sitter-cpp",
  "tree-sitter-css-orchard",
  "tree-sitter-javascript",
+ "tree-sitter-kotlin-ng",
  "tree-sitter-lua",
  "tree-sitter-mona",
  "tree-sitter-nu",
@@ -1617,6 +1618,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-kotlin-ng"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e800ebbda938acfbf224f4d2c34947a31994b1295ee6e819b65226c7b51b4450"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-language"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1635,7 +1646,6 @@ dependencies = [
 [[package]]
 name = "tree-sitter-mona"
 version = "0.1.0"
-source = "git+https://github.com/Quelfth/tree-sitter-mona#eaee0ba4085116249dd4ec60c387472496517ac7"
 dependencies = [
  "cc",
  "tree-sitter-language",

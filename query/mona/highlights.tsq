@@ -20,7 +20,7 @@
 
 ["Self" "In" "Out" "It"] @i.type.self
 
-["decl" "impl" "extend"] @o.implement
+["decl" "impl" "extend" "where"] @o.implement
 
 ["type"] @o.declare.type
 
@@ -31,21 +31,31 @@
 (symbolic_entry "\\" @o.association)
 (named_entry scope: ["." "~" "/"] @i.namespace.keyword)
 
+(where_clause ["{" "," "}"] @o.implement)
+(where_bound [":" "{" "," "}"] @o.implement)
+
 (parenthetical ["(" ")"] @o.group)
 
 (function ["{" "}"] @o.declare.function)
 (object "[" @o.call.type.struct ("," @o.call.type.struct)? [(field_item) (rest_item)] ("," @o.call.type.struct)? "]" @o.call.type.struct)
 (object "[" @o.call.type.enum ("," @o.call.type.enum)? (variant_item) ("," @o.call.type.enum)? "]" @o.call.type.enum)
 (object "[" @o.declare.function ("," @o.declare.function)? (function_item) ("," @o.declare.function)? "]" @o.declare.function)
+(object "[" @o.branch.match ("," @o.branch.match)? (match_item) ("," @o.branch.match)? "]" @o.branch.match)
+
+(type_item generics: (generics ["@" "<" "," ">"] @o.generics.type.struct) (object [(field_item) (rest_item)]))
+
+(match_item "=>" @o.branch.case)
+
 
 (function_block_type ["{" "}"] @o.declare.function)
 (function_block_type "->" @o.declare.function)
+
+(pre_unary_expression "!" @o.logical)
 
 (binary_expression ["+" "-" "*" "/"] @o.arithmetic)
 (binary_expression ["<" ">" "<=" ">=" "!=" "=="] @o.comparison)
 (binary_expression ["!==" "==="] @o.branch.match)
 
-;(case ["=>"] @o.branch.case)
 
 (function_item ["fn" "->" "{" "}"] @o.declare.function)
 (function_item !receiver name: (name (identifier) @i.function))
@@ -53,16 +63,16 @@
 
 (variable_binding ":" @o.type)
 
-(field_expression "." @o.access.field)
-(field_referent "." @o.access.field)
-(reference_type "." @o.access.field)
+(field_expression ["." "~"] @o.access.field)
+(field_referent ["." "~"] @o.access.field)
+(reference_type ["." "~"] @o.access.field)
 (field_expression field: (name (identifier) @i.value.field))
 (field_referent field: (name (identifier) @i.value.field))
 
-(method_call_expression ["." "|>" "<>" "<|"] @o.access.method)
-(method_referent "." @o.access.method)
+(method_call_expression ["." "~" "|>" "<>" "<|"] @o.access.method)
+(method_referent ["." "~"] @o.access.method)
 (method_call_expression method: (name (identifier) @i.function.method))
-(method_call_expression argument: (_ ["(" ")"] @o.call.function.method))
+(method_call_expression argument: (_ ["(" ")" "[" "]" "{" "}"] @o.call.function.method_.priority_1))
 (method_referent method: (name (identifier) @i.function.method))
 (method_referent ["(" ")"] @o.call.function.method)
 (method_chain_expression method: (name (identifier) @i.function.method))
@@ -85,24 +95,41 @@
 (function_block_type parameter: (object ["[" "," "]"] @o.call_.priority_1))
 (function_block_type parameter: (function_block_type ["{" "}"] @o.call_.priority_1))
 
-(receiver ["." "|>" "<>" "<|"] @o.access.method)
+(receiver ["." "~" "|>" "<>" "<|"] @o.access.method)
 (function_item receiver: (_) (simple_parameter ["(" ")"] @o.call.function.method))
 (function_item receiver: (_) parameters: (object ["[" "," "]"] @o.call.function.method))
 (function_item name: (name (identifier) @i.function.method) receiver: (_))
-(function_item generics: (generics ["<" "," ">"] @o.call.function.method) receiver: (_))
+(function_item generics: (generics ["@" "<" "," ">"] @o.call.function.method) receiver: (_))
+
+(function_item name: (name (identifier) @i.reference) receiver: (_ ["." "~"]))
+(function_item name: (name (identifier) @i.mutable) receiver: (_ ["~" "<>" "<|"]))
+
+(method_call_expression ["." "~"] method: (name (identifier) @i.reference))
+(method_call_expression ["~" "<>" "<|"] method: (name (identifier) @i.mutable))
 
 (abstract_item generics: (generics ["@" "<" "," ">"] @o.implement))
 (impl_item generics: (generics ["@" "<" "," ">"] @o.implement))
+(extend_item generics: (generics ["@" "<" "," ">"] @o.implement))
 
 (call_expression
     argument: [
-        (parenthetical ["(" ")"] @o.call)
-        (object ["[" "]"] @o.call)
+        (parenthetical ["(" ")"] @o.call_.priority_1)
+        (object ["[" "]"] @o.call_.priority_1)
+        (function ["{" "}"] @o.call_.priority_1)
     ]
 )
 
 (boolean_type "?" @o.type.error)
 
-((identifier) @i.type.parameter @_ (#local? @_ generic))
+(specific_symbol (name (identifier) @_ (#local? @_ struct)) (specifics ["<" "," ">"] @o.generics.type.struct))
 
+((identifier) @i.reference @_ (#local? @_ reference))
+((identifier) @i.mutable @_ (#local? @_ mutable))
+
+((identifier) @i.function @_ (#local? @_ function))
+((identifier) @i.function.method @_ (#local? @_ method))
+
+((identifier) @i.value.local @_ (#local? @_ local))
+
+((identifier) @i.type.parameter @_ (#local? @_ generic))
 ((identifier) @i.type.struct @_ (#local? @_ struct))

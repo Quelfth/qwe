@@ -2,7 +2,7 @@ use std::{collections::{BTreeMap, HashMap, hash_map}, range::Range, sync::Arc};
 
 use tree_sitter::{Node, QueryCapture, QueryCursor, QueryMatch, StreamingIterator as _};
 
-use crate::{document::Document, ix::{Byte, Ix, ix}, lang::Locals, log::{DisplayLog, LogCategory, log}, util::{MapBounds as _, RangeOverlap as _}};
+use crate::{document::Document, ix::{Byte, Ix, ix}, lang::Locals, util::{MapBounds as _, RangeOverlap as _}};
 
 impl Document {
     pub fn resolve_locals<'s>(&'s self) -> HashMap<Node<'s>, Arc<[String]>> {
@@ -65,12 +65,6 @@ impl Document {
                 }
             }
 
-            log!(DisplayLog {
-                category: LogCategory::Debug,
-                message: "resolved local declarations",
-                details: format!("{decls:#?}"),
-            });
-
             let mut matches = cursor.matches(
                 query,
                 tree.tree.root_node(),
@@ -104,12 +98,6 @@ impl Document {
                     }
                 }
             }
-
-            log!(DisplayLog {
-                category: LogCategory::Debug,
-                message: "resolved locals",
-                details: format!("{locals:#?}"),
-            });
 
             locals
         }.unwrap_or_default()

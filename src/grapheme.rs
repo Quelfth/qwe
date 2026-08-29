@@ -36,6 +36,17 @@ impl Grapheme {
     pub const LEFT_SEMICIRCLE: Self = Self(Cow::Borrowed(""));
     pub const RIGHT_SEMICIRCLE: Self = Self(Cow::Borrowed(""));
     pub const DOT: Self = Self(Cow::Borrowed("."));
+    pub const VERTICAL_SQUIGGLE: Self = Self(Cow::Borrowed("𜰊"));
+    pub const BRACE_2_TOP: Self = Self(Cow::Borrowed("⎰"));
+    pub const BRACE_2_BOTTOM: Self = Self(Cow::Borrowed("⎱"));
+    pub const BRACE_TOP: Self = Self(Cow::Borrowed("⎧"));
+    pub const BRACE_BAR: Self = Self(Cow::Borrowed("⎪"));
+    pub const BRACE_CUSP: Self = Self(Cow::Borrowed("⎨"));
+    pub const BRACE_BOTTOM: Self = Self(Cow::Borrowed("⎩"));
+    pub const BRACE_CUSP_TOP: Self = Self(Cow::Borrowed("⎭"));
+    pub const BRACE_CUSP_BOTTOM: Self = Self(Cow::Borrowed("⎫"));
+
+
 
     pub fn len(&self) -> Ix<Byte> {
         Ix::new(self.0.len())

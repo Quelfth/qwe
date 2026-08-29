@@ -3,10 +3,10 @@ use crate::{action::{Action, DocumentAction, ScrollAction}, app::AppSignal, docu
 impl Action<&mut Editor> for ScrollAction {
     fn act(self, ed: &mut Editor) -> Option<AppSignal> {
         match self {
-            ScrollAction::Up => ed.scroll_up(4),
-            ScrollAction::Down => ed.scroll_down(4),
-            ScrollAction::Left => ed.scroll_left(4),
-            ScrollAction::Right => ed.scroll_right(4),
+            ScrollAction::Up(amount) => ed.scroll_up(amount),
+            ScrollAction::Down(amount) => ed.scroll_down(amount),
+            ScrollAction::Left(amount) => ed.scroll_left(amount),
+            ScrollAction::Right(amount) => ed.scroll_right(amount),
         }
 
         None
@@ -23,8 +23,10 @@ impl Action<&mut Editor> for DocumentAction {
             DocumentAction::ScrollToMainCursor => ed.scroll_main_cursor_on_screen(),
             DocumentAction::DropNonMainCursors => ed.drop_other_selections(),
             DocumentAction::Jump => ed.jump(),
-            DocumentAction::Find => ed.find(),
+            DocumentAction::Find => ed.find_in(),
+            DocumentAction::FindAll => ed.find_all(),
             DocumentAction::LineJump => ed.open_gadget(LineJumper::new()),
+            DocumentAction::GotoDiagnostic => ed.doc_mut().goto_diagnostic(),
         }
 
         None
