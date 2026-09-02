@@ -45,6 +45,11 @@ impl Grapheme {
     pub const BRACE_BOTTOM: Self = Self(Cow::Borrowed("⎩"));
     pub const BRACE_CUSP_TOP: Self = Self(Cow::Borrowed("⎭"));
     pub const BRACE_CUSP_BOTTOM: Self = Self(Cow::Borrowed("⎫"));
+    pub const RULER: Self = Self(Cow::Borrowed("▎"));
+    pub const BULLET: Self = Self(Cow::Borrowed("◦"));
+    pub const RIGHT_PAREN_TOP: Self = Self(Cow::Borrowed("⎞"));
+    pub const RIGHT_PAREN_MIDDLE: Self = Self(Cow::Borrowed("⎟"));
+    pub const RIGHT_PAREN_BOTTOM: Self = Self(Cow::Borrowed("⎠"));
 
 
 

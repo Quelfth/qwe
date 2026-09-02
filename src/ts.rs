@@ -30,7 +30,7 @@ impl QuerySource {
 pub struct QueryCx<'s> {
     pub locals: HashMap<tree_sitter::Node<'s>, Arc<[String]>>,
     pub semtoks: RangeTree<Ix<Byte>, &'s SemanticToken>,
-    pub screen_lines: Range<Ix<Line>>,
+    pub relevant_lines: Range<Ix<Line>>,
 }
 
 impl QueryCx<'static> {
@@ -38,7 +38,7 @@ impl QueryCx<'static> {
         Self {
             locals: Default::default(),
             semtoks: RangeTree::default(),
-            screen_lines: Default::default(),
+            relevant_lines: Default::default(),
         }
     }
 }
@@ -49,7 +49,7 @@ pub fn query_captures<'t, 'c>(
     cursor: &'c mut QueryCursor,
     context: &QueryCx<'t>,
     query: &'static Query,
-    cull_offscreen: bool,
+    cull_irrelevant: bool,
 ) -> impl Iterator<Item = &'c QueryCapture<'t>>
 where
     't: 'c,
@@ -72,10 +72,10 @@ where
                 ..
             }) = matches.next()
         {
-            if cull_offscreen && !captures.iter().any(|QueryCapture { node, .. }| {
+            if cull_irrelevant && !captures.iter().any(|QueryCapture { node, .. }| {
                 let start = Ix::new(node.start_position().row);
                 let end = Ix::new(node.end_position().row);
-                (start..end).overlaps(context.screen_lines)
+                (start..end).overlaps(context.relevant_lines)
             }) {
                 continue
             }

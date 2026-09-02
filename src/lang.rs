@@ -108,7 +108,7 @@ impl Language {
 
     pub fn autosave(self) -> bool {
         use Language::*;
-        matches!(self, Rust | Javascript | Lua | Wesl)
+        matches!(self, Rust | Sulu | Query | Javascript | Wesl)
     }
 
     pub fn query<Q>(self) -> &'static Query
@@ -174,6 +174,7 @@ expand! {
         Highlights
         Injections
         Locals
+        Rulers
         Zebra
     {
         pub enum $q {}
@@ -188,11 +189,11 @@ expand! {
                                     Language::$lang => const {
                                         match include_str_optional!(${
                                             CARGO_MANIFEST_DIR
-                                            ("/query/")
+                                            "/query/"
                                             lang.snake_case.stringify.to_dashes
-                                            ("/")
+                                            "/"
                                             q.snake_case.stringify.to_dashes
-                                            (".tsq")
+                                            ".tsq"
                                         }) {
                                             Some(x) => x,
                                             None => "",

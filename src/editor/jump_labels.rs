@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     custom_literal::integer::rgb,
     document::Document,
-    draw::screen::Canvas, editor::gadget::Gadget, grapheme::GraphemeExt, ix::{Column, Ix, Line}, key::KeyOrChar, pos::Pos, style::FlatStyle,
+    draw::screen::Canvas, editor::gadget::Gadget, grapheme::GraphemeExt, ix::{Column, Ix, Line, ix}, key::KeyOrChar, pos::Pos, style::FlatStyle,
 };
 
 use super::{Editor, gadget::ScreenRegion};
@@ -45,9 +45,9 @@ impl Gadget for JumpLabels {
 
     fn draw(&self, mut canvas: Canvas<'_>) {
         for (pos, label) in self.labels() {
-            if pos.line < self.scroll || pos.line > self.scroll + Ix::new(canvas.height() as usize) { continue }
+            if pos.line < self.scroll || pos.line > self.scroll + ix(canvas.height() as usize) { continue }
             for (i, g) in (0..).into_iter().zip(label.graphemes()) {
-                if pos.column < self.horizontal_scroll || pos.column + Ix::new(i as _) > self.horizontal_scroll + Ix::new(canvas.width() as usize) {continue}
+                if pos.column < self.horizontal_scroll || pos.column + ix(i as _) >= self.horizontal_scroll + ix(canvas.width() as usize) {continue}
                 let cell = &mut canvas[(
                     (pos.line - self.scroll).inner() as u16, 
                     (pos.column - self.horizontal_scroll).inner() as u16 + i,

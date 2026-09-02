@@ -10,6 +10,7 @@ pub mod highlight;
 pub mod main;
 pub mod query;
 pub mod locals;
+pub mod rulers;
 pub mod annotations;
 
 impl Document {
@@ -21,6 +22,7 @@ impl Document {
                 .unwrap_or_default()
         };
         self.main_draw(canvas.reborrow(), cursors);
+        self.draw_rulers(canvas.reborrow());
         self.draw_annotations(canvas.reborrow());
         self.draw_edge_indicators(canvas);
     }

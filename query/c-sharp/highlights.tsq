@@ -14,7 +14,7 @@
 ";" @o.group
 
 "using" @o.use
-(using_directive ";" @o.use)
+(using_directive ["static" "=" ";"] @o.use)
 
 (qualified_name "." @o.scope)
 
@@ -22,19 +22,20 @@
 "protected" @o.visibility.middle
 "private" @o.visibility.private
 
-"sealed" @o.implement
+"sealed" @i.attribute
 
-"static" @o.storage.static
+(modifier "static" @o.association)
 
-(base_list ":" @o.implement)
+(base_list [":" ","] @o.implement)
 
 (attribute_list ["[" "]"] @o.attribute)
 
 "namespace" @o.declare.module
 (namespace_declaration body: (declaration_list ["{" "}"] @o.declare.module))
 
-"class" @o.declare.type.struct
+["class" "struct"] @o.declare.type.struct
 (class_declaration body: (declaration_list ["{" "}"] @o.declare.type.struct))
+(struct_declaration body: (declaration_list ["{" "}"] @o.declare.type.struct))
 
 (predefined_type) @i.type.builtin.keyword
 ((predefined_type) @i.type.void @_ (#eq? @_ "void"))
@@ -44,16 +45,24 @@
 
 (method_declaration body: (block ["{" "}"] @o.declare.function))
 
+"operator" @o.declare.function.operator
+(operator_declaration parameters: (parameter_list ["(" "," ")"] @o.declare.function.operator))
+
 "this" @i.value.receiver
 (null_literal) @i.value.null
 
 (accessor_list ["{" "}"] @o.declare.function.property)
-(accessor_declaration ["get" "set"] @o.declare.function body: (block ["{" "}"] @o.declare.function))
+(accessor_declaration ["get" "set"] @o.declare.function body: (block ["{" "}"] @o.declare.function)? )
 
 (arrow_expression_clause "=>" @o.declare.function)
 (property_declaration ";" @o.declare.function)
 
 (local_declaration_statement ";" @o.declare.value)
+
+(nullable_type "?" @o.type.error)
+(array_rank_specifier ["[" "," "]"] @o.collection.list)
+
+(modifier "new" @o.declare_.priority_1)
 
 ; Expressions
 
@@ -89,6 +98,11 @@
 (assignment_expression ["<<=" ">>=" ">>>="] @o.sequence.assign)
 (expression_statement (assignment_expression) ";" @o.assign)
 
+(operator_declaration operator: ["+" "-" "*" "/" "%"] @o.arithmetic)
+(operator_declaration operator: ["==" "!=" "<" ">" "<=" ">="] @o.comparison)
+(operator_declaration operator: ["!" "~" "&" "|" "^"] @o.logical)
+(operator_declaration operator: ["<<" ">>" ">>>"] @o.sequence)
+
 (member_access_expression "." @o.access.field)
 (invocation_expression function: (member_access_expression "." @o.access.method))
 
@@ -99,6 +113,8 @@
 "typeof" @o.type
 (typeof_expression ["(" ")"] @o.type)
 
+(invocation_expression function: (_) @o.call.operator @_ (#eq? @_ nameof) (argument_list ["(" ")"] @o.call.operator))
+
 "var" @o.declare.value.variable
 
 "if" @o.branch.if
@@ -107,6 +123,8 @@
 
 "else" @o.branch.else
 (if_statement alternative: (block ["{" "}"] @o.branch.else))
+
+(conditional_expression ["?" ":"] @o.branch)
 
 "for" @o.loop.for
 (for_statement ["(" ";" ")"] @o.loop.for)
@@ -138,6 +156,7 @@
 
 (member_access_expression "." @o.access.method name: (identifier) @_ (#semantic? @_ Property))
 
+(member_access_expression expression: (predefined_type) "." @o.association)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ Struct) "." @o.association)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ "!static" Class) "." @o.association)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ Enum) "." @o.association)
@@ -155,6 +174,8 @@
 ((identifier) @i.value.local @_ (#semantic? @_ Variable))
 ((identifier) @i.value.parameter @_ (#semantic? @_ Parameter))
 ((identifier) @i.value.variant @_ (#semantic? @_ EnumMember))
+((identifier) @i.value.constant @_ (#semantic? @_ Constant))
+((identifier) @i.value.keyword @_ (#semantic? @_ Keyword) (#eq? @_ value))
 
 ((identifier) @i.function.method @_ (#semantic? @_ "!static" Method))
 ((identifier) @i.function.associated @_ (#semantic? @_ static Method))
@@ -164,5 +185,6 @@
 ((identifier) @i.type.struct @_ (#semantic? @_ Class "!static"))
 ((identifier) @i.type.struct @_ (#semantic? @_ Struct))
 ((identifier) @i.type.enum @_ (#semantic? @_ Enum))
+((identifier) @i.type.interface @_ (#semantic? @_ Interface))
 
 (attribute name: (identifier) @i.attribute_.priority_1)

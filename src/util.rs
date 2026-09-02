@@ -8,7 +8,7 @@ use tree_sitter::Node;
 
 use crate::{
     grapheme::GraphemeExt,
-    ix::{Byte, Column, Ix, Line}, rope::RopeSlice,
+    ix::{Byte, Column, Ix, Line, ix}, rope::RopeSlice,
 };
 
 pub fn leak<T>(value: T) -> &'static T {
@@ -236,12 +236,15 @@ pub macro Todo() {impl TodoTrait}
 
 #[auto_enum(Iterator)]
 pub fn word_splits(word: RopeSlice<'_>) -> impl Iterator<Item = Range<Ix<Byte>>> {
-    if word.byte_len() <= Ix::new(5)
-        && (word == *"usize" || word == *"isize" || word == *"uint") {
-            return [Ix::new(0)..Ix::new(1), Ix::new(1)..word.byte_len()].into_iter();
+    if word.byte_len() <= Ix::new(6) {
+        match &*word.to_string() {
+            "usize" | "isize" | "uint" => return [ix(0)..ix(1), ix(1)..word.byte_len()].into_iter(),
+            "sizeof" | "typeof" | "nameof" => return [ix(0)..ix(4), ix(4)..ix(6)].into_iter(),
+            _ => ()
         }
+    }
 
-    return iter::once(Ix::new(0)..word.byte_len());
+    return iter::once(ix(0)..word.byte_len());
 }
 
 

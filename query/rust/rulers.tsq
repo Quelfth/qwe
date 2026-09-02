@@ -1,0 +1,22 @@
+(use_list) @o.use
+
+(impl_item (declaration_list) @o.implement)
+(trait_item (declaration_list) @o.declare.trait)
+
+(struct_item (field_declaration_list) @o.declare.type.struct)
+
+(enum_variant_list) @o.declare.type.enum
+
+(function_item body: (block) @o.declare.function)
+(closure_expression body: (block) @o.declare.function)
+
+(for_expression body: (block) @o.loop)
+(while_expression body: (block) @o.loop)
+(loop_expression body: (block) @o.loop)
+
+(match_block) @o.branch.match
+
+(struct_expression [(type_name) (scoped_type_name)] (field_initializer_list) @o.call.type.struct)
+(struct_expression (self_type) (field_initializer_list) @o.call.type.self)
+
+(macro_invocation (token_tree) @o.call.macro.function)

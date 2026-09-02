@@ -1,4 +1,3 @@
-
 ; Identifiers
 
 "r#" @o.strop
@@ -632,6 +631,11 @@
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Union)) ("::" @o.generics.type.union)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ "!trait" TypeAlias)) ("::" @o.generics.type.alias)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
 (generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ trait TypeAlias)) ("::" @o.generics.type.artifact)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.artifact))
+(generic_type type: (scoped_name name: (name) @_ (#semantic? @_ Struct)) ("::" @o.generics.type.struct)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.struct))
+(generic_type type: (scoped_name name: (name) @_ (#semantic? @_ Enum)) ("::" @o.generics.type.enum)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.enum))
+(generic_type type: (scoped_name name: (name) @_ (#semantic? @_ Union)) ("::" @o.generics.type.union)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.union))
+(generic_type type: (scoped_name name: (name) @_ (#semantic? @_ "!trait" TypeAlias)) ("::" @o.generics.type.alias)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.alias))
+(generic_type type: (scoped_name name: (name) @_ (#semantic? @_ trait TypeAlias)) ("::" @o.generics.type.artifact)? type_arguments: (type_arguments ["<" "," ">"] @o.generics.type.artifact))
 
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 
@@ -671,6 +675,7 @@
 ((identifier) @i.macro.function @_ (#semantic? @_ Macro))
 ((identifier) @i.macro.function @_ (#semantic? @_ ProcMacro))
 (use_declaration (scoped_name (name (identifier) @i.macro.attribute @_ (#semantic? @_ Decorator))))
+(use_list (name (identifier) @i.macro.attribute @_ (#semantic? @_ Decorator)))
 
 (function_item name: (name) @_ (#semantic? @_ ProcMacro) (parameters ["(" "," ")"] @o.call.macro.function))
 

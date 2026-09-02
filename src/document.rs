@@ -35,6 +35,7 @@ pub mod tree;
 
 #[derive(Default)]
 pub struct Document {
+    pub byte_order_mark: bool,
     pub scroll: Ix<Line>,
     pub horizontal_scroll: Ix<Column>,
     pub view_height: Mutex<Ix<Line>>,
@@ -57,8 +58,11 @@ impl Document {
         text: impl AsRef<str>,
         cursors: Option<CursorState>,
     ) -> Self {
-        let text: Rope = text.as_ref().into();
+        let text = text.as_ref();
+        let (text, byte_order_mark) = text.strip_prefix("\u{feff}").map(|text| (text, true)).unwrap_or((text, false));
+        let text: Rope = text.into();
         Self {
+            byte_order_mark,
             tree: lang.map(|lang| None::<MetaTree>.parse(Some(&QueryCx::empty()), lang, &text, None).unwrap()),
             language: lang,
             scroll: Ix::new(0),

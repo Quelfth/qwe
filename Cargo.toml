@@ -34,7 +34,7 @@ jiff = "0.2.23"
 strum = { version = "0.28.0", features = ["derive"] }
 arc-swap = "1.9.1"
 extension-traits = "0.2.3"
-expanda = "0.4.5"
+expanda = "0.5.0"
 futures-lite = "2.6.1"
 derive_more = { version = "2.1.1", features = ["display", "from", "error"] }
 

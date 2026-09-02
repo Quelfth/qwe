@@ -53,7 +53,8 @@ impl Editor {
             doc.declare_saved();
             self.bg_docs.by_path(&path).unwrap()
         };
-        _= fs::write(&path, doc.text().to_string().as_bytes());
+
+        _= fs::write(&path, format!("{}{}", if doc.byte_order_mark {"\u{feff}"} else {""}, doc.text()).as_bytes());
         if let Some(cx) = &self.cmn.lsp
             && let Some(lang) = doc.language()
         {

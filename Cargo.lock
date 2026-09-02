@@ -538,18 +538,18 @@ dependencies = [
 
 [[package]]
 name = "expanda"
-version = "0.4.5"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a6022dd715c2c07d30c50bf198d9b54d62c90d5965dd3c9f30bd06f975d5c4a"
+checksum = "7b13484b29ae9249a7f7a671723d08b0b6e7eb1dc63812ef06dea268130d35cb"
 dependencies = [
  "expanda-macros",
 ]
 
 [[package]]
 name = "expanda-macros"
-version = "0.4.5"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f227be533ebc31db79cb394ccc7849ada4fbdd538da84954c519f419a9c4b6f"
+checksum = "70befd46326354a97b292a28b91e220e44b44dc26b77c56587f112e476bdcd3a"
 
 [[package]]
 name = "ext-trait"
