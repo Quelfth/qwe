@@ -4,8 +4,8 @@ use crossterm::{ExecutableCommand, clipboard::CopyToClipboard};
 
 use crate::{
     aprintln::aprintln, editor::{
-        Editor, cursors::Cursors, finder::Finder, inspect::Inspector, jump_labels::JumpLabels, log::LogViewer, picker::Picker
-    }, ix::Ix, lsp::channel::EditorToLspMessage, terminal_size::terminal_size, timeline::TimeDirection,
+        Editor, cursors::{CursorSet, Cursors, line_select::LineCursor, select::{SelectCursor, SelectCursors}}, finder::Finder, inspect::Inspector, jump_labels::JumpLabels, log::LogViewer, picker::Picker
+    }, ix::{Ix, ix}, lsp::channel::EditorToLspMessage, pos::Pos, terminal_size::terminal_size, timeline::TimeDirection
 };
 
 mod insert;
@@ -239,5 +239,42 @@ impl Editor {
         if let Some(file) = self.cmn.file_future.pop() {
             _= self.open_file_doc(file);
         }
+    }
+
+    pub fn mouse_select_new(&mut self) {
+        let (row, col) = self.mouse_pos;
+        let row = ix(row as _) + self.doc.scroll;
+        let col = ix((col.saturating_sub(self.doc.gutter_width())) as _) + self.doc.horizontal_scroll;
+        self.doc.cursors = Some(SelectCursors::one(SelectCursor::one_pos(Pos { line: row, column: col })).into());
+    }
+
+    pub fn mouse_select_continue(&mut self) {
+        let Some(start) = self.doc.main_cursor_pos() else {
+            self.mouse_select_new();
+            return;
+        };
+        let (row, col) = self.mouse_pos;
+        let row = ix(row as _) + self.doc.scroll;
+        let col = ix((col.saturating_sub(self.doc.gutter_width())) as _) + self.doc.horizontal_scroll;
+        let end = Pos { line: row, column: col };
+        let (start, end) = if start > end { (end, start) } else { (start, end) };
+        self.doc.cursors = Some(SelectCursors::one(SelectCursor::range(start..end, self.doc.text())).into());
+    }
+
+    pub fn mouse_line_select_new(&mut self) {
+        let (row, _) = self.mouse_pos;
+        let row = ix(row as _) + self.doc.scroll;
+        self.doc.cursors = Some(CursorSet::one(LineCursor { line: row, height: ix(0) }).into())
+    }
+
+    pub fn mouse_line_select_continue(&mut self) {
+        let Some(start) = self.doc.main_cursor_pos() else {
+            self.mouse_select_new();
+            return;
+        };
+        let (row, _) = self.mouse_pos;
+        let row = ix(row as _) + self.doc.scroll;
+
+        self.doc.cursors = Some(CursorSet::one(LineCursor { line: start.line.min(row), height: start.line.abs_diff(row) }).into());
     }
 }

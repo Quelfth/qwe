@@ -45,6 +45,12 @@ pub enum EditorAction {
 
     ViewDiagnostics,
     Lsp(LspAction),
+
+    MouseSelectNew,
+    MouseSelectContinue,
+
+    MouseLineSelectNew,
+    MouseLineSelectContinue,
 }
 
 impl From<LspAction> for EditorAction {

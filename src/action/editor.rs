@@ -24,6 +24,10 @@ impl Action<&mut Editor> for EditorAction {
                 LspAction::Goto(kind) => ed.goto(kind),
                 LspAction::Refresh => ed.refresh_lsp(),
             }
+            EditorAction::MouseSelectNew => ed.mouse_select_new(),
+            EditorAction::MouseSelectContinue => ed.mouse_select_continue(),
+            EditorAction::MouseLineSelectNew => ed.mouse_line_select_new(),
+            EditorAction::MouseLineSelectContinue => ed.mouse_line_select_continue(),
         }
 
         None

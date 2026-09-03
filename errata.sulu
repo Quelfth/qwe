@@ -326,7 +326,7 @@ i.function.destructor = b f.never;
 
 .error = #ff007f;
 .warning = #bfff01;
-.info = #01ffd3;
-.hint = #00b5ff;
+.info = #01ff24;
+.hint = #604040;
 
 .context = #302020;

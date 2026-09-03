@@ -86,6 +86,8 @@
 
 (modifier "new" @o.declare_.priority_1)
 
+(discard) @o.wildcard
+
 ; Expressions
 
 (implicit_object_creation_expression "new" @o.initialize (_ ["(" "," ")"] @o.initialize))
@@ -173,11 +175,13 @@
 "switch" @o.branch.match
 (switch_statement ["(" ")"] @o.branch.match)
 (switch_body ["{" "}"] @o.branch.match)
+(switch_expression ["{" "," "}"] @o.branch.match)
 
 "case" @o.branch.case
 (switch_section ":" @o.branch.case)
 (switch_section ":" . (block ["{" "}"] @o.branch.case))
 (switch_section "default" @o.branch.case)
+(switch_expression_arm "=>" @o.branch.case)
 
 "try" @o.error.try
 (try_statement body: (block ["{" "}"] @o.error.try))

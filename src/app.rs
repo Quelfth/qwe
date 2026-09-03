@@ -16,6 +16,8 @@ pub trait AppState {
 
     fn on_key_or_char(&mut self, event: KeyOrChar) -> io::Result<Option<AppSignal>> { _=event; Ok(None) }
 
+    fn on_mouse(&mut self, pos: (u16, u16)) { _= pos; }
+
     fn on_paste(&mut self, text: String) -> io::Result<()> { _=text; Ok(()) }
 }
 

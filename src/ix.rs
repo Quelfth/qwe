@@ -49,6 +49,10 @@ impl<U> Ix<U> {
         Some(Self::new(self.0.checked_sub(other.0)?))
     }
 
+    pub fn abs_diff(self, other: Self) -> Self {
+        ix(self.0.abs_diff(other.0))
+    }
+
     pub const ZERO: Self = Ix(0, PhantomData);
 }
 

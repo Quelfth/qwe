@@ -191,6 +191,10 @@ impl AppState for Editor {
         self.on_key_or_char(key)
     }
 
+    fn on_mouse(&mut self, pos: (u16, u16)) {
+        self.on_mouse(pos)
+    }
+
     fn on_paste(&mut self, text: String) -> io::Result<()> {
         self.on_paste(text)
     }

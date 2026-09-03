@@ -107,6 +107,7 @@ pub fn run(InitState{ doc, pos, autosave }: InitState) -> io::Result<()> {
                         handle_signal!(state.on_key_or_char(key)?);
                     },
                 Event::Mouse(event) => {
+                    state.on_mouse((event.row, event.column));
                     if let Some(key) = Key::from_mouse_event(event) {
                         handle_signal!(state.on_key_or_char(KeyOrChar::Key(key))?);
                     }

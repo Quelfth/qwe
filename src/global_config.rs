@@ -90,7 +90,14 @@ impl Default for Keymaps {
             [scroll left] => Scroll::Left(4),
             [ctrl alt a] => Scroll::Left(10),
         };
+        let mouse = keymap! {
+            [left click] => EditorAction::MouseSelectNew,
+            [left drag] => EditorAction::MouseSelectContinue,
+            [alt left click] => EditorAction::MouseLineSelectNew,
+            [alt left drag] => EditorAction::MouseLineSelectContinue,
+        };
         let common_insert = keymap!{
+            ..mouse,
             [esc] => Insert::Select,
             [backspace] => Insert::Backspace,
             [alt backspace] => Insert::ReverseBackspace,
@@ -120,6 +127,7 @@ impl Default for Keymaps {
             use EditorAction::*;
             keymap! {
                 ..lsp_select,
+                ..mouse,
                 [ctrl o] => OpenFile,
                 ['('] => PreviousFile,
                 [')'] => NextFile,

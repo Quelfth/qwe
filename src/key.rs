@@ -1,5 +1,5 @@
 #![allow(unused)]
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use strum::EnumCount;
 
 #[derive(Copy, Clone, PartialEq, Eq, EnumCount)]
@@ -294,6 +294,12 @@ pub enum Key {
     ScrollDown,
     ScrollLeft,
     ScrollRight,
+
+    LeftClick,
+    LeftDrag,
+
+    AltLeftClick,
+    AltLeftDrag,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -514,6 +520,8 @@ impl Key {
             MouseEventKind::ScrollUp => Key::ScrollUp,
             MouseEventKind::ScrollLeft => Key::ScrollLeft,
             MouseEventKind::ScrollRight => Key::ScrollRight,
+            MouseEventKind::Down(MouseButton::Left) => if event.modifiers.contains(KeyModifiers::ALT) {Key::AltLeftClick} else {Key::LeftClick},
+            MouseEventKind::Drag(MouseButton::Left) => if event.modifiers.contains(KeyModifiers::ALT) {Key::AltLeftDrag} else {Key::LeftDrag},
             _ => None::<!>?
         })
     }
@@ -1016,4 +1024,9 @@ pub macro key {
     (scroll down) => {$crate::key::Key::ScrollDown},
     (scroll left) => {$crate::key::Key::ScrollLeft},
     (scroll right) => {$crate::key::Key::ScrollRight},
+
+    (left click) => {$crate::key::Key::LeftClick},
+    (left drag) => {$crate::key::Key::LeftDrag},
+    (alt left click) => {$crate::key::Key::AltLeftClick},
+    (alt left drag) => {$crate::key::Key::AltLeftDrag},
 }

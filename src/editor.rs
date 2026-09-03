@@ -55,6 +55,7 @@ pub struct Editor {
     bg_docs: Documents,
     pub gadget: Option<Box<dyn Gadget>>,
     pub cmn: CommonState,
+    pub mouse_pos: (u16, u16),
 }
 
 impl Editor {
@@ -277,6 +278,10 @@ impl Editor {
         Ok(signal)
     }
 
+    pub fn on_mouse(&mut self, pos: (u16, u16)) {
+        self.mouse_pos = pos;
+    }
+
     pub fn on_paste(&mut self, text: String) -> io::Result<()> {
         self.open_scratch_doc_with(text);
         self.upkeep()
@@ -356,6 +361,7 @@ impl Editor {
             bg_docs,
             gadget: None,
             cmn,
+            mouse_pos: (0, 0),
         }
     }
 }

@@ -21,23 +21,23 @@ impl Severity {
 
     #[culit]
     pub fn fg(self) -> Color {
+        use Severity::*;
         match self {
-            Severity::Err => 0xff007frgb,
-            Severity::Warn => 0xbfff01rgb,
-            Severity::Info => 0x00ff7frgb,
-            Severity::Hint => 0x00b5ffrgb,
-            Severity::Context => 0x906060rgb,
+            Err => 0xff007frgb,
+            Warn => 0xbfff01rgb,
+            Info => 0x01ff24rgb,
+            Hint | Context => 0x906060rgb,
         }
     }
 
     #[culit]
     pub fn bg(self) -> Color {
+        use Severity::*;
         match self {
-            Severity::Err => 0x300015rgb,
-            Severity::Warn => 0x203000rgb,
-            Severity::Info => 0x005042rgb,
-            Severity::Hint => 0x003a52rgb,
-            Severity::Context => 0x302020rgb,
+            Err => 0x300015rgb,
+            Warn => 0x203000rgb,
+            Info => 0x003010rgb,
+            Hint | Context => 0x302020rgb,
         }
     }
 
