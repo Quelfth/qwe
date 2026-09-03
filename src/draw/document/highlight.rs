@@ -4,7 +4,7 @@ use tree_sitter::QueryCursor;
 
 use crate::{
     document::{Document, diagnostics::Severity, tree::MetaQueryCapture},
-    ix::{Byte, Ix},
+    ix::{Byte, Ix, ix},
     lang::{Highlights, Zebra},
     ts::QueryCx,
     util::{CharClass, MapBounds, word_splits},
@@ -63,6 +63,7 @@ impl Scope {
                 Severity::Warn => "warning",
                 Severity::Info => "info",
                 Severity::Hint => "hint",
+                Severity::Context => "context",
             }
             .to_owned(),
         ])
@@ -172,7 +173,12 @@ impl Document {
         }
 
         for (range, diagnostic) in self.diagnostics.ranges() {
-            if self.text().line_of_byte(range.start) != self.text().line_of_byte(range.end) {continue}
+            let start = self.text().line_of_byte(range.start);
+            let end = self.text().pos_of_byte_pos(range.end);
+            if let Some(start) = start && let Some(end) = end
+                && !(end.line == start || end.column == ix(0) && end.line.saturating_sub(ix(1)) == start) {
+                    continue
+                }
             highlight_scopes.push(Highlight {
                 range,
                 scope: Scope::diagnostic(diagnostic.severity),

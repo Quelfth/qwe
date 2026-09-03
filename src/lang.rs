@@ -6,7 +6,7 @@ use mutx::Mutex;
 use serde_json::{Value, json};
 use tree_sitter::Query;
 
-use crate::{lsp::SpecialBehavior, ts::QuerySource, util::leak};
+use crate::{document::diagnostics::Severity, lsp::SpecialBehavior, ts::QuerySource, util::leak};
 
 #[declare_item(LANGUAGE)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -35,6 +35,18 @@ pub struct LangLspInfo {
     pub args: &'static [&'static str],
     pub special_init: SpecialBehavior,
     pub options: Option<Value>,
+    pub severity_map: fn(lsp_types::DiagnosticSeverity) -> Severity,
+}
+
+fn default_severity_map(severtity: lsp_types::DiagnosticSeverity) -> Severity {
+    use lsp_types::DiagnosticSeverity;
+    match severtity {
+        DiagnosticSeverity::ERROR => Severity::Err,
+        DiagnosticSeverity::WARNING => Severity::Warn,
+        DiagnosticSeverity::INFORMATION => Severity::Info,
+        DiagnosticSeverity::HINT => Severity::Hint,
+        _ => Severity::Warn,
+    }
 }
 
 impl Language {
@@ -76,6 +88,7 @@ impl Language {
                 args: &[],
                 special_init: SpecialBehavior::NoOp,
                 options: None,
+                severity_map: default_severity_map,
             }),
             Language::Rust => Some(LangLspInfo {
                 id: "rust",
@@ -86,7 +99,15 @@ impl Language {
                     "check": {
                         "command": "clippy",
                     },
-                }})
+                }}),
+                severity_map: |severity| {
+                    match severity {
+                        lsp_types::DiagnosticSeverity::ERROR => Severity::Err,
+                        lsp_types::DiagnosticSeverity::WARNING => Severity::Warn,
+                        lsp_types::DiagnosticSeverity::HINT => Severity::Context,
+                        _ => Severity::Warn,
+                    }
+                },
             }),
             Language::CSharp => Some(LangLspInfo {
                 id: "cs",
@@ -94,6 +115,7 @@ impl Language {
                 args: &["--stdio"],
                 special_init: SpecialBehavior::Roslyn,
                 options: None,
+                severity_map: default_severity_map,
             }),
             Language::Kotlin => Some(LangLspInfo {
                 id: "kotlin",
@@ -101,6 +123,7 @@ impl Language {
                 args: &["--stdio"],
                 special_init: SpecialBehavior::NoOp,
                 options: None,
+                severity_map: default_severity_map,
             }),
             _ => None,
         }

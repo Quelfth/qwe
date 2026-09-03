@@ -4,7 +4,7 @@ use tower::{Layer, Service};
 use crate::log::{DisplayLog, log, log_msg, LogCategory};
 
 mod pretty_json;
-use pretty_json::pretty_json;
+pub use pretty_json::pretty_json;
 
 #[derive(Clone, Default)]
 pub struct LogLayer;

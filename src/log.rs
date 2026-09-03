@@ -56,6 +56,12 @@ impl<T> DisplayLog<T, &'static str> {
     }
 }
 
+impl<T, D> DisplayLog<T, D> {
+    pub fn debug(message: T, details: D) -> Self {
+        Self { category: LogCategory::Debug, message, details }
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum LogCategory {
     Debug,

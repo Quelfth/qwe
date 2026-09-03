@@ -6,11 +6,12 @@ use std::{
     time::Duration,
 };
 
+use lsp_types::Registration;
 use tokio::time::timeout;
 
 use crate::{
     lang::Language,
-    log::{log, log_err},
+    log::{DisplayLog, LogCategory, log, log_err, log_msg}, lsp::server::DiagnosticHandler,
 };
 
 use super::{
@@ -22,6 +23,7 @@ use super::{
     },
     ClientMessage,
     Server,
+    log::pretty_json,
 };
 
 mod handle_message;
@@ -79,6 +81,25 @@ pub async fn lsp_thread(channels: LspChannels) -> Result<(), Error> {
                         server.docs.insert(uri.clone());
                         cx.tx.send(LspToEditorMessage::Diagnostics { uri, diagnostics })?;
                     }
+                    ClientMessage::RegisterCapability(Registration { id, method, register_options }) => {
+                        match &*method {
+                            "textDocument/diagnostic" => {try {
+                                let options = register_options.as_ref()?.as_object()?;
+                                server.diagnostic_handlers.push(DiagnosticHandler {
+                                    registration_id: Some(id.clone()),
+                                    identifier: options.get("identifier")?.as_str()?.to_owned(),
+                                    inter_file_dependencies: options.get("interFileDependencies").and_then(|o| o.as_bool()).unwrap_or_default(),
+                                    workspace: options.get("workspaceDiagnostics").and_then(|o| o.as_bool()).unwrap_or_default(),
+                                });
+                            };},
+                            _ => log_msg!("ignored registration of unsupported method {method}"),
+                        }
+                        log!(DisplayLog {
+                            category: LogCategory::Debug,
+                            message: "register lsp capability",
+                            details: format!("{id}\n{method}\n{}", register_options.map(|o| pretty_json(&o)).unwrap_or_default()),
+                        })
+                    },
                 }
             }
         }

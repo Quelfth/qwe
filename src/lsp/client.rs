@@ -13,6 +13,7 @@ pub enum ClientMessage {
         diagnostics: Vec<Diagnostic>,
     },
     SemanticTokensRefresh,
+    RegisterCapability(Registration),
 }
 
 pub struct Client {
@@ -95,9 +96,14 @@ impl LanguageClient for Client {
         ControlFlow::Continue(())
     }
 
-    fn register_capability(&mut self, _: RegistrationParams) -> Response<()> {
-        log_msg!("register capability");
-        Box::pin(async { Ok(()) })
+    fn register_capability(&mut self, params: RegistrationParams) -> Response<()> {
+        let channel = self.channel.clone();
+        Box::pin(async move {
+            for registration in params.registrations {
+                channel.send(ClientMessage::RegisterCapability(registration)).unwrap();
+            }
+            Ok(())
+        })
     }
 
     fn unregister_capability(&mut self, _: UnregistrationParams) -> Response<()>{
@@ -110,7 +116,7 @@ impl LanguageClient for Client {
         Box::pin(async { Ok(()) })
     }
 
-    fn inlay_hint_refresh(&mut self, _ : ()) -> Response<()>{
+    fn inlay_hint_refresh(&mut self, _: ()) -> Response<()>{
         log_msg!("inlay hint refresh");
         Box::pin(async { Ok(()) })
     }

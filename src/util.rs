@@ -236,10 +236,10 @@ pub macro Todo() {impl TodoTrait}
 
 #[auto_enum(Iterator)]
 pub fn word_splits(word: RopeSlice<'_>) -> impl Iterator<Item = Range<Ix<Byte>>> {
-    if word.byte_len() <= Ix::new(6) {
+    if word.byte_len() <= Ix::new(8) {
         match &*word.to_string() {
             "usize" | "isize" | "uint" => return [ix(0)..ix(1), ix(1)..word.byte_len()].into_iter(),
-            "sizeof" | "typeof" | "nameof" => return [ix(0)..ix(4), ix(4)..ix(6)].into_iter(),
+            "sizeof" | "typeof" | "nameof" | "readonly" => return [ix(0)..ix(4), ix(4)..word.byte_len()].into_iter(),
             _ => ()
         }
     }

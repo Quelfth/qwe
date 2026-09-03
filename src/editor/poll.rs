@@ -79,7 +79,7 @@ impl AppState for Editor {
                                                             Utf16Pos::from_lsp_pos(end),
                                                         ),
                                                     Diagnostic {
-                                                        severity: Severity::from_lsp(severity),
+                                                        severity: Severity::from_lsp(doc.language(), severity),
                                                         message,
                                                     },
                                                 )
@@ -96,7 +96,7 @@ impl AppState for Editor {
                                         message,
                                         ..
                                     }| {
-                                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(severity), message })
+                                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(info.lang, severity), message })
                                     }
                                 ).collect();
                             },

@@ -1,0 +1,19 @@
+(identifier) @reference
+
+(function_definition
+    parameters: (parameters (identifier) @declare.parameter)
+    body: (_) @scope
+)
+
+(variable_declaration
+    (assignment_statement
+        (variable_list (identifier) @declare.local)
+    )
+) @scope.after
+
+(for_statement
+    clause: (for_generic_clause
+        (variable_list (identifier) @declare.local)
+    )
+    body: (_) @scope
+)

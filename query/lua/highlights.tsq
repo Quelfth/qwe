@@ -1,4 +1,3 @@
-
 (string_content) @l.string
 "\"" @l.string.quote
 
@@ -16,9 +15,11 @@
 (arguments "(" (table_constructor ["{" "," "}"] @o.construct.map_.priority_2))
 
 (function_call name: (identifier) @i.function)
-(function_call name: (dot_index_expression field: (identifier) @i.function))
+(function_call name: (dot_index_expression field: (identifier) @i.function_.priority_1))
+(function_call name: (method_index_expression) arguments: (arguments ["(" "," ")"] @o.call.function.method))
 
 (dot_index_expression "." @o.access.field)
+(method_index_expression ":" @o.access.method)
 
 "local" @o.declare.value
 
@@ -27,3 +28,25 @@
 "function" @o.declare.function
 (parameters ["(" "," ")"] @o.call.function)
 (function_definition "end" @o.declare.function)
+
+["if" "then"] @o.branch.if
+(if_statement "end" @o.branch.if)
+
+"for" @o.loop.for
+(for_statement ["do" "end"] @o.loop.for)
+(for_generic_clause "in" @o.loop.for)
+(for_generic_clause (variable_list "," @o.loop.for))
+
+(dot_index_expression field: (identifier) @i.value.field)
+(method_index_expression method: (identifier) @i.function.method)
+
+["+" "-" "*" "/" "//" "%" "^"] @o.arithmetic
+["&" "|" "~" "not"] @o.logical
+["<<" ">>" "#" ".."] @o.sequence
+["==" "~=" "<" ">" "<=" ">="] @o.comparison
+["and" "or"] @o.branch
+
+"return" @o.control.return
+
+((identifier) @i.value.parameter @_ (#local? @_ parameter))
+((identifier) @i.value.local @_ (#local? @_ local))

@@ -1,5 +1,5 @@
 
-(type_argument_list ["<" ">"] @x.angle-bracket)
+  (type_argument_list ["<" ">"] @x.angle-bracket)
 
 (comment) @comment
 
@@ -24,7 +24,18 @@
 
 "sealed" @i.attribute
 
+"override" @o.override
+
+"params" @o.sequence
+
+"default" @i.value.keyword
+"this" @i.reference
+
+["out" "ref" "readonly"] @o.storage
+(argument "in" @o.storage)
+
 (modifier "static" @o.association)
+(modifier "const" @o.const)
 
 (base_list [":" ","] @o.implement)
 
@@ -37,13 +48,24 @@
 (class_declaration body: (declaration_list ["{" "}"] @o.declare.type.struct))
 (struct_declaration body: (declaration_list ["{" "}"] @o.declare.type.struct))
 
+(class_declaration (modifier "static" @o.declare.module_.priority_1) "class" @o.declare.module_.priority_1 body: (declaration_list ["{" "}"] @o.declare.module_.priority_1))
+
+"enum" @o.declare.type.enum
+(enum_member_declaration_list ["{" "," "}"] @o.declare.type.enum)
+
 (predefined_type) @i.type.builtin.keyword
-((predefined_type) @i.type.void @_ (#eq? @_ "void"))
+((predefined_type) @i.type.void @_ (#eq? @_ void))
+((predefined_type) @i.reference @_ (#any-of? @_ string object))
 
 (field_declaration ";" @o.declare.value)
 (variable_declarator "=" @o.declare.value)
+(parameter "=" @o.declare.value.parameter)
+
+(constructor_declaration name: (identifier) @i.function.constructor.declaration parameters: (parameter_list ["(" "," ")"] @o.call.function.constructor.declaration_.priority_1))
 
 (method_declaration body: (block ["{" "}"] @o.declare.function))
+(constructor_declaration body: (block ["{" "}"] @o.declare.function))
+(local_function_statement body: (block ["{" "}"] @o.declare.function))
 
 "operator" @o.declare.function.operator
 (operator_declaration parameters: (parameter_list ["(" "," ")"] @o.declare.function.operator))
@@ -66,22 +88,24 @@
 
 ; Expressions
 
-"new" @o.constructor
-
 (implicit_object_creation_expression "new" @o.initialize (_ ["(" "," ")"] @o.initialize))
 
-(implicit_array_creation_expression ["new" "[" "]"] @o.collection.list_.priority_1 (_ ["{" "," "}"] @o.collection.list))
+(implicit_array_creation_expression ["new" "[" "]"] @o.collection.list (_ ["{" "," "}"] @o.collection.list))
+(array_creation_expression "new" @o.collection.list (_ ["{" "," "}"] @o.collection.list))
 
-(object_creation_expression (argument_list ["(" "," ")"] @o.call.type.struct))
+(object_creation_expression "new" @o.call.type.struct (argument_list ["(" "," ")"] @o.call.type.struct))
 
 (parenthesized_expression ["(" ")"] @o.group)
 (block ["{" "}"] @o.group)
+
+["not" "or" "and"] @o.pattern
 
 (binary_expression ["+" "-" "*" "/" "%"] @o.arithmetic)
 (binary_expression ["==" "!=" "<" ">" "<=" ">="] @o.comparison)
 (binary_expression ["<<" ">>" ">>>"] @o.sequence)
 (binary_expression ["&" "|" "^"] @o.logical)
 (binary_expression ["&&" "||"] @o.branch)
+(binary_expression "??" @o.error)
 
 (prefix_unary_expression ["!" "~"] @o.logical)
 (prefix_unary_expression ["+" "-"] @o.arithmetic)
@@ -106,9 +130,17 @@
 (member_access_expression "." @o.access.field)
 (invocation_expression function: (member_access_expression "." @o.access.method))
 
+(member_binding_expression "." @o.access.field)
+(conditional_access_expression "?" @o.error.propogate)
+(invocation_expression function: (conditional_access_expression (member_binding_expression "." @o.access.method)))
+
+(postfix_unary_expression "!" @o.error.forgive)
+
 (bracketed_argument_list ["[" "," "]"] @o.sequence)
 (parameter_list ["(" "," ")"] @o.call.function.method)
 (argument_list ["(" "," ")"] @o.call.function.method)
+
+(cast_expression ["(" ")"] @o.type)
 
 "typeof" @o.type
 (typeof_expression ["(" ")"] @o.type)
@@ -134,6 +166,10 @@
 (foreach_statement ["(" "in" ")"] @o.loop.for)
 (foreach_statement body: (block ["{" "}"] @o.loop.for))
 
+"while" @o.loop.while
+(while_statement ["(" ")"] @o.loop.while)
+(while_statement body: (block ["{" "}"] @o.loop.while))
+
 "switch" @o.branch.match
 (switch_statement ["(" ")"] @o.branch.match)
 (switch_body ["{" "}"] @o.branch.match)
@@ -143,10 +179,20 @@
 (switch_section ":" . (block ["{" "}"] @o.branch.case))
 (switch_section "default" @o.branch.case)
 
+"try" @o.error.try
+(try_statement body: (block ["{" "}"] @o.error.try))
+"catch" @o.error.catch
+(catch_declaration ["(" ")"] @o.error.catch)
+(catch_clause body: (block ["{" "}"] @o.error.catch))
+
 ["is" "as"] @o.branch.match
+(property_pattern_clause ["{" "," "}"] @o.branch.match)
 
 "return" @o.control.return
 (return_statement ";" @o.control.return)
+
+"yield" @o.control.yield
+(yield_statement ["return" ";"] @o.control.yield)
 
 "break" @o.control.break
 (break_statement ";" @o.control.break)
@@ -155,14 +201,30 @@
 (generic_name (identifier) @_ (#semantic? @_ Method) (type_argument_list ["<" "," ">"] @o.call.function.method))
 
 (member_access_expression "." @o.access.method name: (identifier) @_ (#semantic? @_ Property))
+(member_binding_expression "." @o.access.method name: (identifier) @_ (#semantic? @_ Property))
 
 (member_access_expression expression: (predefined_type) "." @o.association)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ Struct) "." @o.association)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ "!static" Class) "." @o.association)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ Enum) "." @o.association)
+(member_access_expression expression: (identifier) @_ (#semantic? @_ Interface) "." @o.association)
+(member_access_expression expression: (member_access_expression name: (identifier) @_ (#semantic? @_ Struct)) "." @o.association)
+(member_access_expression expression: (member_access_expression name: (identifier) @_ (#semantic? @_ "!static" Class)) "." @o.association)
+(member_access_expression expression: (member_access_expression name: (identifier) @_ (#semantic? @_ Enum)) "." @o.association)
+(member_access_expression expression: (member_access_expression name: (identifier) @_ (#semantic? @_ Interface)) "." @o.association)
 
 (member_access_expression expression: (identifier) @_ (#semantic? @_ Namespace) "." @o.scope)
 (member_access_expression expression: (identifier) @_ (#semantic? @_ static Class) "." @o.scope)
+(member_access_expression expression: (member_access_expression name: (identifier) @_ (#semantic? @_ Namespace)) "." @o.scope)
+(member_access_expression expression: (member_access_expression name: (identifier) @_ (#semantic? @_ static Class)) "." @o.scope)
+
+;(qualified_name (predefined_type) "." @o.association)
+(qualified_name (identifier) @_ (#semantic? @_ Struct) "." @o.association_.priority_1)
+(qualified_name (identifier) @_ (#semantic? @_ "!static" Class) "." @o.association_.priority_1)
+(qualified_name (identifier) @_ (#semantic? @_ Enum) "." @o.association_.priority_1)
+(qualified_name (identifier) @_ (#semantic? @_ Interface) "." @o.association_.priority_1)
+
+(invocation_expression function: (member_access_expression name: (identifier) @_ (#semantic? @_ ExtensionMethod)) arguments: (argument_list ["(" "," ")"] @o.call.function.method.extension))
 
 ((identifier) @i.reference @_ (#semantic? @_ "!static" Class))
 
@@ -178,6 +240,7 @@
 ((identifier) @i.value.keyword @_ (#semantic? @_ Keyword) (#eq? @_ value))
 
 ((identifier) @i.function.method @_ (#semantic? @_ "!static" Method))
+((identifier) @i.function.method.extension @_ (#semantic? @_ ExtensionMethod))
 ((identifier) @i.function.associated @_ (#semantic? @_ static Method))
 ((identifier) @i.function.property @_ (#semantic? @_ Property))
 ((identifier) @i.function.property.associated @_ (#semantic? @_ static Property))

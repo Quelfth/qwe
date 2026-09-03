@@ -39,6 +39,7 @@ pub struct Server {
     pub(super) socket: ServerSocket,
     pub(super) caps: ServerCaps,
     pub(super) client_channel: UnboundedReceiver<ClientMessage>,
+    pub(super) diagnostic_handlers: Vec<DiagnosticHandler>,
     pub(super) docs: HashSet<Url>,
     pub(super) tx: LspToEditorSender,
     pub(super) _process: Child,
@@ -47,6 +48,17 @@ pub struct Server {
 #[derive(Clone, Default)]
 pub(super) struct ServerCaps {
     semtoks: bool,
+}
+
+#[derive(Clone, Default)]
+pub(super) struct DiagnosticHandler {
+    #[allow(unused)]
+    pub registration_id: Option<String>,
+    pub identifier: String,
+    #[allow(unused)]
+    pub inter_file_dependencies: bool,
+    #[allow(unused)]
+    pub workspace: bool,
 }
 
 impl From<&ServerCapabilities> for ServerCaps {
@@ -111,6 +123,7 @@ impl Server {
             join,
             caps: Default::default(),
             client_channel: recv,
+            diagnostic_handlers: Default::default(),
             docs: Default::default(),
             socket,
             tx,
@@ -287,5 +300,52 @@ impl Server {
                 tokens: semtoks,
             }).unwrap();
         });
+    }
+
+    pub fn document_diagnostics(&mut self, doc: Url) -> Vec<impl use<> + Future<Output = Result<DocumentDiagnosticReportResult, async_lsp::Error>>> {
+        let mut futures = Vec::new();
+
+        for DiagnosticHandler { identifier, .. } in &self.diagnostic_handlers {
+            let f = self.socket.document_diagnostic(DocumentDiagnosticParams {
+                text_document: TextDocumentIdentifier { uri: doc.clone() },
+                identifier: Some(identifier.clone()),
+                previous_result_id: None,
+                work_done_progress_params: WorkDoneProgressParams { work_done_token: None },
+                partial_result_params: PartialResultParams { partial_result_token: None },
+            });
+
+            futures.push(f);
+        }
+
+        futures
+    }
+
+    pub fn refresh_diagnostics(&mut self, doc: Url) {
+        let tx = self.tx.clone();
+        for future in self.document_diagnostics(doc.clone()) {
+            let tx = tx.clone();
+            let doc = doc.clone();
+            tokio::spawn(async move {
+                let Ok(report) = future.await.map_err(|e| log!(e)) else {return};
+                match report {
+                    DocumentDiagnosticReportResult::Report(report) => {
+                        match report {
+                            DocumentDiagnosticReport::Full(report) => {
+                                let RelatedFullDocumentDiagnosticReport {
+                                    related_documents: _,
+                                    full_document_diagnostic_report: FullDocumentDiagnosticReport { result_id: _, items },
+                                } = report;
+                                tx.send(LspToEditorMessage::Diagnostics {
+                                    uri: doc.clone(),
+                                    diagnostics: items,
+                                }).unwrap();
+                            },
+                            DocumentDiagnosticReport::Unchanged(_) => log_msg!("unchanged diagnostics"),
+                        }
+                    },
+                    DocumentDiagnosticReportResult::Partial(_) => log_msg!("unhandled partial diagnostics"),
+                }
+            });
+        }
     }
 }

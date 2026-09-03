@@ -13,7 +13,8 @@ impl LspThread {
                 },
                 content_changes: changes,
             }));
-            server.refresh_semantic_tokens(uri);
+            server.refresh_semantic_tokens(uri.clone());
+            server.refresh_diagnostics(uri);
         }
         Ok(CONTINUE)
     }

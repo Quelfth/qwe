@@ -16,7 +16,4 @@
 
 (match_block) @o.branch.match
 
-(struct_expression [(type_name) (scoped_type_name)] (field_initializer_list) @o.call.type.struct)
-(struct_expression (self_type) (field_initializer_list) @o.call.type.self)
-
 (macro_invocation (token_tree) @o.call.macro.function)

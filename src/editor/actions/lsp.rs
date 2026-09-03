@@ -3,7 +3,7 @@ use std::{collections::HashSet, path::Path, sync::Arc};
 use lsp_types::Url;
 
 use crate::{
-    editor::{Editor, code_actions::{ActionChangeEdit, ActionEdit, ActionEditEffect}, documents::DocKey, markdown_view::MarkdownGadget}, lang::Language, lsp::channel::{EditorToLspMessage, GotoKind}, pos::Utf16Pos, util::uri_to_canon_path
+    editor::{Editor, code_actions::{ActionChangeEdit, ActionEdit, ActionEditEffect}, documents::DocKey, markdown_view::MarkdownGadget}, lang::Language, log::{DisplayLog, log, log_msg}, lsp::channel::{EditorToLspMessage, GotoKind}, pos::Utf16Pos, util::uri_to_canon_path
 };
 
 use std::fmt::Write as _;
@@ -76,9 +76,16 @@ impl Editor {
     }
 
     pub fn apply_action_edits(&mut self, mut edits: Vec<ActionEdit>) {
+        log!(DisplayLog::debug(
+            "applying edits",
+            format!("{edits:#?}"),
+        ));
         let mut global = false;
         for edit in &edits {
-            let ActionEdit { uri, effect: ActionEditEffect::Change(_) } = edit else {return};
+            let ActionEdit { uri, effect: ActionEditEffect::Change(_) } = edit else {
+                log_msg!("unsupported action edit effect: {:?}", edit.effect);
+                return
+            };
             if uri.scheme() != "file" {return};
             let Ok(path) = uri.to_file_path() else {return};
             if global {continue}

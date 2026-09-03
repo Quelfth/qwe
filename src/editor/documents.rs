@@ -1,5 +1,5 @@
 use {
-    crate::{document::{Document, diagnostics::Diagnostic}, pos::Utf16Pos},
+    crate::{document::{Document, diagnostics::Diagnostic}, lang::Language, pos::Utf16Pos},
     bimap::BiMap,
     slotmap::SlotMap,
     std::{mem, path::Path, range::Range, sync::Arc}
@@ -118,5 +118,6 @@ impl DocOrInfo {
 
 #[derive(Default)]
 pub struct DocumentInfo {
+    pub lang: Option<Language>,
     pub diagnostics: Vec<(Range<Utf16Pos>, Diagnostic)>,
 }

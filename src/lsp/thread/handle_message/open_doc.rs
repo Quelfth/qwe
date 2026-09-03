@@ -12,6 +12,7 @@ impl LspThread {
             args,
             special_init,
             options,
+            severity_map: _,
         }) = lang.lsp_info()
         else {
             r#continue!()
@@ -38,7 +39,8 @@ impl LspThread {
         if !server.docs.contains(&doc_uri) {
             server.docs.insert(doc_uri.clone());
         }
-        server.refresh_semantic_tokens(doc_uri);
+        server.refresh_semantic_tokens(doc_uri.clone());
+        server.refresh_diagnostics(doc_uri);
 
         Ok(CONTINUE)
     }

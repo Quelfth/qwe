@@ -4,7 +4,10 @@ zebra-boundary = d:2;
 
 diagnostic.error = u:curl u.error;
 diagnostic.warning = u:curl u.warning;
-diagnostic.hint = b.hint-bg;
+diagnostic.info = u:curl u.info;
+diagnostic.hint = u:curl u.hint;
+
+diagnostic.context = b.context;
 
 x.angle-bracket = ag:1;
 
@@ -118,6 +121,7 @@ o.lint-level = f.set-lint-level;
 o.logical = f.logical;
 o.loop = f.loop;
 o.macro.attribute = f.attribute-macro;
+o.override = f.class;
 o.pattern = f.case;
 o.pattern.disjunct = f.enum;
 o.pipe = f.method-access;
@@ -322,6 +326,7 @@ i.function.destructor = b f.never;
 
 .error = #ff007f;
 .warning = #bfff01;
+.info = #01ffd3;
 .hint = #00b5ff;
 
-.hint-bg = #302020;
+.context = #302020;

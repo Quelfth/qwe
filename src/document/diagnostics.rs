@@ -2,10 +2,11 @@ use crossterm::style::Color;
 use culit::culit;
 use lsp_types::DiagnosticSeverity;
 
-use crate::style::Style;
+use crate::{lang::Language, style::Style};
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Default, PartialOrd, Ord)]
 pub enum Severity {
+    Context,
     Hint,
     Info,
     #[default]
@@ -14,17 +15,8 @@ pub enum Severity {
 }
 
 impl Severity {
-    pub fn from_lsp(severity: Option<DiagnosticSeverity>) -> Self {
-        let Some(severity) = severity else {
-            return Self::default();
-        };
-        match severity {
-            DiagnosticSeverity::ERROR => Self::Err,
-            DiagnosticSeverity::WARNING => Self::Warn,
-            DiagnosticSeverity::INFORMATION => Self::Info,
-            DiagnosticSeverity::HINT => Self::Hint,
-            _ => Self::default(),
-        }
+    pub fn from_lsp(lang: Option<Language>, severity: Option<DiagnosticSeverity>) -> Self {
+        try { (lang?.lsp_info()?.severity_map)(severity?) }.unwrap_or_default()
     }
 
     #[culit]
@@ -33,7 +25,8 @@ impl Severity {
             Severity::Err => 0xff007frgb,
             Severity::Warn => 0xbfff01rgb,
             Severity::Info => 0x00ff7frgb,
-            Severity::Hint => 0x906060rgb,
+            Severity::Hint => 0x00b5ffrgb,
+            Severity::Context => 0x906060rgb,
         }
     }
 
@@ -42,8 +35,9 @@ impl Severity {
         match self {
             Severity::Err => 0x300015rgb,
             Severity::Warn => 0x203000rgb,
-            Severity::Info => 0x302020rgb,
-            Severity::Hint => 0x302020rgb,
+            Severity::Info => 0x005042rgb,
+            Severity::Hint => 0x003a52rgb,
+            Severity::Context => 0x302020rgb,
         }
     }
 
