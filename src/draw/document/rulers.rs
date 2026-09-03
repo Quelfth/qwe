@@ -60,7 +60,7 @@ impl Document {
                 };
 
                 let hl = node.and_then(|n| {
-                    let scopes = rulers.get(&n)?;
+                    let scopes = rulers.remove(&n)?;
                     let highlight = sulu::Highlight::<&'static str>::from_iterators(scopes.iter().map(|scope| scope.split('.')));
                     let hl = theme().highlight(&highlight);
                     Some(hl)
