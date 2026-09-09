@@ -14,6 +14,7 @@ pub enum Language {
     Cpp,
     CSharp,
     Css,
+    Ghostty,
     Javascript,
     Kotlin,
     Lua,
@@ -36,6 +37,26 @@ pub struct LangLspInfo {
     pub special_init: SpecialBehavior,
     pub options: Option<Value>,
     pub severity_map: fn(lsp_types::DiagnosticSeverity) -> Severity,
+    pub diagnostic_display_style: DiagnosticDisplayStyle,
+}
+
+impl Default for LangLspInfo {
+    fn default() -> Self {
+        Self {
+            id: "",
+            command: "",
+            args: &[],
+            special_init: SpecialBehavior::NoOp,
+            options: None,
+            severity_map: default_severity_map,
+            diagnostic_display_style: DiagnosticDisplayStyle::Message,
+        }
+    }
+}
+
+pub enum DiagnosticDisplayStyle {
+    Message,
+    RustRendered,
 }
 
 fn default_severity_map(severtity: lsp_types::DiagnosticSeverity) -> Severity {
@@ -63,6 +84,7 @@ impl Language {
             "c" | "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
             "cs" | "csharp" => Self::CSharp,
             "css" => Self::Css,
+            "ghostty" => Self::Ghostty,
             "js" | "javascript" => Self::Javascript,
             "kt" | "kotlin" => Self::Kotlin,
             "lua" => Self::Lua,
@@ -85,16 +107,11 @@ impl Language {
             Language::Cpp => Some(LangLspInfo {
                 id: "cpp",
                 command: "clangd",
-                args: &[],
-                special_init: SpecialBehavior::NoOp,
-                options: None,
-                severity_map: default_severity_map,
+                ..Default::default()
             }),
             Language::Rust => Some(LangLspInfo {
                 id: "rust",
                 command: "rust-analyzer",
-                args: &[],
-                special_init: SpecialBehavior::NoOp,
                 options: Some(json!{{
                     "check": {
                         "command": "clippy",
@@ -108,22 +125,21 @@ impl Language {
                         _ => Severity::Warn,
                     }
                 },
+                diagnostic_display_style: DiagnosticDisplayStyle::RustRendered,
+                ..Default::default()
             }),
             Language::CSharp => Some(LangLspInfo {
                 id: "cs",
                 command: "roslyn-language-server",
                 args: &["--stdio"],
                 special_init: SpecialBehavior::Roslyn,
-                options: None,
-                severity_map: default_severity_map,
+                ..Default::default()
             }),
             Language::Kotlin => Some(LangLspInfo {
                 id: "kotlin",
                 command: "intellij-server",
                 args: &["--stdio"],
-                special_init: SpecialBehavior::NoOp,
-                options: None,
-                severity_map: default_severity_map,
+                ..Default::default()
             }),
             _ => None,
         }
@@ -150,6 +166,7 @@ impl Language {
                     (Cpp tree_sitter_cpp)
                     (CSharp tree_sitter_c_sharp)
                     (Css tree_sitter_css_orchard)
+                    (Ghostty tree_sitter_ghostty)
                     (Javascript tree_sitter_javascript)
                     (Kotlin tree_sitter_kotlin)
                     (Lua tree_sitter_lua)

@@ -69,6 +69,7 @@ impl AppState for Editor {
                                                  range: lsp_types::Range { start, end },
                                                  severity,
                                                  message,
+                                                 data,
                                                  ..
                                              }| {
                                                 (
@@ -81,6 +82,7 @@ impl AppState for Editor {
                                                     Diagnostic {
                                                         severity: Severity::from_lsp(doc.language(), severity),
                                                         message,
+                                                        data,
                                                     },
                                                 )
                                             },
@@ -94,9 +96,10 @@ impl AppState for Editor {
                                         range: lsp_types::Range { start, end },
                                         severity,
                                         message,
+                                        data,
                                         ..
                                     }| {
-                                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(info.lang, severity), message })
+                                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(info.lang, severity), message, data })
                                     }
                                 ).collect();
                             },

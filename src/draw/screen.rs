@@ -261,6 +261,14 @@ pub struct CanvasCursor<'a, 'b> {
 pub struct EndOfRow;
 pub struct EndOfCanvas;
 
+pub enum EndOfRowOrCanvas {
+    EndOfRow,
+    EndOfCanvas,
+}
+
+impl From<EndOfRow> for EndOfRowOrCanvas { fn from(_: EndOfRow) -> Self { Self::EndOfRow } }
+impl From<EndOfCanvas> for EndOfRowOrCanvas { fn from(_: EndOfCanvas) -> Self { Self::EndOfCanvas } }
+
 impl<'a, 'b> CanvasCursor<'a, 'b> {
     pub fn canvas_width(&self) -> u16 {
         self.canvas.width()
@@ -320,6 +328,16 @@ impl<'a, 'b> CanvasCursor<'a, 'b> {
         Ok(())
     }
 
+    #[expect(unused)]
+    pub fn write_lines(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>) -> Result<(), EndOfRowOrCanvas> {
+        let style = style.into();
+        for line in text.as_ref().lines() {
+            self.break_line()?;
+            self.write(line, style)?;
+        }
+        Ok(())
+    }
+
     pub fn write_box(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>, ends: (Grapheme, Grapheme)) -> Result<(), EndOfRow> {
         let (left, right) = ends;
         let style = style.into();
@@ -327,6 +345,15 @@ impl<'a, 'b> CanvasCursor<'a, 'b> {
         self.write(text, style)?;
         self.write1_background(right, style)?;
 
+        Ok(())
+    }
+
+    pub fn write_boxed_lines(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>, ends: (Grapheme, Grapheme)) -> Result<(), EndOfRowOrCanvas> {
+        let style = style.into();
+        for line in text.as_ref().lines() {
+            self.break_line()?;
+            self.write_box(line, style, ends.clone())?;
+        }
         Ok(())
     }
 
@@ -347,6 +374,15 @@ impl<'a, 'b> CanvasCursor<'a, 'b> {
         self.write_wrapping(text, style)?;
         _ = self.write1_background(right, style);
 
+        Ok(())
+    }
+
+    pub fn write_boxed_lines_wrapping(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>, ends: (Grapheme, Grapheme)) -> Result<(), EndOfRowOrCanvas> {
+        let style = style.into();
+        for line in text.as_ref().lines() {
+            self.break_line()?;
+            self.write_box_wrapping(line, style, ends.clone())?;
+        }
         Ok(())
     }
 

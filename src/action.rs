@@ -164,6 +164,12 @@ pub enum AnySelectAction {
     CobolCase,           // COBOL-CASE
 }
 
+impl From<EditorAction> for AnySelectAction {
+    fn from(value: EditorAction) -> Self {
+        Self::Document(value.into())
+    }
+}
+
 impl From<DocumentAction> for AnySelectAction {
     fn from(value: DocumentAction) -> Self {
         Self::Document(value)
@@ -211,6 +217,12 @@ pub enum SelectAction {
 impl From<AnySelectAction> for SelectAction {
     fn from(value: AnySelectAction) -> Self {
         Self::Any(value)
+    }
+}
+
+impl From<EditorAction> for SelectAction {
+    fn from(value: EditorAction) -> Self {
+        Self::Any(value.into())
     }
 }
 
@@ -266,6 +278,12 @@ impl From<DocumentAction> for LineSelectAction {
 
 impl From<ScrollAction> for LineSelectAction {
     fn from(value: ScrollAction) -> Self {
+        Self::Any(value.into())
+    }
+}
+
+impl From<EditorAction> for LineSelectAction {
+    fn from(value: EditorAction) -> Self {
         Self::Any(value.into())
     }
 }

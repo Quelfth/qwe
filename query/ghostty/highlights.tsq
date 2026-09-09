@@ -1,0 +1,8 @@
+(comment) @comment
+(property) @i.value.field
+
+(basic_directive "=" @o.key-value)
+(command_directive "=" @o.key-value)
+
+[(number) (percent_adjustment)] @l.number
+["true" "false"] @i.value.boolean

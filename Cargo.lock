@@ -1150,6 +1150,7 @@ dependencies = [
  "tree-sitter-c-sharp",
  "tree-sitter-cpp",
  "tree-sitter-css-orchard",
+ "tree-sitter-ghostty",
  "tree-sitter-javascript",
  "tree-sitter-kotlin-ng",
  "tree-sitter-lua",
@@ -1608,6 +1609,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-ghostty"
+version = "0.1.0"
+source = "git+https://github.com/bezhermoso/tree-sitter-ghostty#a2075c3761a41449bb4faf69794c902dfef6d70e"
+dependencies = [
+ "cc",
+ "tree-sitter",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-javascript"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1663,7 +1674,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-rust"
 version = "0.23.2"
-source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#fa9d227db14bff3f5236528b597e2897eac97923"
+source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#40f0ee84ad5e033a914b50c569661da3bb5a3096"
 dependencies = [
  "cc",
  "tree-sitter-language",

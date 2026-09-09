@@ -1,5 +1,5 @@
 
-  (type_argument_list ["<" ">"] @x.angle-bracket)
+(type_argument_list ["<" ">"] @x.angle-bracket)
 
 (comment) @comment
 
@@ -200,6 +200,9 @@
 
 "break" @o.control.break
 (break_statement ";" @o.control.break)
+
+["#if" "#elif" "#else" "#endif"] @o.branch
+(preproc_if condition: (identifier) @i.macro.flag_.priority_1)
 
 (generic_name (identifier) @_ (#semantic? @_ Class) (type_argument_list ["<" "," ">"] @o.generics.type.struct))
 (generic_name (identifier) @_ (#semantic? @_ Method) (type_argument_list ["<" "," ">"] @o.call.function.method))

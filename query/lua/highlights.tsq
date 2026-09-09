@@ -1,5 +1,5 @@
 (string_content) @l.string
-"\"" @l.string.quote
+["\"" "'"] @l.string.quote
 
 (number) @l.number
 

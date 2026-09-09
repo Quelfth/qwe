@@ -1,0 +1,3 @@
+(property) @zebra
+(string) @zebra
+(string "\"" @l.source.quote)

@@ -55,4 +55,5 @@ impl Severity {
 pub struct Diagnostic {
     pub severity: Severity,
     pub message: String,
+    pub data: Option<serde_json::Value>,
 }

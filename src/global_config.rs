@@ -93,8 +93,8 @@ impl Default for Keymaps {
         let mouse = keymap! {
             [left click] => EditorAction::MouseSelectNew,
             [left drag] => EditorAction::MouseSelectContinue,
-            [alt left click] => EditorAction::MouseLineSelectNew,
-            [alt left drag] => EditorAction::MouseLineSelectContinue,
+            [middle click] => EditorAction::MouseLineSelectNew,
+            [middle drag] => EditorAction::MouseLineSelectContinue,
         };
         let common_insert = keymap!{
             ..mouse,
@@ -127,7 +127,6 @@ impl Default for Keymaps {
             use EditorAction::*;
             keymap! {
                 ..lsp_select,
-                ..mouse,
                 [ctrl o] => OpenFile,
                 ['('] => PreviousFile,
                 [')'] => NextFile,
@@ -161,6 +160,7 @@ impl Default for Keymaps {
         };
         let select = {use Select::*; keymap!{
             ..document_select,
+            ..mouse,
             [tab] => TabIn,
             [back tab] => TabOut,
             [o] => SyntaxExtend,

@@ -12,7 +12,7 @@ impl LspThread {
             args,
             special_init,
             options,
-            severity_map: _,
+            ..
         }) = lang.lsp_info()
         else {
             r#continue!()

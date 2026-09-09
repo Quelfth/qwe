@@ -47,6 +47,7 @@ mod poll;
 pub mod renamer;
 pub mod line_jumper;
 pub mod log;
+pub mod diagnostics_view;
 
 #[derive(Default)]
 pub struct Editor {

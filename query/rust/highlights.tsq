@@ -42,6 +42,8 @@
 (escape ["x" "u"] @l.escape.function)
 (escape ["{" "}"] @l.escape.arguments)
 
+(string "\\\n" @l.string.line-continue)
+
 (boolean_literal) @i.value.boolean
 
 [(line_comment) (block_comment)] @comment
@@ -219,6 +221,10 @@
 )
 (const_trait_bound ["[" "]"] @o.implement)
 
+(constrained_type_parameter ":" @o.implement)
+(where_predicate ":" @o.implement)
+(associated_type ":" @o.implement)
+
 (use_bound ["use" "<" "," ">"] @o.implement)
 
 ; Attributes
@@ -350,6 +356,7 @@
 (reference_expression "&" @o.access.reference)
 (reference_pattern "&" @o.access.reference)
 (unary_expression "*" @o.access.dereference)
+(unary_expression "*" @o.access.pointer @_ (#semantic? @_ unsafe))
 
 (field_expression field: (integer_literal) @i.value.field.tuple)
 
@@ -408,6 +415,7 @@
 (async_block (block ["{" "}"] @o.async))
 
 (const_block body: (block ["{" "}"] @o.const))
+(type_arguments (block ["{" "}"] @o.const))
 
 (assignment_expression "=" @o.assign)
 (expression_statement [(assignment_expression) (compound_assignment_expr)] ";" @o.assign)
@@ -639,6 +647,8 @@
 ((identifier) @i.trait (#semantic? @i.trait Interface))
 
 (generic_type type: (type_name) @_ (#semantic? @_ Interface) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
+(generic_type type: (scoped_type_name name: (type_name) @_ (#semantic? @_ Interface)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
+(generic_type type: (scoped_name name: (name) @_ (#semantic? @_ Interface)) type_arguments: (type_arguments ["<" "," ">"] @o.generics.trait))
 
 (type_binding "=" @o.type)
 

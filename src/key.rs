@@ -297,6 +297,10 @@ pub enum Key {
 
     LeftClick,
     LeftDrag,
+    RightClick,
+    RightDrag,
+    MiddleClick,
+    MiddleDrag,
 
     AltLeftClick,
     AltLeftDrag,
@@ -522,6 +526,10 @@ impl Key {
             MouseEventKind::ScrollRight => Key::ScrollRight,
             MouseEventKind::Down(MouseButton::Left) => if event.modifiers.contains(KeyModifiers::ALT) {Key::AltLeftClick} else {Key::LeftClick},
             MouseEventKind::Drag(MouseButton::Left) => if event.modifiers.contains(KeyModifiers::ALT) {Key::AltLeftDrag} else {Key::LeftDrag},
+            MouseEventKind::Down(MouseButton::Right) => Key::RightClick,
+            MouseEventKind::Drag(MouseButton::Right) => Key::RightDrag,
+            MouseEventKind::Down(MouseButton::Middle) => Key::MiddleClick,
+            MouseEventKind::Drag(MouseButton::Middle) => Key::MiddleDrag,
             _ => None::<!>?
         })
     }
@@ -1027,6 +1035,10 @@ pub macro key {
 
     (left click) => {$crate::key::Key::LeftClick},
     (left drag) => {$crate::key::Key::LeftDrag},
+    (right click) => {$crate::key::Key::RightClick},
+    (right drag) => {$crate::key::Key::RightDrag},
+    (middle click) => {$crate::key::Key::MiddleClick},
+    (middle drag) => {$crate::key::Key::MiddleDrag},
     (alt left click) => {$crate::key::Key::AltLeftClick},
     (alt left drag) => {$crate::key::Key::AltLeftDrag},
 }

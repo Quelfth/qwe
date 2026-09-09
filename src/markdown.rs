@@ -135,7 +135,11 @@ impl MdDraw for InlineCode {
 impl MdDraw for Code {
     fn draw(&self, cx: MdContext, cursor: &mut CanvasCursor<'_, '_>) -> Result<(), EndOfCanvas> {
         let cache = &mut *cx.cache.lock();
-        let doc = cache.entry((self.lang.clone(), self.value.clone())).or_insert_with(|| Document::new(self.lang.as_deref().and_then(Language::from_file_ext), &self.value, None));
+        let mut text = self.value.clone();
+        if text.lines().count() > 1 {
+            text += "\n";
+        }
+        let doc = cache.entry((self.lang.clone(), self.value.clone())).or_insert_with(|| Document::new(self.lang.as_deref().and_then(Language::from_file_ext), &text, None));
         cursor.draw_document(doc)?;
         Ok(())
     }

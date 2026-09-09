@@ -3,20 +3,19 @@ use std::{collections::HashSet, path::Path, sync::Arc};
 use lsp_types::Url;
 
 use crate::{
-    editor::{Editor, code_actions::{ActionChangeEdit, ActionEdit, ActionEditEffect}, documents::DocKey, markdown_view::MarkdownGadget}, lang::Language, log::{DisplayLog, log, log_msg}, lsp::channel::{EditorToLspMessage, GotoKind}, pos::Utf16Pos, util::uri_to_canon_path
+    editor::{Editor, code_actions::{ActionChangeEdit, ActionEdit, ActionEditEffect}, diagnostics_view::DiagnosticsView, documents::DocKey}, lang::Language, log::{DisplayLog, log, log_msg}, lsp::channel::{EditorToLspMessage, GotoKind}, pos::Utf16Pos, util::uri_to_canon_path
 };
 
-use std::fmt::Write as _;
 
 impl Editor {
     pub fn view_diagnostics(&mut self) {
         let diagnostics = self.doc.diagnostics_under_cursor();
-        let mut text = String::new();
-        for diagnostic in diagnostics {
-            let diagnostic = diagnostic.message.lines().map(|line| line.to_owned() + "\n\n").collect::<String>();
-            _= write!(text, "{}---\n\n", diagnostic);
-        }
-        self.open_gadget(MarkdownGadget::new(text))
+        //let mut text = String::new();
+        //for diagnostic in diagnostics {
+        //    let diagnostic = diagnostic.message.lines().map(|line| line.to_owned() + "\n\n").collect::<String>();
+        //    _= write!(text, "{}---\n\n", diagnostic);
+        //}
+        self.open_gadget(DiagnosticsView::new(self.doc.language(), diagnostics.into_iter().cloned().collect()))
     }
 
     pub fn hover(&mut self) {
