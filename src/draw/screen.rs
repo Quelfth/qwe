@@ -1,5 +1,5 @@
 use std::{
-    borrow::Cow, io::{self, Write, stdout}, ops::{Index, IndexMut}
+    borrow::Cow, io::{self, Write, stdout}, ops::{Index, IndexMut, RangeBounds}
 };
 
 use crossterm::{
@@ -10,7 +10,11 @@ use crossterm::{
 use culit::culit;
 
 use crate::{
-    document::Document, draw::{Range, Rect}, grapheme::Grapheme, ix::{Column, Ix}, style::FlatStyle
+    document::Document,
+    draw::{Range, Rect},
+    grapheme::Grapheme,
+    ix::{Column, Ix},
+    style::{FlatStyle, Style},
 };
 
 #[derive(Default)]
@@ -48,6 +52,7 @@ impl IndexMut<(u16, u16)> for Screen {
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Cell {
+    pub is_background: bool,
     pub grapheme: Grapheme,
     pub style: FlatStyle,
 }
@@ -56,6 +61,7 @@ impl Default for Cell {
     #[culit]
     fn default() -> Self {
         Self {
+            is_background: false,
             grapheme: Default::default(),
             style: FlatStyle {
                 fg: 0x604040rgb,
@@ -225,18 +231,6 @@ impl<'s> Canvas<'s> {
     }
 }
 
-impl IndexMut<(u16, u16)> for Canvas<'_> {
-    fn index_mut(&mut self, (i, j): (u16, u16)) -> &mut Self::Output {
-        let (width, height) = (self.rect.width(), self.rect.height());
-        if i > self.rect.height() {
-            panic!("row {i} is out of bounds for canvas of height {height}")
-        }
-        if j > self.rect.width() {
-            panic!("column {j} is out of bounds for canvas of width {width}")
-        }
-        &mut self.screen[(i + self.rect.rows.start, j + self.rect.cols.start)]
-    }
-}
 
 impl Index<(u16, u16)> for Canvas<'_> {
     type Output = Cell;
@@ -250,6 +244,57 @@ impl Index<(u16, u16)> for Canvas<'_> {
             panic!("column {j} is out of bounds for canvas of width {width}")
         }
         &self.screen[(i + self.rect.rows.start, j + self.rect.cols.start)]
+    }
+}
+
+impl IndexMut<(u16, u16)> for Canvas<'_> {
+    fn index_mut(&mut self, (i, j): (u16, u16)) -> &mut Self::Output {
+        let (width, height) = (self.rect.width(), self.rect.height());
+        if i > self.rect.height() {
+            panic!("row {i} is out of bounds for canvas of height {height}")
+        }
+        if j > self.rect.width() {
+            panic!("column {j} is out of bounds for canvas of width {width}")
+        }
+        &mut self.screen[(i + self.rect.rows.start, j + self.rect.cols.start)]
+    }
+}
+
+impl Canvas<'_> {
+    pub fn overlay_rect(&mut self, lines: impl RangeBounds<u16>, columns: impl RangeBounds<u16>, style: Style) {
+        use std::ops::Bound::*;
+        let lines = match lines.start_bound() {
+            Included(b) => *b,
+            Excluded(b) => *b + 1,
+            Unbounded => 0,
+        }..match lines.end_bound() {
+            Included(b) => *b + 1,
+            Excluded(b) => *b,
+            Unbounded => self.height(),
+        };
+
+        let columns = match columns.start_bound() {
+            Included(b) => *b,
+            Excluded(b) => *b + 1,
+            Unbounded => 0,
+        }..match columns.end_bound() {
+            Included(b) => *b + 1,
+            Excluded(b) => *b,
+            Unbounded => self.width(),
+        };
+
+        for i in lines {
+            if i >= self.height() { break }
+            for j in columns {
+                if j >= self.width() { break }
+                let cell = &mut self[(i, j)];
+                cell.style += style;
+                if cell.is_background && style.bg.is_some() {
+                    cell.grapheme = Grapheme::SPACE;
+                    cell.is_background = false;
+                }
+            }
+        }
     }
 }
 
@@ -328,7 +373,6 @@ impl<'a, 'b> CanvasCursor<'a, 'b> {
         Ok(())
     }
 
-    #[expect(unused)]
     pub fn write_lines(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>) -> Result<(), EndOfRowOrCanvas> {
         let style = style.into();
         for line in text.as_ref().lines() {

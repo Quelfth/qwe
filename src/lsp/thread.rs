@@ -91,6 +91,9 @@ pub async fn lsp_thread(channels: LspChannels) -> Result<(), Error> {
                                     inter_file_dependencies: options.get("interFileDependencies").and_then(|o| o.as_bool()).unwrap_or_default(),
                                     workspace: options.get("workspaceDiagnostics").and_then(|o| o.as_bool()).unwrap_or_default(),
                                 });
+                                for doc in server.docs.iter().cloned().collect::<Vec<_>>() {
+                                    server.refresh_diagnostics(doc);
+                                }
                             };},
                             _ => log_msg!("ignored registration of unsupported method {method}"),
                         }

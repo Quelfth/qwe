@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::ops::{Add, AddAssign};
 
 use crossterm::style::{Attribute, Color, ContentStyle, Stylize};
 
@@ -68,22 +68,26 @@ impl FlatStyle {
     }
 }
 
+impl AddAssign<Style> for FlatStyle {
+    fn add_assign(&mut self, rhs: Style) {
+        let Style { fg, bg, italic, bold, under, uc, strikethrough, ag, .. } = rhs;
+        if let Some(fg) = fg { self.fg = fg; }
+        if let Some(bg) = bg { self.bg = bg; }
+        if let Some(italic) = italic { self.italic = italic; }
+        if let Some(bold) = bold { self.bold = bold; }
+        if let Some(under) = under { self.under = under; }
+        if let Some(uc) = uc { self.uc = uc; }
+        if let Some(strikethrough) = strikethrough { self.strikethrough = strikethrough; }
+        if let Some(ag) = ag { self.ag = ag; }
+    }
+}
+
 impl Add<Style> for FlatStyle {
     type Output = Self;
 
-    fn add(self, rhs: Style) -> Self::Output {
-        let Self { fg, bg, italic, bold, under, uc, strikethrough, overline, ag } = self;
-        Self {
-            fg: rhs.fg.unwrap_or(fg),
-            bg: rhs.bg.unwrap_or(bg),
-            italic: rhs.italic.unwrap_or(italic),
-            bold: rhs.bold.unwrap_or(bold),
-            under: rhs.under.unwrap_or(under),
-            uc: rhs.uc.unwrap_or(uc),
-            strikethrough: rhs.strikethrough.unwrap_or(strikethrough),
-            overline,
-            ag: rhs.ag.unwrap_or(ag),
-        }
+    fn add(mut self, rhs: Style) -> Self::Output {
+        self += rhs;
+        self
     }
 }
 

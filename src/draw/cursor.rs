@@ -8,37 +8,53 @@ use crossterm::style::Color;
 use culit::culit;
 
 use crate::{
-    editor::cursors::{CursorIndex, CursorState, select::RangeCursorLine},
-    ix::{Column, Ix, Line},
+    editor::cursors::{CursorIndex, CursorState},
+    ix::{Column, Ix, Line, ix}, pos::Pos,
 };
 
 #[derive(Copy, Clone)]
 pub struct CursorRange {
     pub r#type: CursorType,
-    pub range: Option<Range<Ix<Column>>>,
+    pub range: CursorRangeShape,
+}
+
+#[derive(Copy, Clone)]
+pub enum CursorRangeShape {
+    Range {
+        line: Ix<Line>,
+        range: Range<Ix<Column>>,
+    },
+    Line(Range<Ix<Line>>),
 }
 
 impl CursorRange {
     pub(super) fn thin(
-        pos: Ix<Column>,
+        pos: Pos,
         left: CursorType,
         right: CursorType,
     ) -> impl Iterator<Item = Self> {
+        use CursorRangeShape::*;
         [
-            (pos > Ix::new(0)).then(|| Self {
+            (pos.column > Ix::new(0)).then(|| Self {
                 r#type: left,
-                range: Some(pos - Ix::new(1)..pos),
+                range: Range {
+                    line: pos.line,
+                    range: pos.column - Ix::new(1)..pos.column
+                },
             }),
             Some(Self {
                 r#type: right,
-                range: Some(pos..pos + Ix::new(1)),
+                range: Range {
+                    line: pos.line,
+                    range: pos.column..pos.column + Ix::new(1)
+                },
             }),
         ]
         .into_iter()
         .flatten()
     }
 
-    pub(super) fn insert(pos: Ix<Column>, order: impl ToCursorOrder) -> impl Iterator<Item = Self> {
+    pub(super) fn insert(pos: Pos, order: impl ToCursorOrder) -> impl Iterator<Item = Self> {
         Self::thin(
             pos,
             cursor_type!(Insert Start[order]),
@@ -47,7 +63,7 @@ impl CursorRange {
     }
 
     pub(super) fn mirror_insert(
-        pos: Ix<Column>,
+        pos: Pos,
         forward: bool,
         order: impl ToCursorOrder,
     ) -> impl Iterator<Item = Self> {
@@ -61,27 +77,35 @@ impl CursorRange {
 
     #[auto_enum(Iterator)]
     pub(super) fn select(
-        start: Ix<Column>,
-        end: Ix<Column>,
+        line: Ix<Line>,
+        range: Range<Ix<Column>>,
         index: impl ToCursorOrder,
     ) -> impl Iterator<Item = Self> {
+        let Range { start, end } = range;
         match start == end {
             true => Self::thin(
-                start,
+                Pos{ line, column: start },
                 cursor_type!(Select Start [index]),
                 cursor_type!(Select End [index]),
             ),
             false => iter::once(Self {
                 r#type: cursor_type!(Select[index]),
-                range: Some(Range { start, end }),
+                range: CursorRangeShape::Range { line, range },
             }),
         }
     }
 
-    fn line(order: impl ToCursorOrder) -> Self {
+    fn line(lines: Range<Ix<Line>>, order: impl ToCursorOrder) -> Self {
         Self {
             r#type: cursor_type!(Select[order]),
-            range: None,
+            range: CursorRangeShape::Line(lines),
+        }
+    }
+
+    fn between_line(line: Ix<Line>, order: impl ToCursorOrder) -> Self {
+        Self {
+            r#type: cursor_type!(Select Line [order]),
+            range: CursorRangeShape::Line(line.saturating_sub(ix(1))..line),
         }
     }
 }
@@ -268,40 +292,73 @@ impl CursorState {
                 .zip(CursorOrder::iter())
                 .flat_map(|(c, o)| [((c.forward, true), o), ((c.reverse, false), o)])
                 .flat_map(move |((c, forward), o)| {
-                    (c.line == line).then(|| CursorRange::mirror_insert(c.column, forward, o))
+                    (c.line == line).then(|| CursorRange::mirror_insert(c, forward, o))
                 })
                 .flatten(),
             Insert(cursors) => cursors
                 .sorted_iter()
                 .zip(CursorOrder::iter())
                 .flat_map(move |(c, o)| {
-                    (c.pos.line == line).then(|| CursorRange::insert(c.pos.column, o))
+                    (c.pos.line == line).then(|| CursorRange::insert(c.pos, o))
                 })
                 .flatten(),
             Select(cursors) => cursors
                 .sorted_iter()
                 .zip(CursorOrder::iter())
                 .filter_map(move |(c, o)| {
-                    let RangeCursorLine { start, end } = c.on_line(line)?;
-                    Some(CursorRange::select(start, end, o))
+                    let range = c.on_line(line)?;
+                    Some(CursorRange::select(line, range, o))
                 })
                 .flatten(),
             LineSelect(cursors) => (cursors
                 .sorted_iter()
                 .zip(CursorOrder::iter())
                 .find(|(c, _)| c.line <= line && c.line + c.height > line))
-            .map(|(_, o)| CursorRange::line(o))
+            .map(|(c, o)| CursorRange::line(c.range(), o))
             .or_else(|| {
                 cursors
                     .sorted_iter()
                     .zip(CursorOrder::iter())
                     .find(|(c, _)| c.line == line + Ix::new(1) && c.height == Ix::new(0))
-                    .map(|(_, o)| CursorRange {
-                        r#type: cursor_type!(Select Line [o]),
-                        range: None,
-                    })
+                    .map(|(c, o)| CursorRange::between_line(c.line, o))
             })
             .into_iter(),
+        }
+    }
+
+    #[auto_enum(Iterator)]
+    pub(super) fn ranges(&self) -> impl Iterator<Item = CursorRange> {
+        use CursorState::*;
+        match self {
+            MirrorInsert(cursors) => cursors
+                .sorted_iter()
+                .zip(CursorOrder::iter())
+                .flat_map(|(c, o)| [((c.forward, true), o), ((c.reverse, false), o)])
+                .flat_map(move |((c, forward), o)| {
+                    (true).then(|| CursorRange::mirror_insert(c, forward, o))
+                })
+                .flatten(),
+            Insert(cursors) => cursors
+                .sorted_iter()
+                .zip(CursorOrder::iter())
+                .flat_map(move |(c, o)| {
+                    (true).then(|| CursorRange::insert(c.pos, o))
+                })
+                .flatten(),
+            Select(cursors) => cursors
+                .sorted_iter()
+                .zip(CursorOrder::iter())
+                .flat_map(move |(c, o)| {
+                    c.lines_ix().map(move |(line, range)| CursorRange::select(line, range, o))
+                }).flatten(),
+            LineSelect(cursors) => cursors
+                .sorted_iter()
+                .zip(CursorOrder::iter())
+                .map(|(c, o)| if c.height != ix(0) {
+                    CursorRange::line(c.range(), o)
+                } else {
+                    CursorRange::between_line(c.line, o)
+                }),
         }
     }
 }

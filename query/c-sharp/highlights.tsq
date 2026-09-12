@@ -207,6 +207,8 @@
 (generic_name (identifier) @_ (#semantic? @_ Class) (type_argument_list ["<" "," ">"] @o.generics.type.struct))
 (generic_name (identifier) @_ (#semantic? @_ Method) (type_argument_list ["<" "," ">"] @o.call.function.method))
 
+(member_access_expression expression: (identifier) @_0 (#semantic? @_0 Enum) "." @o.association.enum name: (identifier) @_1 (#semantic? @_1 EnumMember))
+
 (member_access_expression "." @o.access.method name: (identifier) @_ (#semantic? @_ Property))
 (member_binding_expression "." @o.access.method name: (identifier) @_ (#semantic? @_ Property))
 

@@ -2,7 +2,7 @@ use std::{borrow::Cow, fmt::Display};
 
 use crate::{
     constants::TAB_WIDTH,
-    ix::{Byte, Column, Ix},
+    ix::{Byte, Column, Ix, ix},
 };
 
 use unicode_segmentation::UnicodeSegmentation;
@@ -22,39 +22,44 @@ impl Display for Grapheme {
     }
 }
 
+/// Don't make this public it's sus.
+const fn raw(str: &'static str) -> Grapheme {
+    Grapheme(Cow::Borrowed(str))
+}
+
 impl Grapheme {
-    pub unsafe fn new_unchecked(data: impl AsRef<str>) -> Self {
+    pub fn new_unchecked(data: impl AsRef<str>) -> Self {
         Self(data.as_ref().to_owned().into())
     }
 
-    pub const SPACE: Self = Self(Cow::Borrowed(" "));
-    pub const UPPER_LEFT_TRIANGLE: Self = Self(Cow::Borrowed("◤"));
-    pub const UPPER_RIGHT_TRIANGLE: Self = Self(Cow::Borrowed("◥"));
-    pub const LOWER_LEFT_TRIANGLE: Self = Self(Cow::Borrowed("◣"));
-    pub const LEFT_TRIANGLE: Self = Self(Cow::Borrowed(""));
-    pub const RIGHT_TRIANGLE: Self = Self(Cow::Borrowed(""));
-    pub const LEFT_SEMICIRCLE: Self = Self(Cow::Borrowed(""));
-    pub const RIGHT_SEMICIRCLE: Self = Self(Cow::Borrowed(""));
-    pub const DOT: Self = Self(Cow::Borrowed("."));
-    pub const VERTICAL_SQUIGGLE: Self = Self(Cow::Borrowed("𜰊"));
-    pub const BRACE_2_TOP: Self = Self(Cow::Borrowed("⎰"));
-    pub const BRACE_2_BOTTOM: Self = Self(Cow::Borrowed("⎱"));
-    pub const BRACE_TOP: Self = Self(Cow::Borrowed("⎧"));
-    pub const BRACE_BAR: Self = Self(Cow::Borrowed("⎪"));
-    pub const BRACE_CUSP: Self = Self(Cow::Borrowed("⎨"));
-    pub const BRACE_BOTTOM: Self = Self(Cow::Borrowed("⎩"));
-    pub const BRACE_CUSP_TOP: Self = Self(Cow::Borrowed("⎭"));
-    pub const BRACE_CUSP_BOTTOM: Self = Self(Cow::Borrowed("⎫"));
-    pub const RULER: Self = Self(Cow::Borrowed("▎"));
-    pub const BULLET: Self = Self(Cow::Borrowed("◦"));
-    pub const RIGHT_PAREN_TOP: Self = Self(Cow::Borrowed("⎞"));
-    pub const RIGHT_PAREN_MIDDLE: Self = Self(Cow::Borrowed("⎟"));
-    pub const RIGHT_PAREN_BOTTOM: Self = Self(Cow::Borrowed("⎠"));
+    pub const SPACE: Self = raw(" ");
+    pub const UPPER_LEFT_TRIANGLE: Self = raw("◤");
+    pub const UPPER_RIGHT_TRIANGLE: Self = raw("◥");
+    pub const LOWER_LEFT_TRIANGLE: Self = raw("◣");
+    pub const LEFT_TRIANGLE: Self = raw("");
+    pub const RIGHT_TRIANGLE: Self = raw("");
+    pub const LEFT_SEMICIRCLE: Self = raw("");
+    pub const RIGHT_SEMICIRCLE: Self = raw("");
+    pub const DOT: Self = raw(".");
+    pub const VERTICAL_SQUIGGLE: Self = raw("𜰊");
+    pub const BRACE_2_TOP: Self = raw("⎰");
+    pub const BRACE_2_BOTTOM: Self = raw("⎱");
+    pub const BRACE_TOP: Self = raw("⎧");
+    pub const BRACE_BAR: Self = raw("⎪");
+    pub const BRACE_CUSP: Self = raw("⎨");
+    pub const BRACE_BOTTOM: Self = raw("⎩");
+    pub const BRACE_CUSP_TOP: Self = raw("⎭");
+    pub const BRACE_CUSP_BOTTOM: Self = raw("⎫");
+    pub const RULER: Self = raw("▎");
+    pub const BULLET: Self = raw("◦");
+    pub const RIGHT_PAREN_TOP: Self = raw("⎞");
+    pub const RIGHT_PAREN_MIDDLE: Self = raw("⎟");
+    pub const RIGHT_PAREN_BOTTOM: Self = raw("⎠");
 
 
 
     pub fn len(&self) -> Ix<Byte> {
-        Ix::new(self.0.len())
+        ix(self.0.len())
     }
 
     pub fn as_str(&self) -> &str {
@@ -74,7 +79,8 @@ impl Grapheme {
     }
 
     pub fn columns(&self) -> Ix<Column> {
-        Ix::new(if &*self.0 == "\t" { TAB_WIDTH } else { 1 })
+        use unicode_width::UnicodeWidthStr as _;
+        ix(if &*self.0 == "\t" { TAB_WIDTH } else { self.0.width() })
     }
 
     pub fn apply_ag(&self, ag: u8) -> Option<Self> {

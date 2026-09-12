@@ -58,6 +58,7 @@ tree-sitter-nu.git = "https://github.com/nushell/tree-sitter-nu"
 tree-sitter-wesl.git = "https://github.com/Quelfth/tree-sitter-wesl"
 #tree-sitter-wesl.path = "../tree-sitter-wesl"
 tree-sitter-ghostty.git = "https://github.com/bezhermoso/tree-sitter-ghostty"
+unicode-width = "0.2.2"
 
 [profile.release]
 debug = true

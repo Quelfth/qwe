@@ -1,5 +1,7 @@
 use std::{cmp::Ordering::*, collections::HashMap, iter, mem, range::Range};
 
+use extension_traits::extension;
+
 use crate::{
     document::{CursorChange, CursorChangeBias},
     editor::cursors::{
@@ -82,7 +84,7 @@ impl Cursor for SelectCursor {
         let line = self.line;
         let selections = self
             .lines()
-            .map(|RangeCursorLine { start, end }| {
+            .map(|Range { start, end }| {
                 Pos {
                     line,
                     column: start,
@@ -132,14 +134,11 @@ impl Cursor for SelectCursor {
                 Some(list) => {
                     let start = list.iter().map(|l| l.start).min().unwrap();
                     let end = list.iter().map(|l| l.end).max().unwrap();
-                    new_lines.push(RangeCursorLine { start, end });
+                    new_lines.push(start..end);
                 }
                 None => {
                     let last = new_lines.last().unwrap().start;
-                    new_lines.push(RangeCursorLine {
-                        start: last,
-                        end: last,
-                    })
+                    new_lines.push(last..last)
                 }
             }
         }
@@ -195,39 +194,15 @@ impl Cursor for SelectCursor {
 #[derive(Clone, Default)]
 pub struct SelectCursor {
     pub line: Ix<Line>,
-    pub first_line: RangeCursorLine,
-    pub other_lines: Vec<RangeCursorLine>,
-}
-
-#[derive(Copy, Clone, Default, PartialEq, Eq)]
-pub struct RangeCursorLine {
-    pub start: Ix<Column>,
-    pub end: Ix<Column>,
-}
-
-impl RangeCursorLine {
-    pub fn point(column: Ix<Column>) -> Self {
-        Self {
-            start: column,
-            end: column,
-        }
-    }
-
-    fn is_point(&self) -> bool {
-        self.start == self.end
-    }
-
-    #[expect(unused)]
-    fn len(&self) -> Ix<Column> {
-        self.end.saturating_sub(self.start)
-    }
+    pub first_line: Range<Ix<Column>>,
+    pub other_lines: Vec<Range<Ix<Column>>>,
 }
 
 impl SelectCursor {
     pub fn one_pos(pos: Pos) -> Self {
         Self {
             line: pos.line,
-            first_line: RangeCursorLine {
+            first_line: Range {
                 start: pos.column,
                 end: pos.column,
             },
@@ -247,7 +222,7 @@ impl SelectCursor {
         if start.line == end.line {
             return Self {
                 line: start.line,
-                first_line: RangeCursorLine {
+                first_line: Range {
                     start: start.column,
                     end: end.column,
                 },
@@ -263,17 +238,17 @@ impl SelectCursor {
 
         Self {
             line: start.line,
-            first_line: RangeCursorLine {
+            first_line: Range {
                 start: start.column,
                 end: text.columns_in_line(start.line),
             },
             other_lines: (start.line + Ix::new(1)..end.line)
                 .into_iter()
-                .map(|i| RangeCursorLine {
+                .map(|i| Range {
                     start: indent,
                     end: indent.max(text.columns_in_line(i)),
                 })
-                .chain(iter::once(RangeCursorLine {
+                .chain(iter::once(Range {
                     start: indent,
                     end: end.column,
                 }))
@@ -283,7 +258,7 @@ impl SelectCursor {
 
     pub fn is_tangent_to_range(&self, range: Range<Pos>) -> bool {
         if range.start.line == range.end.line {
-            let Some(RangeCursorLine { start, end }) = self.on_line(range.start.line) else {return false};
+            let Some(Range { start, end }) = self.on_line(range.start.line) else {return false};
             return (start..end).overlaps(range.start.column..range.end.column)
         }
         if !(range.start.line..range.end.line).overlaps(self.line..self.line + self.last_line_ix() + ix(1)) {
@@ -291,12 +266,12 @@ impl SelectCursor {
         }
 
         if self.last_line_ix() == range.start.line {
-            let RangeCursorLine { end, .. } = self.last_line();
+            let Range { end, .. } = self.last_line();
             return end >= range.start.column;
         }
 
         if self.line == range.end.line {
-            let RangeCursorLine { start, .. } = self.last_line();
+            let Range { start, .. } = self.last_line();
             return range.end.column >= start;
         }
 
@@ -357,7 +332,7 @@ impl SelectCursor {
         }
     }
 
-    pub fn on_line(&self, line: Ix<Line>) -> Option<RangeCursorLine> {
+    pub fn on_line(&self, line: Ix<Line>) -> Option<Range<Ix<Column>>> {
         if line < self.line {
             return None;
         }
@@ -370,11 +345,11 @@ impl SelectCursor {
         self.other_lines.get(line.inner() - 1).copied()
     }
 
-    fn last_line(&self) -> RangeCursorLine {
+    fn last_line(&self) -> Range<Ix<Column>> {
         self.other_lines.last().copied().unwrap_or(self.first_line)
     }
 
-    fn last_line_mut(&mut self) -> &mut RangeCursorLine {
+    fn last_line_mut(&mut self) -> &mut Range<Ix<Column>> {
         self.other_lines.last_mut().unwrap_or(&mut self.first_line)
     }
 
@@ -396,15 +371,15 @@ impl SelectCursor {
         }
     }
 
-    pub fn lines(&self) -> impl Iterator<Item = RangeCursorLine> {
+    pub fn lines(&self) -> impl Iterator<Item = Range<Ix<Column>>> {
         iter::once(self.first_line).chain(self.other_lines.iter().copied())
     }
 
-    pub fn lines_ix(&self) -> impl Iterator<Item = (Ix<Line>, RangeCursorLine)> {
+    pub fn lines_ix(&self) -> impl Iterator<Item = (Ix<Line>, Range<Ix<Column>>)> {
         (self.line..).into_iter().zip(self.lines())
     }
 
-    fn lines_mut(&mut self) -> impl Iterator<Item = &mut RangeCursorLine> {
+    fn lines_mut(&mut self) -> impl Iterator<Item = &mut Range<Ix<Column>>> {
         iter::once(&mut self.first_line).chain(&mut self.other_lines)
     }
 
@@ -412,10 +387,7 @@ impl SelectCursor {
         let a = self.first_line.start;
         let b = self.last_line().end;
 
-        let range = RangeCursorLine {
-            start: a.min(b),
-            end: a.max(b)
-        };
+        let range = a.min(b)..a.max(b);
         for line in self.lines_mut() {
             *line = range;
         }
@@ -663,7 +635,16 @@ impl SelectCursor {
     }
 }
 
-impl RangeCursorLine {
+#[extension(pub trait CursorRangeExt)]
+impl Range<Ix<Column>> {
+    fn point(column: Ix<Column>) -> Range<Ix<Column>> {
+        column..column
+    }
+
+    fn is_point(&self) -> bool {
+        self.start == self.end
+    }
+    
     fn right_align(&mut self, mut end: Ix<Column>, force: bool) {
         if !force {
             end = self.start.max(end);
@@ -677,7 +658,7 @@ impl RangeCursorLine {
         self.end = self.end.max(self.start);
     }
 
-    pub fn move_x(&mut self, columns: Ix<Column, isize>) {
+    fn move_x(&mut self, columns: Ix<Column, isize>) {
         match columns.cmp(&Ix::new(0)) {
             Less => {
                 self.start = self.start.saturating_sub((-columns).to_usize());
@@ -691,19 +672,19 @@ impl RangeCursorLine {
         }
     }
 
-    pub fn extend_left(&mut self, columns: Ix<Column>) {
+    fn extend_left(&mut self, columns: Ix<Column>) {
         self.start = self.start.saturating_sub(columns);
     }
 
-    pub fn extend_right(&mut self, columns: Ix<Column>) {
+    fn extend_right(&mut self, columns: Ix<Column>) {
         self.end += columns;
     }
 
-    pub fn retract_right(&mut self, columns: Ix<Column>) {
+    fn retract_right(&mut self, columns: Ix<Column>) {
         self.start = (self.start + columns).min(self.end)
     }
 
-    pub fn retract_left(&mut self, columns: Ix<Column>) {
+    fn retract_left(&mut self, columns: Ix<Column>) {
         self.end = self.end.saturating_sub(columns).max(self.start)
     }
 }

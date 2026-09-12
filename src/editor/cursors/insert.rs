@@ -6,7 +6,7 @@ use crate::{
     editor::cursors::{
         Cursor, CursorSet,
         line_select::{LineCursor, LineCursors},
-        select::{RangeCursorLine, SelectCursor, SelectCursors},
+        select::{SelectCursor, SelectCursors},
     },
     ix::{Column, Ix, Line},
     pos::{Pos, Region},
@@ -50,10 +50,7 @@ impl InsertCursor {
         } = self;
         SelectCursor {
             line,
-            first_line: RangeCursorLine {
-                start: column,
-                end: column,
-            },
+            first_line: column..column,
             other_lines: Vec::new(),
         }
     }

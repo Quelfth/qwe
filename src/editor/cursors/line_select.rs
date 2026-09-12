@@ -4,7 +4,7 @@ use crate::{
     document::CursorChange,
     editor::cursors::{
         Cursor, CursorSet,
-        select::{RangeCursorLine, SelectCursor, SelectCursors},
+        select::{CursorRangeExt, SelectCursor, SelectCursors},
     },
     ix::{Byte, Ix, Line},
     pos::{Pos, Region},
@@ -83,14 +83,14 @@ impl LineCursor {
             if line == Ix::new(0) {
                 return SelectCursor {
                     line,
-                    first_line: RangeCursorLine::point(doc.indent_on_line(Ix::new(0))),
+                    first_line: Range::point(doc.indent_on_line(Ix::new(0))),
                     other_lines: Vec::new(),
                 };
             }
             return SelectCursor {
                 line: line - Ix::new(1),
-                first_line: RangeCursorLine::point(doc.context_columns_in_line(line - Ix::new(1))),
-                other_lines: vec![RangeCursorLine::point(doc.context_indent_inc(line))],
+                first_line: Range::point(doc.context_columns_in_line(line - Ix::new(1))),
+                other_lines: vec![Range::point(doc.context_indent_inc(line))],
             };
         }
 
@@ -105,16 +105,11 @@ impl LineCursor {
 
         SelectCursor {
             line,
-            first_line: RangeCursorLine {
-                start,
-                end: doc.context_columns_in_line(line),
-            },
+            first_line: start..doc.context_columns_in_line(line),
+            
             other_lines: (line + Ix::new(1)..end_line)
                 .into_iter()
-                .map(|l| RangeCursorLine {
-                    start,
-                    end: doc.context_columns_in_line(l),
-                })
+                .map(|l| start..doc.context_columns_in_line(l))
                 .collect(),
         }
     }
@@ -133,7 +128,7 @@ impl LineCursor {
             }
         }
         let start = start.unwrap_or(Ix::ZERO);
-        let line = RangeCursorLine { start, end: end.unwrap_or(start) };
+        let line = start..end.unwrap_or(start);
 
         SelectCursor {
             line: self.line,
@@ -199,8 +194,12 @@ impl LineCursor {
         Some(start..end)
     }
 
+    pub fn range(&self) -> Range<Ix<Line>> {
+        self.line..self.end()
+    }
+
     pub fn convex_range(&self) -> Region {
-        Region::Line(self.line..self.line + self.height)
+        Region::Line(self.range())
     }
 
     pub fn line_split(&self) -> impl Iterator<Item = Self> {

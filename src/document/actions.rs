@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{
     constants::TAB_WIDTH,
     document::{Document, force_cursors},
-    editor::cursors::{Cursor as _, CursorIndex, CursorState, Cursors, select::RangeCursorLine},
+    editor::cursors::{Cursor as _, CursorIndex, CursorState, Cursors},
     ix::Ix,
     pos::Pos,
     util::indent_string,
@@ -32,9 +32,9 @@ impl Document {
             CursorState::Select(cursors) => {
                 let mut s = String::new();
                 let cursor = cursors.get(cursor)?;
-                for (i, RangeCursorLine { start, end }) in cursor.lines_ix() {
+                for (i, range) in cursor.lines_ix() {
                     let Some(line) = self.text.line(i) else { continue };
-                    let range = line.column_range_to_byte_range(start..end);
+                    let range = line.column_range_to_byte_range(range);
                     s.extend(line.byte_slice(range).unwrap().chunks());
                     s += "\n";
                 }
