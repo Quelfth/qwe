@@ -43,8 +43,8 @@ tree-sitter-tsquery.git = "https://github.com/Quelfth/tree-sitter-query"
 tree-sitter-rust = { git = "https://github.com/Quelfth/tree-sitter-rust", branch = "main" }
 #tree-sitter-rust.path = "../tree-sitter-rust"
 tree-sitter-sulu.git = "https://github.com/Quelfth/tree-sitter-sulu"
-#tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
-tree-sitter-mona.path = "../tree-sitter-mona"
+tree-sitter-mona.git = "https://github.com/Quelfth/tree-sitter-mona"
+#tree-sitter-mona.path = "../tree-sitter-mona"
 tree-sitter-rust-format-args.git = "https://github.com/Quelfth/tree-sitter-rust-format-args"
 tree-sitter-javascript = "0.25.0"
 tree-sitter-kotlin = { package = "tree-sitter-kotlin-ng", version = "1.1.0" }
