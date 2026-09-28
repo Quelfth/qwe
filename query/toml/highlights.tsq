@@ -3,9 +3,13 @@
 (string) @l.string
 (string "\"" @l.string.quote)
 
+(integer) @l.number
+
 (boolean) @i.value.boolean
 
 (bare_key) @i.value.field
+(quoted_key) @i.value.field
+(quoted_key "\"" @l.source.quote_.priority_1)
 
 (pair "=" @o.key-value)
 (dotted_key "." @o.access.field)

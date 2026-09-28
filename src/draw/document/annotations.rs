@@ -47,7 +47,7 @@ impl Document {
                 } else {
                     brace_part(i, n)
                 };
-                cell.style = cell.style + Style::fg(severity.fg());
+                cell.style += Style::fg(severity.fg());
             }
         }
     }

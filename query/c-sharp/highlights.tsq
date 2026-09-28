@@ -1,4 +1,3 @@
-
 (type_argument_list ["<" ">"] @x.angle-bracket)
 
 (comment) @comment
@@ -25,6 +24,8 @@
 "sealed" @i.attribute
 
 "override" @o.override
+"abstract" @o.declare.abstract
+"virtual" @o.declare.virtual
 
 "params" @o.sequence
 
@@ -60,6 +61,8 @@
 (field_declaration ";" @o.declare.value)
 (variable_declarator "=" @o.declare.value)
 (parameter "=" @o.declare.value.parameter)
+(variable_declarator (initializer_expression ["{" "," "}"] @o.collection.list))
+(initializer_expression (initializer_expression ["{" "," "}"] @o.initialize))
 
 (constructor_declaration name: (identifier) @i.function.constructor.declaration parameters: (parameter_list ["(" "," ")"] @o.call.function.constructor.declaration_.priority_1))
 
@@ -90,7 +93,7 @@
 
 ; Expressions
 
-(implicit_object_creation_expression "new" @o.initialize (_ ["(" "," ")"] @o.initialize))
+(implicit_object_creation_expression "new" @o.initialize (_ ["(" "," ")" "{" "}"] @o.initialize)?)
 
 (implicit_array_creation_expression ["new" "[" "]"] @o.collection.list (_ ["{" "," "}"] @o.collection.list))
 (array_creation_expression "new" @o.collection.list (_ ["{" "," "}"] @o.collection.list))
@@ -149,6 +152,10 @@
 
 (invocation_expression function: (_) @o.call.operator @_ (#eq? @_ nameof) (argument_list ["(" ")"] @o.call.operator))
 
+(implicit_parameter) @i.value.parameter
+
+(lambda_expression "=>" @o.declare.function.lambda)
+
 "var" @o.declare.value.variable
 
 "if" @o.branch.if
@@ -191,6 +198,7 @@
 
 ["is" "as"] @o.branch.match
 (property_pattern_clause ["{" "," "}"] @o.branch.match)
+(subpattern ":" @o.key-value)
 
 "return" @o.control.return
 (return_statement ";" @o.control.return)
@@ -258,5 +266,13 @@
 ((identifier) @i.type.struct @_ (#semantic? @_ Struct))
 ((identifier) @i.type.enum @_ (#semantic? @_ Enum))
 ((identifier) @i.type.interface @_ (#semantic? @_ Interface))
+
+([
+    "+" "-" "*" "/" "%"
+    "==" "!=" "<" ">" "<=" ">="
+    "!" "~" "&" "|" "^"
+    "<<" ">>" ">>>"
+] @o.overloaded
+@_ (#semantic? @_ OperatorOverloaded))
 
 (attribute name: (identifier) @i.attribute_.priority_1)

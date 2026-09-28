@@ -1,8 +1,5 @@
 use {
-    crate::{document::{Document, diagnostics::Diagnostic}, lang::Language, pos::Utf16Pos},
-    bimap::BiMap,
-    slotmap::SlotMap,
-    std::{mem, path::Path, range::Range, sync::Arc}
+    crate::{document::{Document, diagnostics::Diagnostic}, lang::Language, pos::Utf16Pos, range_sequence::RangeSequence, util::MapBounds as _}, bimap::BiMap, slotmap::SlotMap, std::{mem, path::Path, range::Range, sync::Arc}
 };
 
 slotmap::new_key_type! {
@@ -30,9 +27,37 @@ impl Documents {
     }
 
     pub fn insert_pathed_or_info(&mut self, path: Arc<Path>, doc: DocOrInfo) -> DocKey {
-        let key = self.docs.insert(doc);
-        self.paths.insert(path, key);
-        key
+        match doc {
+            DocOrInfo::Doc(mut document) => {
+                if
+                    let Some(key) = self.key_from_path(&path) &&
+                    let Some(current_doc) = self.by_key_or_info_mut(key) &&
+                    let Some(info) = current_doc.info_mut()
+                {
+                    let info = mem::take(info);
+        
+                    document.diagnostics = RangeSequence::from_abs(
+                        info.diagnostics
+                            .into_iter()
+                            .map(|(range, diagnostic)| {
+                                (range.map_bounds(|b| document.text().byte_of_utf16_pos_saturating(b)), diagnostic)
+                            })
+                            .collect()
+                    )
+                } 
+                let key = self.docs.insert(DocOrInfo::Doc(document));
+                self.paths.insert(path, key);
+                key
+            },
+            DocOrInfo::Info(document_info) => {
+                let key = self.docs.insert(DocOrInfo::Info(document_info));
+                self.paths.insert(path, key);
+                key
+            },
+        }
+
+
+
     }
 
     pub fn extract_by_path(&mut self, path: &Path) -> Option<Document> {
@@ -67,8 +92,18 @@ impl Documents {
         self.docs.get(key)
     }
 
+    pub fn by_key_or_info_mut(&mut self, key: DocKey) -> Option<&mut DocOrInfo> {
+        self.docs.get_mut(key)
+    }
+
     pub fn key_from_path(&self, path: &Path) -> Option<DocKey> {
         Some(*self.paths.get_by_left(path)?)
+    }
+
+    pub fn key_from_path_not_info(&self, path: &Path) -> Option<DocKey> {
+        let key = self.key_from_path(path)?;
+        self.by_key(key)?;
+        Some(key)
     }
 
     pub fn path_from_key(&self, key: DocKey) -> Option<Arc<Path>> {
@@ -112,6 +147,13 @@ impl DocOrInfo {
         match self {
             DocOrInfo::Doc(document) => Some(document),
             DocOrInfo::Info(_) => None,
+        }
+    }
+
+    pub fn info_mut(&mut self) -> Option<&mut DocumentInfo> {
+        match self {
+            DocOrInfo::Doc(_) => None,
+            DocOrInfo::Info(info) => Some(info),
         }
     }
 }

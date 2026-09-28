@@ -3,8 +3,6 @@ use crate::{
     draw::screen::Canvas,
 };
 
-use super::CursorRange;
-
 pub mod badges;
 pub mod highlight;
 pub mod main;
@@ -16,13 +14,7 @@ pub mod cursors;
 
 impl Document {
     pub fn draw(&self, mut canvas: Canvas<'_>) {
-        let cursors = |i| {
-            self.cursors
-                .as_ref()
-                .map(|c| c.ranges_for_line(i).collect())
-                .unwrap_or_default()
-        };
-        self.main_draw(canvas.reborrow(), cursors);
+        self.main_draw(canvas.reborrow());
         self.draw_cursors(canvas.reborrow());
         self.draw_rulers(canvas.reborrow());
         self.draw_annotations(canvas.reborrow());

@@ -1,11 +1,9 @@
 use std::{
-    borrow::Cow, io::{self, Write, stdout}, ops::{Index, IndexMut, RangeBounds}
+    borrow::Cow, io::{self, Stdout, Write, stdout}, ops::{Index, IndexMut, RangeBounds}
 };
 
 use crossterm::{
-    QueueableCommand,
-    cursor::MoveTo,
-    style::{Color, ContentStyle, PrintStyledContent, StyledContent},
+    QueueableCommand, cursor, style::{Color, ContentStyle, PrintStyledContent, StyledContent},
 };
 use culit::culit;
 
@@ -22,6 +20,7 @@ pub struct Screen {
     width: u16,
     height: u16,
     cells: Box<[Cell]>,
+    cursors: Vec<ScreenCursor>,
 }
 
 impl Screen {
@@ -30,6 +29,7 @@ impl Screen {
             width,
             height,
             cells: vec![Cell::new(bg); (width * height).into()].into(),
+            cursors: vec![],
         }
     }
 }
@@ -100,16 +100,22 @@ impl Cell {
     }
 }
 
+pub struct ScreenCursor {
+    pub position: (u16, u16),
+    pub color: Color,
+}
+
 impl Screen {
     pub fn draw_full(&self) -> io::Result<()> {
         let mut stdout = stdout();
         for i in 0..self.height {
-            stdout.queue(MoveTo(0, i))?;
+            stdout.queue(cursor::MoveTo(0, i))?;
             for j in 0..self.width {
                 let cell = &self[(i, j)];
                 stdout.queue(PrintStyledContent(cell.as_styled()))?;
             }
         }
+        self.draw_cursors(&mut stdout)?;
 
         stdout.flush()
     }
@@ -126,12 +132,44 @@ impl Screen {
                 }
                 let cell = &self[(i, j)];
                 stdout
-                    .queue(MoveTo(j, i))?
+                    .queue(cursor::MoveTo(j, i))?
                     .queue(PrintStyledContent(cell.as_styled()))?;
             }
         }
+        self.draw_cursors(&mut stdout)?;
 
         stdout.flush()
+    }
+
+    fn draw_cursors(&self, stdout: &mut Stdout) -> io::Result<()> {
+        let mut cursors = self.cursors.iter();
+
+        write!(stdout, "\x1b[>0;4 q")?; // Clear alternate cursors
+
+        let Some(&ScreenCursor { position: (row, col), color }) = cursors.next() else {
+            stdout.queue(cursor::Hide)?;
+            return Ok(());
+        };
+
+        stdout.queue(cursor::MoveTo(col, row))?;
+        stdout.queue(cursor::SetCursorStyle::SteadyBar)?;
+        if let Color::Rgb { r, g, b } = color {
+            write!(stdout, "\x1b]12;rgb:{r:02x}/{g:02x}/{b:02x}\x07")?; // Set cursor color
+        }
+        stdout.queue(cursor::Show)?;
+
+        let mut cursor_color_set = false;
+
+        for &ScreenCursor { position: (row, col), color } in cursors {
+            let (row, col) = (row + 1, col + 1);
+            write!(stdout, "\x1b[>29;2:{row}:{col} q")?;
+            if !cursor_color_set && let Color::Rgb { r, g, b } = color {
+                write!(stdout, "\x1b[>40;2:{r}:{g}:{b} q")?;
+                cursor_color_set = true;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -228,6 +266,10 @@ impl<'s> Canvas<'s> {
                 self[(i, j)] = Cell::new(color);
             }
         }
+    }
+
+    pub fn draw_cursor(&mut self, cursor: ScreenCursor) {
+        self.screen.cursors.push(cursor);
     }
 }
 
@@ -392,6 +434,7 @@ impl<'a, 'b> CanvasCursor<'a, 'b> {
         Ok(())
     }
 
+    #[expect(unused)]
     pub fn write_boxed_lines(&mut self, text: impl AsRef<str>, style: impl Into<FlatStyle>, ends: (Grapheme, Grapheme)) -> Result<(), EndOfRowOrCanvas> {
         let style = style.into();
         for line in text.as_ref().lines() {

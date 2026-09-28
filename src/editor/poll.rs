@@ -40,24 +40,26 @@ impl AppState for Editor {
                             self.cmn.presenter.defer_draw();
                         }
                     }
-                    Diagnostics { uri, diagnostics } => {
+                    Diagnostics { uri: diagnostic_uri, diagnostics } => {
                         let Some(path) = self.filepath.clone() else {continue};
-                        let Ok(path) = path.canonicalize() else {continue};
+                        let Ok(diagnostic_path) = path.canonicalize() else {continue};
 
                         enum DocMut<'a> {
                             Doc(&'a mut Document),
                             OrInfo(&'a mut DocOrInfo),
                         }
-
-                        let doc = if let Ok(x) = Url::from_file_path(&path) && x == uri {
+                        
+                        let doc = if let Ok(current_filepath) = Url::from_file_path(&diagnostic_path) && current_filepath == diagnostic_uri {
                             self.cmn.presenter.defer_draw();
                             DocMut::Doc(&mut self.doc)
-                        } else if let Some(doc) = self.bg_docs.by_path_mut_or_info(&path) {
+                        } else if let Some(diagnostic_path) = uri_to_canon_path(diagnostic_uri) {
+                            if let Some(doc) = self.bg_docs.by_path_mut_or_info(&diagnostic_path) {
                             DocMut::OrInfo(doc)
-                        } else {
-                            self.bg_docs.insert_pathed_or_info(path.clone().into(), DocOrInfo::Info(DocumentInfo::default()));
-                            DocMut::OrInfo(self.bg_docs.by_path_mut_or_info(&path).unwrap())
-                        };
+                            } else {
+                                self.bg_docs.insert_pathed_or_info(diagnostic_path.clone().into(), DocOrInfo::Info(DocumentInfo::default()));
+                                DocMut::OrInfo(self.bg_docs.by_path_mut_or_info(&diagnostic_path).unwrap())
+                            }
+                        } else { continue };
 
                         match doc {
                             DocMut::Doc(doc) | DocMut::OrInfo(DocOrInfo::Doc(doc)) => {

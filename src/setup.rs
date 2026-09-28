@@ -1,5 +1,7 @@
 use std::{
-    io::{self, stdout}, panic, sync::atomic::{AtomicBool, Ordering}
+    io::{self, stdout, Write},
+    panic,
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 use crossterm::{
@@ -67,6 +69,8 @@ pub fn teardown() -> io::Result<()> {
         DisableBracketedPaste,
         LeaveAlternateScreen,
     }?;
+    let mut stdout = stdout();
+    write!(stdout, "\x1b]112\x07")?;
     terminal::disable_raw_mode()?;
     IS_SETUP.store(false, Ordering::Relaxed);
     print_print_stream();

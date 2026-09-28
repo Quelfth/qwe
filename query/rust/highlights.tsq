@@ -36,11 +36,11 @@
 (char_literal [(char_prefix) "\'"] @l.string.quote)
 (char_literal (literal_suffix) @l.string.suffix)
 
-(escape_sequence "\\" @l.string.escape)
-(escape ["'" "\"" "\\"] @l.string)
-(escape ["0" "n" "r" "t"] @l.escape.value)
-(escape ["x" "u"] @l.escape.function)
-(escape ["{" "}"] @l.escape.arguments)
+(escape_sequence ["\\'" "\\\"" "\\\\" "\\0" "\\n" "\\r" "\\t" "\\x" "\\u"] @l.string.escape (#slice! @l.string.escape s0 s1))
+(escape_sequence ["\\'" "\\\"" "\\\\"] @l.string (#slice! @l.string s1 s2))
+(escape_sequence ["\\0" "\\n" "\\r" "\\t"] @l.escape.value)
+(escape_sequence ["\\x" "\\u"] @l.escape.function)
+(escape_sequence ["{" "}"] @l.escape.arguments)
 
 (string "\\\n" @l.string.line-continue)
 
@@ -96,6 +96,7 @@
 
 (keyword_scope ["self" "super"] @i.namespace.keyword)
 (keyword_scope ["crate"] @i.namespace.crate.keyword)
+;(scoped_name name: ["self" "super"] @i.namespace.keyword)
 
 ((identifier) @i.namespace (#semantic? @i.namespace Namespace))
 ((identifier) @i.namespace.crate (#semantic? @i.namespace.crate crate-root Namespace))
@@ -298,6 +299,8 @@
 (attribute_item "#" @o.visibility.public "[" @o.visibility.public (builtin_attribute "macro_export") "]" @o.visibility.public)
 (builtin_attribute "macro_use" @o.use)
 (attribute_item "#" @o.use "[" @o.use (builtin_attribute "macro_use") "]" @o.use)
+
+(token_tree (name) @_ (#semantic? @_ Namespace) . "::" @o.scope)
 
 ; Macros
 
@@ -654,9 +657,10 @@
 
 ; Names
 
-([(identifier) (self)] @i.reference (#semantic? @i.reference reference))
-([(identifier) (self)] @i.mutable (#semantic? @i.mutable mutable))
-([(identifier) (self)] @i.async (#semantic? @i.async async))
+([(identifier) (self)] @i.reference @_ (#semantic? @_ reference))
+([(identifier) (self)] @i.mutable @_ (#semantic? @_ mutable))
+([(identifier) (self)] @i.async @_ (#semantic? @_ async))
+((identifier) @i.unresolved @_ (#semantic? @_ UnresolvedReference))
 
 ; Value Names
 

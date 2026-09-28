@@ -1,10 +1,10 @@
 (macro_invocation
-    (name) @_ (#not-any-of? @_ "expand" "json" "quote" "quote_spanned")
+    (name) @_ (#not-any-of? @_ "expand" "json" "quote" "quote_spanned" "bsn" "bsn_list")
     (token_tree) @rust
 )
 
 (macro_invocation
-    (scoped_name)
+    (scoped_name name: (name) @_ (#not-any-of? @_ "expand" "json" "quote" "quote_spanned" "bsn" "bsn_list"))
     (token_tree) @rust
 )
 

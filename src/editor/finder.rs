@@ -75,7 +75,7 @@ impl Finder {
     }
 
     pub fn find(&self) -> Option<Vec<Range<Ix<Byte>>>> {
-        let re = Regex::new(&format!{"({}){}", self.regex, r"&\p{utf8}"}).ok()?;
+        let re = Regex::new(&format!("({}){}", self.regex, r"&\p{utf8}")).ok()?;
 
         Some(
             self.haystacks

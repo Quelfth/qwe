@@ -3,11 +3,7 @@ use std::range::Range;
 use tree_sitter::QueryCursor;
 
 use crate::{
-    document::{Document, diagnostics::Severity, tree::MetaQueryCapture},
-    ix::{Byte, Ix, ix},
-    lang::{Highlights, Zebra},
-    ts::QueryCx,
-    util::{CharClass, MapBounds, word_splits},
+    document::{Document, diagnostics::Severity, tree::MetaQueryCapture}, ix::{Byte, Ix, ix}, lang::{Highlights, Zebra}, ts::{DirectivesExt as _, QueryCx}, util::{CharClass, MapBounds, word_splits},
 };
 
 pub struct Highlight {
@@ -17,6 +13,7 @@ pub struct Highlight {
     pub priority: i32,
 }
 
+#[derive(Clone)]
 pub struct Scope(pub Vec<String>);
 
 pub struct ScopeWithProperties {
@@ -89,17 +86,19 @@ impl Document {
         }
 
         if let Some(lang) = self.language() && let Some(tree) = self.tree() {
-            for MetaQueryCapture { node, name, layer } in tree.query::<Highlights>(cx, qc!(), self.text(), lang) {
+            for MetaQueryCapture { node, name, layer, directives } in tree.query::<Highlights>(cx, qc!(), self.text(), lang) {
                 let range = Range::from(node.byte_range()).map_bounds(Ix::new);
                 let ScopeWithProperties { scope, ilayer, priority } = ScopeWithProperties::parse(name);
-                highlight_scopes.push(Highlight {
-                    scope,
-                    range,
-                    injection_layer: Some(layer + ilayer),
-                    priority,
-                });
+                for range in directives.apply_to_range(range, self.text()) {
+                    highlight_scopes.push(Highlight {
+                        scope: scope.clone(),
+                        range,
+                        injection_layer: Some(layer + ilayer),
+                        priority,
+                    });
+                }
             }
-            for MetaQueryCapture { node, name, layer } in tree.query::<Zebra>(cx, qc!(), self.text(), lang) {
+            for MetaQueryCapture { node, name, layer, directives: _ } in tree.query::<Zebra>(cx, qc!(), self.text(), lang) {
                 if name != "zebra" {
                     continue;
                 }

@@ -4,14 +4,14 @@ use crate::{
     color,
     custom_literal::integer::rgb,
     document::Document,
-    draw::{cursor::{CursorRangeShape, CursorStyle}, document::{highlight::Highlight, query::query_cx}, screen::Canvas},
+    draw::{document::{highlight::Highlight, query::query_cx}, screen::Canvas},
     grapheme::{Grapheme, GraphemeExt},
-    ix::{Byte, Column, Ix, Line, ix},
-    style::{Style, Under},
+    ix::{Byte, Ix, Line, ix},
+    style::Style,
     theme::theme,
 };
 
-use super::{super::screen::Cell, CursorRange};
+use super::super::screen::Cell;
 
 fn resolve_highlight(scopes: &[Highlight], pos: Ix<Byte>) -> Style {
     let scopes = scopes
@@ -52,7 +52,6 @@ impl Document {
     pub fn main_draw(
         &self,
         mut canvas: Canvas<'_>,
-        cursors: impl Fn(Ix<Line>) -> Vec<CursorRange>,
     ) {
         let (width, height) = canvas.size();
         *self.view_height.lock() = ix(height as _);

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, iter, ops::Deref, range::Range, sync::Arc};
 
-use tree_sitter::{Query, QueryCapture, QueryCursor, QueryError, QueryMatch, StreamingIterator as _, Tree};
+use tree_sitter::{Query, QueryCapture, QueryCursor, QueryError, QueryMatch, QueryPredicate, StreamingIterator as _, Tree};
 
 use crate::{
     document::semtoks::SemanticToken,
@@ -8,11 +8,14 @@ use crate::{
     lang::Language,
     range_tree::RangeTree,
     rope::Rope,
-    ts::predicate::Predicate,
+    ts::{directive::{DirectiveError}, predicate::{Predicate, PredicateError}},
     util::{MapBounds as _, RangeOverlap as _}
 };
 
 mod predicate;
+mod directive;
+
+pub use directive::{Directive, DirectivesExt};
 
 #[derive(Copy, Clone)]
 pub struct QuerySource {
@@ -43,6 +46,11 @@ impl QueryCx<'static> {
     }
 }
 
+pub struct QueryCaptureWithDirectives<'t, 'c> {
+    pub capture: &'c QueryCapture<'t>,
+    pub directives: Vec<Directive>,
+}
+
 pub fn query_captures<'t, 'c>(
     tree: &'t Tree,
     text: &Rope,
@@ -50,7 +58,7 @@ pub fn query_captures<'t, 'c>(
     context: &QueryCx<'t>,
     query: &'static Query,
     cull_irrelevant: bool,
-) -> impl Iterator<Item = &'c QueryCapture<'t>>
+) -> impl Iterator<Item = QueryCaptureWithDirectives<'t, 'c>>
 where
     't: 'c,
 {
@@ -80,17 +88,26 @@ where
                 continue
             }
 
-            let preds = query
+            let mut predicates = Vec::new();
+            let mut directives = Vec::new();
+
+            for predicate in query
                 .general_predicates(*pattern_index)
                 .iter()
-                .filter_map(|p| Predicate::parse(p).ok())
-                .collect::<Vec<_>>();
+                .filter_map(|p| parse_predicate(p).ok())
+            {
+                match predicate {
+                    PredicateOrDirective::Predicate(predicate) => predicates.push(predicate),
+                    PredicateOrDirective::Directive(directive) => directives.push(directive),
+                }
+            }
+
             let capture_nodes = captures
                 .iter()
                 .map(|QueryCapture { node, index }| (*index, node))
                 .collect::<HashMap<_, _>>();
 
-            for pred in preds {
+            for pred in predicates {
                 match pred {
                     Predicate::Semantic { capture, predicate } => {
                         let node = capture_nodes[&capture];
@@ -117,8 +134,41 @@ where
             }
 
             for capture in *captures {
-                yield capture;
+                let directives = directives.iter().filter(|d| d.0 == capture.index).map(|d| d.1).collect();
+                yield QueryCaptureWithDirectives { capture, directives };
             }
         }
     }
+}
+
+pub enum PredicateOrDirective {
+    Predicate(Predicate),
+    Directive((u32, Directive)),
+}
+
+pub enum PredicateOrDirectiveError {
+    Predicate(PredicateError),
+    Directive(DirectiveError),
+}
+
+impl From<PredicateError> for PredicateOrDirectiveError {
+    fn from(value: PredicateError) -> Self {
+        Self::Predicate(value)
+    }
+}
+
+impl From<DirectiveError> for PredicateOrDirectiveError {
+    fn from(value: DirectiveError) -> Self {
+        Self::Directive(value)
+    }
+}
+
+fn parse_predicate(predicate: &QueryPredicate) -> Result<PredicateOrDirective, PredicateOrDirectiveError> {
+    let QueryPredicate { operator, args } = predicate;
+    let (name, operator) = operator.split_at(operator.floor_char_boundary(operator.len()-1));
+    Ok(match operator {
+        "?" => PredicateOrDirective::Predicate(Predicate::parse(name, args)?),
+        "!" => PredicateOrDirective::Directive(Directive::parse(name, args)?),
+        _ => todo!()
+    })
 }

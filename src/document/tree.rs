@@ -4,7 +4,7 @@ use extension_traits::extension;
 use thiserror::Error;
 use tree_sitter::{InputEdit, LanguageError, Node, Parser, QueryCapture, QueryCursor, Tree};
 
-use crate::{ix::{Byte, Ix}, lang::{Injections, Language, LanguageQuery}, log::log_msg, rope::Rope, ts::{self, QueryCx}};
+use crate::{ix::{Byte, Ix}, lang::{Injections, Language, LanguageQuery}, log::log_msg, rope::Rope, ts::{self, Directive, QueryCaptureWithDirectives, QueryCx}};
 
 pub struct MetaTree {
     pub tree: Tree,
@@ -47,9 +47,9 @@ impl MetaTree {
     {
         gen move {
             let query = lang.query::<Q>();
-            for &QueryCapture{ node, index } in ts::query_captures(&self.tree, text, cursor, cx, lang.query::<Q>(), true) {
+            for QueryCaptureWithDirectives{ capture: &QueryCapture{ node, index }, directives } in ts::query_captures(&self.tree, text, cursor, cx, lang.query::<Q>(), true) {
                 let name = query.capture_names()[index as usize];
-                yield MetaQueryCapture { node, name, layer };
+                yield MetaQueryCapture { node, name, layer, directives };
             }
 
             for injection in &self.injections {
@@ -62,11 +62,12 @@ impl MetaTree {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct MetaQueryCapture<'t> {
     pub node: Node<'t>,
     pub name: &'static str,
     pub layer: u32,
+    pub directives: Vec<Directive>,
 }
 
 #[extension(pub trait OptionTreeParseExt)]
@@ -103,7 +104,7 @@ fn query_injections(cx: &QueryCx<'_>, lang: Language, tree: &Tree, text: &Rope, 
     let inj_query = lang.query::<Injections>();
 
     let mut all_injections = ts::query_captures(tree, text, &mut QueryCursor::new(), cx, inj_query, false)
-        .filter_map(|QueryCapture { node, index }| {
+        .filter_map(|QueryCaptureWithDirectives{ capture: QueryCapture { node, index }, .. }| {
             let name = inj_query.capture_names()[*index as usize];
             let lang = Language::from_injection_name(name)?;
             let std::ops::Range { start, end } = node.byte_range();

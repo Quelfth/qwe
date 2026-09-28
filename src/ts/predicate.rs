@@ -1,4 +1,4 @@
-use tree_sitter::{QueryPredicate, QueryPredicateArg};
+use tree_sitter::QueryPredicateArg;
 
 use crate::pred::Pred;
 
@@ -11,10 +11,9 @@ pub enum Predicate {
 pub struct PredicateError;
 
 impl Predicate {
-    pub fn parse(predicate: &QueryPredicate) -> Result<Self, PredicateError> {
-        let QueryPredicate { operator, args } = predicate;
-        match &**operator {
-            "semantic?" => {
+    pub fn parse(name: &str, args: &[QueryPredicateArg]) -> Result<Self, PredicateError> {
+        match name {
+            "semantic" => {
                 let Some(QueryPredicateArg::Capture(capture)) = args.first() else {
                     return Err(PredicateError);
                 };
@@ -37,7 +36,7 @@ impl Predicate {
                     predicate,
                 })
             }
-            "local?" => {
+            "local" => {
                 let Some(QueryPredicateArg::Capture(capture)) = args.first() else {
                     return Err(PredicateError);
                 };

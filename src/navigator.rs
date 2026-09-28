@@ -214,9 +214,9 @@ impl Navigator {
         let Some(entry) = dir.get_mut(&final_component) else { return };
 
         let Entry::File { doc, .. } = entry else { return };
-        if !matches!(doc, FileDocument::OnDisk) { return };
+        //if !matches!(doc, FileDocument::OnDisk) { return };
 
-        let doc_key = self.docs.key_from_path(&self.path).or_else(|| {
+        let doc_key = self.docs.key_from_path_not_info(&self.path).or_else(|| {
             let path: Arc<Path> = self.path.clone().into();
             let PathedFile { path, file } = PathedFile::open(path.clone()).ok()?;
             let new_doc = Document::new(
@@ -461,7 +461,7 @@ impl Present for Navigator {
     fn present(&self, mut canvas: Canvas<'_>) -> io::Result<()> {
         self.main_draw(canvas.reborrow())?;
         if let Some(NameBox { name, .. }) = &self.name_box {
-            _ = canvas.at((canvas.height() / 2, canvas.width() / 2)).write(name, Style::fg(color::FG) + Style::bg(color::BG));
+            _= canvas.at((canvas.height() / 2, canvas.width() / 2)).write(name, Style::fg(color::FG) + Style::bg(color::BG));
         }
         Ok(())
     }

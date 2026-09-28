@@ -13,27 +13,28 @@ use crate::{
 };
 
 #[derive(Copy, Clone)]
-pub struct CursorRange {
+pub struct CursorElement {
     pub r#type: CursorType,
-    pub range: CursorRangeShape,
+    pub range: CursorElementShape,
 }
 
 #[derive(Copy, Clone)]
-pub enum CursorRangeShape {
+pub enum CursorElementShape {
     Range {
         line: Ix<Line>,
         range: Range<Ix<Column>>,
     },
     Line(Range<Ix<Line>>),
+    Caret(Pos),
 }
 
-impl CursorRange {
+impl CursorElement {
     pub(super) fn thin(
         pos: Pos,
         left: CursorType,
         right: CursorType,
     ) -> impl Iterator<Item = Self> {
-        use CursorRangeShape::*;
+        use CursorElementShape::*;
         [
             (pos.column > Ix::new(0)).then(|| Self {
                 r#type: left,
@@ -54,12 +55,17 @@ impl CursorRange {
         .flatten()
     }
 
+    pub(super) fn caret(pos: Pos, r#type: CursorType) -> Self {
+        Self {
+            r#type,
+            range: CursorElementShape::Caret(pos),
+        }
+    }
+
     pub(super) fn insert(pos: Pos, order: impl ToCursorOrder) -> impl Iterator<Item = Self> {
-        Self::thin(
-            pos,
-            cursor_type!(Insert Start[order]),
-            cursor_type!(Insert End[order]),
-        )
+        [
+            Self::caret(pos, cursor_type!(Insert Caret[order]))
+        ].into_iter()
     }
 
     pub(super) fn mirror_insert(
@@ -90,7 +96,7 @@ impl CursorRange {
             ),
             false => iter::once(Self {
                 r#type: cursor_type!(Select[index]),
-                range: CursorRangeShape::Range { line, range },
+                range: CursorElementShape::Range { line, range },
             }),
         }
     }
@@ -98,14 +104,14 @@ impl CursorRange {
     fn line(lines: Range<Ix<Line>>, order: impl ToCursorOrder) -> Self {
         Self {
             r#type: cursor_type!(Select[order]),
-            range: CursorRangeShape::Line(lines),
+            range: CursorElementShape::Line(lines),
         }
     }
 
     fn between_line(line: Ix<Line>, order: impl ToCursorOrder) -> Self {
         Self {
             r#type: cursor_type!(Select Line [order]),
-            range: CursorRangeShape::Line(line.saturating_sub(ix(1))..line),
+            range: CursorElementShape::Line(line.saturating_sub(ix(1))..line),
         }
     }
 }
@@ -141,6 +147,7 @@ pub enum CursorPart {
     Middle,
     End,
     Line,
+    Caret,
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -223,9 +230,11 @@ impl CursorType {
         use {CursorCategory::*, CursorOrder::*, CursorPart::*, CursorStyle::*};
         const I_LEFT: Col = 0x003830rgb;
         const I_RIGHT: Col = 0x007060rgb;
+        const I_CARET: Col = 0x00cca4rgb;
 
         const IO_RIGHT: Col = 0x307030rgb;
         const IE_RIGHT: Col = 0x607020rgb;
+        const I_CARET_A: Col = 0xa4cc00rgb;
 
         const S_LEFT: Col = 0x101050rgb;
         const S_RIGHT: Col = 0x404090rgb;
@@ -244,18 +253,21 @@ impl CursorType {
                     End => Color(I_RIGHT),
                     Middle => Color(I_RIGHT),
                     Line => Underline(I_RIGHT),
+                    Caret => Color(I_CARET),
                 },
                 Odd => match self.part {
                     Start => Color(I_LEFT),
                     End => Color(IO_RIGHT),
                     Middle => Color(IO_RIGHT),
                     Line => Underline(IO_RIGHT),
+                    Caret => Color(I_CARET_A),
                 },
                 Even => match self.part {
                     Start => Color(I_LEFT),
                     End => Color(IE_RIGHT),
                     Middle => Color(IE_RIGHT),
                     Line => Underline(IE_RIGHT),
+                    Caret => Color(I_CARET_A),
                 },
             },
             Select => match self.order {
@@ -264,18 +276,21 @@ impl CursorType {
                     End => Color(S_RIGHT),
                     Middle => Color(S),
                     Line => Underline(S_LINE),
+                    Caret => Color(S_RIGHT),
                 },
                 Odd => match self.part {
                     Start => Color(S_LEFT),
                     End => Color(SO_RIGHT),
                     Middle => Color(SO),
                     Line => Underline(SO_RIGHT),
+                    Caret => Color(SO_RIGHT),
                 },
                 Even => match self.part {
                     Start => Color(S_LEFT),
                     End => Color(SE_RIGHT),
                     Middle => Color(SE),
                     Line => Underline(SE_RIGHT),
+                    Caret => Color(SE_RIGHT),
                 },
             },
         }
@@ -284,7 +299,7 @@ impl CursorType {
 
 impl CursorState {
     #[auto_enum(Iterator)]
-    pub(super) fn ranges_for_line(&self, line: Ix<Line>) -> impl Iterator<Item = CursorRange> {
+    pub(super) fn elements(&self) -> impl Iterator<Item = CursorElement> {
         use CursorState::*;
         match self {
             MirrorInsert(cursors) => cursors
@@ -292,72 +307,29 @@ impl CursorState {
                 .zip(CursorOrder::iter())
                 .flat_map(|(c, o)| [((c.forward, true), o), ((c.reverse, false), o)])
                 .flat_map(move |((c, forward), o)| {
-                    (c.line == line).then(|| CursorRange::mirror_insert(c, forward, o))
+                    (true).then(|| CursorElement::mirror_insert(c, forward, o))
                 })
                 .flatten(),
             Insert(cursors) => cursors
                 .sorted_iter()
                 .zip(CursorOrder::iter())
                 .flat_map(move |(c, o)| {
-                    (c.pos.line == line).then(|| CursorRange::insert(c.pos, o))
-                })
-                .flatten(),
-            Select(cursors) => cursors
-                .sorted_iter()
-                .zip(CursorOrder::iter())
-                .filter_map(move |(c, o)| {
-                    let range = c.on_line(line)?;
-                    Some(CursorRange::select(line, range, o))
-                })
-                .flatten(),
-            LineSelect(cursors) => (cursors
-                .sorted_iter()
-                .zip(CursorOrder::iter())
-                .find(|(c, _)| c.line <= line && c.line + c.height > line))
-            .map(|(c, o)| CursorRange::line(c.range(), o))
-            .or_else(|| {
-                cursors
-                    .sorted_iter()
-                    .zip(CursorOrder::iter())
-                    .find(|(c, _)| c.line == line + Ix::new(1) && c.height == Ix::new(0))
-                    .map(|(c, o)| CursorRange::between_line(c.line, o))
-            })
-            .into_iter(),
-        }
-    }
-
-    #[auto_enum(Iterator)]
-    pub(super) fn ranges(&self) -> impl Iterator<Item = CursorRange> {
-        use CursorState::*;
-        match self {
-            MirrorInsert(cursors) => cursors
-                .sorted_iter()
-                .zip(CursorOrder::iter())
-                .flat_map(|(c, o)| [((c.forward, true), o), ((c.reverse, false), o)])
-                .flat_map(move |((c, forward), o)| {
-                    (true).then(|| CursorRange::mirror_insert(c, forward, o))
-                })
-                .flatten(),
-            Insert(cursors) => cursors
-                .sorted_iter()
-                .zip(CursorOrder::iter())
-                .flat_map(move |(c, o)| {
-                    (true).then(|| CursorRange::insert(c.pos, o))
+                    (true).then(|| CursorElement::insert(c.pos, o))
                 })
                 .flatten(),
             Select(cursors) => cursors
                 .sorted_iter()
                 .zip(CursorOrder::iter())
                 .flat_map(move |(c, o)| {
-                    c.lines_ix().map(move |(line, range)| CursorRange::select(line, range, o))
+                    c.lines_ix().map(move |(line, range)| CursorElement::select(line, range, o))
                 }).flatten(),
             LineSelect(cursors) => cursors
                 .sorted_iter()
                 .zip(CursorOrder::iter())
                 .map(|(c, o)| if c.height != ix(0) {
-                    CursorRange::line(c.range(), o)
+                    CursorElement::line(c.range(), o)
                 } else {
-                    CursorRange::between_line(c.line, o)
+                    CursorElement::between_line(c.line, o)
                 }),
         }
     }

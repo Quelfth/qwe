@@ -16,6 +16,7 @@
 
 (string_escape (identifier) @l.string @_ (#any-of? @_ "\"" "\\" "{"))
 
+
 ["self" "it"] @i.value.receiver
 
 ["Self" "In" "Out" "It"] @i.type.self
@@ -23,6 +24,12 @@
 ["decl" "impl" "extend" "where"] @o.implement
 
 ["type"] @o.declare.type
+
+"use" @o.use
+(use_list ["[" "," "]"] @o.use)
+(use "/" @o.use)
+(use scope: ["." "~" "/"] @i.namespace.keyword_.priority_1)
+(use symbol: ["." "~" "/"] @i.namespace.keyword_.priority_1)
 
 (impl_list_item ["{" "," "}"] @o.implement)
 (extend_item body: (object ["[" "," "]"] @o.implement))
@@ -42,7 +49,9 @@
 (object "[" @o.declare.function ("," @o.declare.function)? (function_item) ("," @o.declare.function)? "]" @o.declare.function)
 (object "[" @o.branch.match ("," @o.branch.match)? (match_item) ("," @o.branch.match)? "]" @o.branch.match)
 
-(type_item generics: (generics ["@" "<" "," ">"] @o.generics.type.struct) (object [(field_item) (rest_item)]))
+(list ["@[" "," "]"] @o.construct.list)
+
+(type_item generics: (generics [":" "<" "," ">"] @o.generics.type.struct) (object [(field_item) (rest_item)]))
 
 (match_item "=>" @o.branch.case)
 
@@ -59,7 +68,7 @@
 
 (function_item ["fn" "->" "{" "}"] @o.declare.function)
 (function_item !receiver name: (name (identifier) @i.function))
-(function_item !receiver (generics ["@" "<" "," ">"] @o.call))
+(function_item !receiver (generics [":" "<" "," ">"] @o.call))
 
 (variable_binding ":" @o.type)
 
@@ -68,6 +77,11 @@
 (reference_type ["." "~"] @o.access.field)
 (field_expression field: (name (identifier) @i.value.field))
 (field_referent field: (name (identifier) @i.value.field))
+
+(variable_binding "~" @o.storage.mutable)
+(access_expression ["~" "|>"] @o.access)
+
+(call_expression function: (name (identifier) @i.function))
 
 (method_call_expression ["." "~" "|>" "<>" "<|"] @o.access.method)
 (method_referent ["." "~"] @o.access.method)
@@ -99,7 +113,7 @@
 (function_item receiver: (_) (simple_parameter ["(" ")"] @o.call.function.method))
 (function_item receiver: (_) parameters: (object ["[" "," "]"] @o.call.function.method))
 (function_item name: (name (identifier) @i.function.method) receiver: (_))
-(function_item generics: (generics ["@" "<" "," ">"] @o.call.function.method) receiver: (_))
+(function_item generics: (generics [":" "<" "," ">"] @o.call.function.method) receiver: (_))
 
 (function_item name: (name (identifier) @i.reference) receiver: (_ ["." "~"]))
 (function_item name: (name (identifier) @i.mutable) receiver: (_ ["~" "<>" "<|"]))
@@ -107,9 +121,9 @@
 (method_call_expression ["." "~"] method: (name (identifier) @i.reference))
 (method_call_expression ["~" "<>" "<|"] method: (name (identifier) @i.mutable))
 
-(abstract_item generics: (generics ["@" "<" "," ">"] @o.implement))
-(impl_item generics: (generics ["@" "<" "," ">"] @o.implement))
-(extend_item generics: (generics ["@" "<" "," ">"] @o.implement))
+(abstract_item generics: (generics [":" "<" "," ">"] @o.implement))
+(impl_item generics: (generics [":" "<" "," ">"] @o.implement))
+(extend_item generics: (generics [":" "<" "," ">"] @o.implement))
 
 (call_expression
     argument: [

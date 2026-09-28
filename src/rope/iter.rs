@@ -22,7 +22,7 @@ impl<'a> Iterator for Graphemes<'a> {
     type Item = Grapheme;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|g| unsafe { Grapheme::new_unchecked(g) })
+        self.0.next().map(Grapheme::new_unchecked)
     }
 }
 
@@ -30,6 +30,6 @@ impl<'a> DoubleEndedIterator for Graphemes<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         self.0
             .next_back()
-            .map(|g| unsafe { Grapheme::new_unchecked(g) })
+            .map(Grapheme::new_unchecked)
     }
 }

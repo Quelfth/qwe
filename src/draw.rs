@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-    draw::{cursor::CursorRange, screen::{Canvas}},
+    draw::screen::{Canvas},
     editor::{Editor, gadget::ScreenRegion},
     presenter::{Present, Presenter},
     util::RangeLen,
