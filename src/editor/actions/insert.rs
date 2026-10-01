@@ -27,15 +27,11 @@ impl Editor {
         self.doc.insert_pair(left, right);
     }
 
-    pub fn insert_reluctant(&mut self, text: &str) {
-        self.doc.insert_reluctant(text);
+    pub fn insert_reluctant(&mut self, text: &str, escape: Option<&str>) {
+        self.doc.insert_reluctant(text, escape);
     }
 
     pub fn insert_space(&mut self) {
         self.doc.insert_space();
-    }
-
-    pub fn tab_out(&mut self) {
-        self.doc.tab_out()
     }
 }

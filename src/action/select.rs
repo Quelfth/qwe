@@ -63,6 +63,14 @@ impl Action<&mut Editor> for SelectAction {
             RetractDown => ed.retract_down(1),
             RetractLeft => ed.retract_left(1),
             RetractRight => ed.retract_right(1),
+
+            Move1WordForward => ed.doc_mut().move_1_word_forward(),
+            Move1WordBack => ed.doc_mut().move_1_word_back(),
+
+            Extend1WordForward => ed.doc_mut().extend_1_word_forward(),
+            Extend1WordBack => ed.doc_mut().extend_1_word_back(),
+            Retract1WordForward => ed.doc_mut().retract_1_word_forward(),
+            Retract1WordBack => ed.doc_mut().retract_1_word_back(),
         }
 
         None

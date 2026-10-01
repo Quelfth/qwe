@@ -211,6 +211,7 @@ expand! {
     <--let ($*^({$*.}). {$*($langs. ,)}) = $LANGUAGE
 
     <--for $q in
+        Context
         Highlights
         Injections
         Locals

@@ -6,11 +6,7 @@ use std::{
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
-    document::{Change, CursorChange, CursorChangeKind, PosError},
-    grapheme::Grapheme,
-    ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ixto},
-    pos::{Pos, Region, Utf16Pos},
-    rope::iter::{Graphemes, Lines}, util::MapBounds as _,
+    constants::TAB_WIDTH, document::{Change, CursorChange, CursorChangeKind, PosError}, grapheme::Grapheme, ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ix, ixto}, pos::{Pos, Region, Utf16Pos}, rope::iter::{Graphemes, Lines}, util::{MapBounds as _, WordBoundaryCheck},
 };
 
 use super::{Rope, RopeSlice, range_bounds_to_start_end};
@@ -21,7 +17,7 @@ impl Rope {
     #[must_use]
     fn validate_byte_range(&self, byte_range: &(impl RangeBounds<Ix<Byte>> + Clone)) -> Option<()> {
         let (start, end) =
-            range_bounds_to_start_end(byte_range.clone(), Ix::new(0), self.byte_len());
+            range_bounds_to_start_end(byte_range.clone(), ix(0), self.byte_len());
         if start > end {
             return None;
         }
@@ -43,11 +39,11 @@ impl Rope {
 
     fn validate_line_range(&self, line_range: &(impl RangeBounds<Ix<Line>> + Clone)) -> Option<()> {
         let (start, end) =
-            range_bounds_to_start_end(line_range.clone(), Ix::new(0), Ix::new(self.0.line_len()));
+            range_bounds_to_start_end(line_range.clone(), ix(0), ix(self.0.line_len()));
         if start > end {
             return None;
         }
-        if end > Ix::new(self.0.line_len()) {
+        if end > ix(self.0.line_len()) {
             return None;
         }
 
@@ -60,12 +56,12 @@ impl Rope {
     }
 
     pub fn byte_len(&self) -> Ix<Byte> {
-        Ix::new(self.0.byte_len())
+        ix(self.0.byte_len())
     }
 
     pub fn byte_of_line(&self, line_offset: Ix<Line>) -> Option<Ix<Byte>> {
         ixto!(line_offset);
-        (line_offset <= self.0.line_len()).then(|| Ix::new(self.0.byte_of_line(line_offset)))
+        (line_offset <= self.0.line_len()).then(|| ix(self.0.byte_of_line(line_offset)))
     }
 
     pub fn byte_slice(
@@ -102,7 +98,7 @@ impl Rope {
     pub fn graphemes_with_bytes(&self) -> impl Iterator<Item = (Ix<Byte>, Grapheme)> {
         let iter = self.graphemes();
         gen {
-            let mut byte = Ix::new(0);
+            let mut byte = ix(0);
 
             for grapheme in iter {
                 let len = grapheme.len();
@@ -115,15 +111,15 @@ impl Rope {
     pub fn columns_bytes(&self) -> impl Iterator<Item = (Ix<Column>, Ix<Byte>)> {
         let iter = self.graphemes();
         gen {
-            let mut column = Ix::new(0);
-            let mut byte = Ix::new(0);
+            let mut column = ix(0);
+            let mut byte = ix(0);
 
             for grapheme in iter {
                 let columns = grapheme.columns();
                 let bytes = grapheme.len();
                 for _ in Ix::<Column>::new(0)..columns {
                     yield (column, byte);
-                    column += Ix::new(1);
+                    column += ix(1);
                 }
                 byte += bytes;
             }
@@ -164,12 +160,12 @@ impl Rope {
     }
 
     pub fn line_len(&self) -> Ix<Line> {
-        Ix::new(self.0.line_len())
+        ix(self.0.line_len())
     }
 
     pub fn line_count(&self) -> Ix<Line> {
         let len = self.0.line_len();
-        Ix::new(match self.0.chars().next_back() {
+        ix(match self.0.chars().next_back() {
             Some('\n') => len,
             None => 0,
             _ => len - 1,
@@ -178,7 +174,7 @@ impl Rope {
 
     pub fn max_line_number(&self) -> Ix<Line> {
         let len = self.0.line_len();
-        Ix::new(match self.0.chars().next_back() {
+        ix(match self.0.chars().next_back() {
             Some('\n') => len + 1,
             None => 0,
             _ => len,
@@ -194,7 +190,7 @@ impl Rope {
         if byte_offset > self.0.byte_len() {
             return None;
         }
-        Some(Ix::new(self.0.line_of_byte(byte_offset)))
+        Some(ix(self.0.line_of_byte(byte_offset)))
     }
 
     pub fn line_slice(
@@ -234,12 +230,12 @@ impl Rope {
 
     pub fn utf16_of_byte(&self, byte: Ix<Byte>) -> Option<Ix<Utf16>> {
         self.validate_byte_offset(byte)?;
-        Some(Ix::new(self.0.utf16_code_unit_of_byte(byte.inner())))
+        Some(ix(self.0.utf16_code_unit_of_byte(byte.inner())))
     }
 
     pub fn ts_callback<'a>(&'a self) -> impl Fn(usize, tree_sitter::Point) -> &'a str {
         |byte, _| {
-            self.chunk_from_byte(Ix::new(byte))
+            self.chunk_from_byte(ix(byte))
                 .expect("tree sitter should be providing valid byte offsets")
         }
     }
@@ -304,7 +300,7 @@ impl Rope {
         let Some(line_text) = self.line(line) else {
             return Some(Pos {
                 line,
-                column: Ix::new(0),
+                column: ix(0),
             });
         };
         let column = line_text
@@ -326,11 +322,11 @@ impl Rope {
         })?;
         let line = self.line(pos.line);
         let Some(line) = line else {
-            return if pos.column != Ix::new(0) {
+            return if pos.column != ix(0) {
                 Err(PosError::BadColumn {
                     byte_of_line: line_ix,
-                    bytes_in_line: Ix::new(0),
-                    columns_in_line: Ix::new(0),
+                    bytes_in_line: ix(0),
+                    columns_in_line: ix(0),
                 })
             } else {
                 Ok(line_ix)
@@ -377,7 +373,7 @@ impl Rope {
             insert,
         } = change;
         let ins = insert;
-        let insert = Ix::new(insert.len());
+        let insert = ix(insert.len());
         match insert.cmp(delete) {
             Less => {
                 let byte_pos = *byte_pos + insert;
@@ -385,7 +381,7 @@ impl Rope {
                 let pos = self.pos_of_byte_pos(byte_pos).unwrap();
                 let end_pos = self.pos_of_byte_pos(byte_pos + delete).unwrap();
                 let (lines, columns) = if end_pos.line == pos.line {
-                    (Ix::new(0), end_pos.column - pos.column)
+                    (ix(0), end_pos.column - pos.column)
                 } else {
                     (end_pos.line - pos.line, end_pos.column)
                 };
@@ -403,45 +399,55 @@ impl Rope {
 
     pub fn context_indent(&self, line: Ix<Line>) -> Ix<Column> {
         let mut line = line;
-        while line > Ix::new(0) {
-            line -= Ix::new(1);
+        while line > ix(0) {
+            line -= ix(1);
             if self
                 .line(line)
                 .is_some_and(|l| !l.chars().all(char::is_whitespace))
             {
-                return self.indent_on_line(line);
+                return self.indent_for_next_line(line);
             }
         }
 
-        Ix::new(0)
+        ix(0)
     }
-    pub fn context_indent_inc(&self, line: Ix<Line>) -> Ix<Column> {
-        let mut line = line;
-        while line > Ix::new(0) {
-            if self
-                .line(line)
-                .is_some_and(|l| !l.chars().all(char::is_whitespace))
-            {
-                return self.indent_on_line(line);
-            }
-            line -= Ix::new(1);
-        }
 
-        Ix::new(0)
+    pub fn context_indent_inc(&self, line: Ix<Line>) -> Ix<Column> {
+        if self
+            .line(line)
+            .is_some_and(|l| !l.chars().all(char::is_whitespace))
+        {
+            return self.indent_on_line(line);
+        }
+        self.context_indent(line)
     }
 
     pub fn indent_on_line(&self, line: Ix<Line>) -> Ix<Column> {
         let Some(line) = self.line(line) else {
-            return Ix::new(0);
+            return ix(0);
         };
         line.graphemes()
             .take_while(|g| g.is_whitespace())
             .map(|g| g.columns())
             .sum()
     }
+
+    pub fn indent_for_next_line(&self, line: Ix<Line>) -> Ix<Column> {
+        let current = self.indent_on_line(line);
+
+        if let Some(line) = self.line(line)
+            && let Some(r#final) = line.graphemes().rev().find(|g| !g.is_whitespace())
+            && matches!(r#final.as_str(), "(" | "[" | "{" | "<" | ":")
+        {
+            return current + ix(TAB_WIDTH)
+        }
+
+        current
+    }
+
     pub fn columns_in_line(&self, line: Ix<Line>) -> Ix<Column> {
         let Some(line) = self.line(line) else {
-            return Ix::new(0);
+            return ix(0);
         };
         line.graphemes().map(|g| g.columns()).sum()
     }
@@ -461,7 +467,7 @@ impl Rope {
     }
 
     pub fn graphemes_to_bytes(&self, graphemes: Ix<ix::Grapheme>) -> Option<Ix<Byte>> {
-        for (g, (b, _)) in (Ix::new(0)..).into_iter().zip(self.graphemes_with_bytes()) {
+        for (g, (b, _)) in (ix(0)..).into_iter().zip(self.graphemes_with_bytes()) {
             if graphemes == g {
                 return Some(b);
             }
@@ -491,6 +497,18 @@ impl Rope {
         let len = self.line(line)?.byte_len();
         Some(start..start + len)
     }
+
+    pub fn word_boundary_check(&self, pos: Pos) -> Option<WordBoundaryCheck> {
+        Some(self.byte_word_boundary_check(self.byte_pos_of_pos(pos).ok()?))
+    }
+
+    fn byte_word_boundary_check(&self, pos: Ix<Byte>) -> WordBoundaryCheck {
+        WordBoundaryCheck::new(
+            try { self.byte_slice(..pos)?.chars().rev().next()? },
+            try { self.byte_slice(pos..)?.chars().next()? },
+            try { self.byte_slice(pos..)?.chars().nth(1)? },
+        )
+    }
 }
 
 impl<'a> tree_sitter::TextProvider<&'a str> for &'a Rope {
@@ -498,7 +516,7 @@ impl<'a> tree_sitter::TextProvider<&'a str> for &'a Rope {
 
     fn text(&mut self, node: tree_sitter::Node) -> Self::I {
         let range = node.byte_range();
-        self.byte_slice(Ix::new(range.start)..Ix::new(range.end))
+        self.byte_slice(ix(range.start)..ix(range.end))
             .unwrap()
             .chunks()
     }

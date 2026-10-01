@@ -38,15 +38,6 @@ impl Document {
         })
     }
 
-    pub fn find_haystacks(&self) -> Vec<Haystack> {
-        let haystacks = self.cursor_haystacks();
-        if haystacks.is_empty() {
-            vec![self.full_haystack()]
-        } else {
-            haystacks
-        }
-    }
-
     pub fn cursor_haystacks(&self) -> Vec<Haystack> {
         let Some(cursors) = &self.cursors else {
             return Vec::new();

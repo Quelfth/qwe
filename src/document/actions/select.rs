@@ -1,7 +1,7 @@
 use std::{iter, range::Range};
 
 use crate::{
-    constants::TAB_WIDTH, document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorState, Cursors, mirror_insert::{MirrorInsertCursor, MirrorInsertCursors}}, ix::{Byte, Column, Ix, Line, ix}, pos::Pos, util::{Case, MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
+    constants::TAB_WIDTH, document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorState, Cursors, mirror_insert::{MirrorInsertCursor, MirrorInsertCursors}, select::SelectCursor}, ix::{Byte, Column, Ix, Line, ix}, pos::Pos, util::{Case, MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
 };
 
 impl Document {
@@ -186,6 +186,64 @@ impl Document {
     }
     pub fn retract_right(&mut self, rows: Ix<Column>) {
         force_cursors!(self).retract_right(rows);
+    }
+
+    pub fn move_1_word_forward(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.seek_end_1_word_forward(&self.text);
+                *cursor = SelectCursor::one_pos(cursor.end_pos());
+                cursor.seek_start_1_word_back(&self.text);
+            }
+        };
+    }
+
+    pub fn move_1_word_back(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.seek_start_1_word_back(&self.text);
+                *cursor = SelectCursor::one_pos(cursor.start_pos());
+                cursor.seek_end_1_word_forward(&self.text);
+            }
+        };
+    }
+
+    pub fn extend_1_word_forward(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.seek_end_1_word_forward(&self.text);
+            }
+        };
+    }
+
+    pub fn extend_1_word_back(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.seek_start_1_word_back(&self.text);
+            }
+        };
+    }
+
+    pub fn retract_1_word_forward(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.seek_start_1_word_forward(&self.text);
+            }
+        };
+    }
+
+    pub fn retract_1_word_back(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.seek_end_1_word_back(&self.text);
+            }
+        };
     }
 
     pub fn drop_other_selections(&mut self) {

@@ -1,15 +1,17 @@
 use std::iter;
+use std::ops::{Bound, RangeBounds as _};
 use std::range::Range;
 use std::time::{Duration, Instant};
 
 use auto_enums::auto_enum;
 use mutx::Mutex;
 use thiserror::Error;
-use tree_sitter::{InputEdit};
+use tree_sitter::{InputEdit, QueryCursor};
 
-use crate::document::tree::{MetaTree, OptionTreeParseExt as _};
+use crate::document::tree::{MetaQueryCapture, MetaTree, OptionTreeParseExt as _};
 use crate::editor::cursors::Cursors as _;
 use crate::global_config::GLOBAL_CONFIG;
+use crate::lang::Context;
 use crate::ts::QueryCx;
 use crate::util::MapBounds as _;
 use crate::{
@@ -241,6 +243,35 @@ impl Document {
         self.cursors = Some(SelectCursors::one(SelectCursor::range(range, &self.text)).into());
         self.scroll_to_main_cursor();
     }
+
+    pub fn insert_context(&self) -> InsertContext {
+        try {
+            if !self.cursors.as_ref()?.is_insert() { None? }
+            let mut cx = InsertContext::default();
+            for MetaQueryCapture { node, name, layer: _, directives } in self.tree.as_ref()?.query::<Context>(&self.query_cx(), &mut QueryCursor::new(), self.text(), self.language?) {
+                let range = Range::from(node.byte_range()).map_bounds(Ix::new);
+                use crate::ts::DirectivesExt;
+                for range in directives.apply_to_range(range, self.text()) {
+                    let range = self.text.pos_of_byte_pos(range.start)?..self.text.pos_of_byte_pos(range.end)?;
+                    if !(Bound::Excluded(range.start), Bound::Excluded(range.end)).contains(&self.main_cursor_pos()?) {
+                        continue
+                    }
+                    match name {
+                        "disable-auto-pairs" => {
+                            cx.disable_auto_pairs = true;
+                        }
+                        _ => ()
+                    }
+                }
+            }
+            cx
+        }.unwrap_or_default()
+    }
+}
+
+#[derive(Default)]
+pub struct InsertContext {
+    pub disable_auto_pairs: bool,
 }
 
 pub macro query_parse($self: ident, $cx: ident) {
@@ -594,19 +625,46 @@ impl Document {
         )
     }
 
-    pub fn insert_reluctant_change(&self, pos: Pos, text: String) -> (Option<Change>, Option<CursorChange>) {
-        let cursor_change = CursorChange::insert_end(pos, &text);
-        (
-            self.text
-                .byte_pos_of_pos(pos).ok()
-                .is_none_or(|pos|
-                    self.text
-                        .byte_slice(pos..pos + Ix::new(text.len()))
-                        .is_none_or(|slice| slice.to_string() != text)
+    pub fn insert_reluctant_change(&self, pos: Pos, text: String, escape: Option<&str>) -> (Option<Change>, Option<CursorChange>) {
+        try {
+            let byte_pos = self.text.byte_pos_of_pos(pos).ok()?;
+            let slice = self.text.byte_slice(byte_pos..)?;
+            let mut ws = 0;
+            if let Some(c) = slice.graphemes()
+                .inspect(|g| if g.as_str() == " " { ws += 1 })
+                .find(|g| g.as_str() != " ")
+                && c.as_str() == text
+                && escape.is_none_or(|escape| {
+                    try {
+                        self.text
+                            .byte_slice(..byte_pos)?
+                            .graphemes()
+                            .rev()
+                            .take_while(|g| g.as_str() == escape)
+                            .count()
+                            .is_multiple_of(2)
+                    }.unwrap_or_default()
+                })
+            {
+                return (
+                    None,
+                    CursorChange::insert_end(
+                        pos,
+                        &iter::repeat_n(" ", ws)
+                            .chain(iter::once(&*text))
+                            .collect::<String>()
+                    )
                 )
-                .then(|| self.insert_change_inner(pos, text)),
-            cursor_change,
-        )
+            }
+
+            let cursor_change = CursorChange::insert_end(pos, &text);
+            return (
+                Some(self.insert_change_inner(pos, text)),
+                cursor_change,
+            )
+        };
+
+        (None, CursorChange::insert_end(pos, &text))
     }
 
     pub fn return_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {

@@ -3,16 +3,11 @@ use std::{cmp::Ordering::*, collections::HashMap, iter, mem, range::Range};
 use extension_traits::extension;
 
 use crate::{
-    document::{CursorChange, CursorChangeBias},
-    editor::cursors::{
+    document::{CursorChange, CursorChangeBias}, editor::cursors::{
         Cursor, CursorSet,
         line_select::{LineCursor, LineCursors},
         mirror_insert::{MirrorInsertCursor, MirrorInsertCursors},
-    },
-    ix::{Byte, Column, Ix, Line, MappedRange, ix, ixto},
-    pos::{Pos, Region},
-    rope::Rope,
-    util::{MapBounds, RangeOverlap as _},
+    }, ix::{Byte, Column, Ix, Line, MappedRange, ix, ixto}, pos::{Pos, Region}, rope::Rope, util::{MapBounds, RangeOverlap as _, WordBoundaryCheck},
 };
 
 use super::insert::*;
@@ -632,6 +627,126 @@ impl SelectCursor {
                 };
             }
         }
+    }
+
+    pub fn seek_start_1_word_forward(&mut self, text: &Rope) {
+        let line = self.last_line_ix();
+        let end = self.first_line.end;
+        let start = &mut self.first_line.start;
+
+        if text.word_boundary_check(Pos { line, column: *start }).is_none() {
+            return;
+        }
+
+        if *start >= end { return }
+        *start += ix(1);
+
+        while let Some(check) = text.word_boundary_check(Pos { line, column: *start })
+            && !check.is_start() {
+            if *start >= end { return }
+            *start += ix(1);
+        }
+    }
+
+    pub fn seek_start_1_word_back(&mut self, text: &Rope) {
+        let line = self.last_line_ix();
+        let start = &mut self.first_line.start;
+
+
+        if text.word_boundary_check(Pos { line, column: *start }).is_none() {
+            return;
+        }
+
+        try {
+            *start = start.checked_sub(ix(1))?;
+
+            while let Some(check) = text.word_boundary_check(Pos { line, column: *start })
+                && !check.is_start() {
+                *start = start.checked_sub(ix(1))?;
+            }
+        };
+    }
+
+    pub fn seek_end_1_word_forward(&mut self, text: &Rope) {
+        let line = self.last_line_ix();
+        let end = &mut self.last_line_mut().end;
+
+        if text.word_boundary_check(Pos { line, column: *end }).is_none() {
+            return;
+        }
+        *end += ix(1);
+
+        while let Some(check) = text.word_boundary_check(Pos { line, column: *end })
+            && !check.is_end() {
+            *end += ix(1);
+        }
+    }
+
+    pub fn seek_end_1_word_back(&mut self, text: &Rope) {
+        let line = self.last_line_ix();
+        let start = self.last_line().start;
+        let end = &mut self.last_line_mut().end;
+
+        if text.word_boundary_check(Pos { line, column: *end }).is_none() {
+            return;
+        }
+
+        try {
+            if *end <= start { return }
+            *end = end.checked_sub(ix(1))?;
+
+            while let Some(check) = text.word_boundary_check(Pos { line, column: *end })
+                && !check.is_end() {
+                if *end <= start { return }
+                *end = end.checked_sub(ix(1))?;
+            }
+        };
+    }
+}
+
+#[derive(Copy, Clone)]
+enum SeekDir {
+    Forward,
+    Backward,
+}
+
+impl SeekDir {
+    fn step(self, column: &mut Ix<Column>) {
+        match self {
+            SeekDir::Forward => *column += ix(1),
+            SeekDir::Backward => *column -= ix(1),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+enum SeekBound {
+    Start,
+    End,
+}
+
+impl SeekBound {
+    fn check(self, check: WordBoundaryCheck) -> bool {
+        match self {
+            SeekBound::Start => check.is_start(),
+            SeekBound::End => check.is_end(),
+        }
+    }
+}
+
+pub fn seek_1_word(text: &Rope, line: Ix<Line>, column: &mut Ix<Column>, dir: SeekDir, bound: SeekBound, limit: Ix<Column>) {
+    if text.word_boundary_check(Pos { line, column: *column }).is_none() {
+        return;
+    }
+
+    if *column == limit { return }
+    dir.step(column);
+
+    while let Some(check) = text.word_boundary_check(Pos { line, column: *column })
+        && !bound.check(check)
+        && *column != limit
+    {
+        dir.step(column);
     }
 }
 

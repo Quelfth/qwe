@@ -66,10 +66,6 @@ impl Editor {
         _= stdout().execute(CopyToClipboard::to_clipboard_from(text));
     }
 
-    pub fn copy_file(&mut self) {
-        self.copy_to_system_clipboard(&self.doc.text().to_string())
-    }
-
     pub fn system_copy(&mut self) {
         try {
             self.copy_to_system_clipboard(&self.doc.copy_main_text()?)
@@ -130,10 +126,6 @@ impl Editor {
     pub fn jump(&mut self) {
         let (_, height) = terminal_size();
         self.open_gadget(JumpLabels::generate(&self.doc, Ix::new(height as usize)))
-    }
-
-    pub fn find(&mut self) {
-        self.open_gadget(Finder::new(self.doc.find_haystacks()));
     }
 
     pub fn find_all(&mut self) {

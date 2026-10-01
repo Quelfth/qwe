@@ -40,7 +40,7 @@ pub mod finder;
 pub mod gadget;
 mod inspect;
 pub mod jump_labels;
-pub mod keymap;
+//pub mod keymap;
 pub mod markdown_view;
 pub mod picker;
 mod poll;
@@ -226,14 +226,15 @@ impl Editor {
                         self.upkeep()?;
                     } else if let Some(char) = event.char() {
                         'insert: {
+                            let context = self.doc().insert_context();
                             if matches!(cursors, Insert(_)) && let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
                                 match special {
-                                    CharSpecial::StrongLeft(right) => {
+                                    CharSpecial::StrongLeft(right) if !context.disable_auto_pairs => {
                                         self.insert_pair(&String::from(char), &String::from(*right));
                                         break 'insert;
                                     },
                                     CharSpecial::Right | CharSpecial::AltInsert | CharSpecial::WeakPair => {
-                                        self.insert_reluctant(&String::from(char));
+                                        self.insert_reluctant(&String::from(char), GLOBAL_CONFIG.escape_char.lock().as_deref());
                                         break 'insert;
                                     },
                                     _ => ()

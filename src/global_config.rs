@@ -11,6 +11,7 @@ pub struct GlobalConfig {
     pub autosave_langs: Mutex<HashSet<Language>>,
     pub keymaps: Keymaps,
     pub special_chars: Mutex<HashMap<char, CharSpecial>>,
+    pub escape_char: Mutex<Option<String>>,
 }
 
 impl Default for GlobalConfig {
@@ -46,6 +47,7 @@ impl Default for GlobalConfig {
                     (';', AltInsert),
                 ]))
             },
+            escape_char: Mutex::new(Some("\\".to_owned())),
         }
     }
 }
@@ -165,8 +167,8 @@ impl Default for Keymaps {
             [back tab] => TabOut,
             [o] => SyntaxExtend,
             [:] => SplitCursorsByLines,
-            [u] => CollapseToStart,
-            [q] => CollapseToEnd,
+            [alt i] => CollapseToStart,
+            [alt a] => CollapseToEnd,
             [alt 9] => FlitBackward,
             [alt 0] => FlitForward,
             [return] => Open,
@@ -226,6 +228,15 @@ impl Default for Keymaps {
                     [alt j] => RetractDown,
                     [alt k] => ExtendUp,
                     [alt l] => RetractRight,
+
+                    [q] => Move1WordBack,
+                    [e] => Move1WordForward,
+
+                    [Q] => Retract1WordBack,
+                    [E] => Extend1WordForward,
+
+                    [alt q] => Extend1WordBack,
+                    [alt e] => Retract1WordForward,
                 })
             }, 
             line_select: {

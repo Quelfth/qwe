@@ -212,6 +212,15 @@ pub enum SelectAction {
     RetractDown,
     RetractLeft,
     RetractRight,
+
+    Move1WordForward,
+    Move1WordBack,
+
+    Extend1WordForward,
+    Extend1WordBack,
+
+    Retract1WordForward,
+    Retract1WordBack,
 }
 
 impl From<AnySelectAction> for SelectAction {

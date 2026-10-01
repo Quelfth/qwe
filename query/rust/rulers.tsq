@@ -1,19 +1,19 @@
-(use_list) @o.use
-
-(impl_item (declaration_list) @o.implement)
-(trait_item (declaration_list) @o.declare.trait)
-
-(struct_item (field_declaration_list) @o.declare.type.struct)
-
-(enum_variant_list) @o.declare.type.enum
-
-(function_item body: (block) @o.declare.function)
-(closure_expression body: (block) @o.declare.function)
-
-(for_expression body: (block) @o.loop)
-(while_expression body: (block) @o.loop)
-(loop_expression body: (block) @o.loop)
-
-(match_block) @o.branch.match
-
-(macro_invocation (token_tree) @o.call.macro.function)
+;(use_list) @o.use
+;
+;(impl_item (declaration_list) @o.implement)
+;(trait_item (declaration_list) @o.declare.trait)
+;
+;(struct_item (field_declaration_list) @o.declare.type.struct)
+;
+;(enum_variant_list) @o.declare.type.enum
+;
+;(function_item body: (block) @o.declare.function)
+;(closure_expression body: (block) @o.declare.function)
+;
+;(for_expression body: (block) @o.loop)
+;(while_expression body: (block) @o.loop)
+;(loop_expression body: (block) @o.loop)
+;
+;(match_block) @o.branch.match
+;
+;(macro_invocation (token_tree) @o.call.macro.function)

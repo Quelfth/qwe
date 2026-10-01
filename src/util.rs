@@ -269,3 +269,82 @@ pub enum Case {
     Train,
     Cobol,
 }
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+enum CharacterCategory {
+    Whitespace,
+    Punctuation(char),
+    Lowercase,
+    Capital,
+    Caseless,
+    Number,
+}
+
+impl CharacterCategory {
+    fn of(char: char) -> Self {
+        if char.is_whitespace() {
+            Self::Whitespace
+        } else if char.is_alphabetic() {
+            if char.is_uppercase() {
+                Self::Capital
+            } else if char.is_lowercase() {
+                Self::Lowercase
+            } else {
+                Self::Caseless
+            }
+        } else if char.is_numeric() {
+            Self::Number
+        } else {
+            Self::Punctuation(char)
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct WordBoundaryCheck {
+    before: CharacterCategory,
+    current: CharacterCategory,
+    next: CharacterCategory,
+}
+
+impl WordBoundaryCheck {
+    pub fn none() -> Self {
+        Self::new(None, None, None)
+    }
+
+    pub fn new(before: Option<char>, current: Option<char>, next: Option<char>) -> Self {
+        fn cat(char: Option<char>) -> CharacterCategory {
+            char.map(CharacterCategory::of).unwrap_or(CharacterCategory::Whitespace)
+        }
+        Self {
+            before: cat(before),
+            current: cat(current),
+            next: cat(next),
+        }
+    }
+
+    pub fn is_boundary(self) -> bool {
+        use CharacterCategory::*;
+        let Self { before, current, next } = self;
+
+        if before == Capital && current == Lowercase {
+            return false
+        }
+
+        before == Capital && current == Capital && next == Lowercase
+        ||
+        before != current
+    }
+
+    pub fn is_start(self) -> bool {
+        self.current != CharacterCategory::Whitespace
+        &&
+        self.is_boundary()
+    }
+
+    pub fn is_end(self) -> bool {
+        self.before != CharacterCategory::Whitespace
+        &&
+        self.is_boundary()
+    }
+}

@@ -47,8 +47,8 @@ impl Document {
         self.do_insert(|doc, pos, _| doc.insert_pair_change(pos, left.to_owned(), right.to_owned()))
     }
 
-    pub fn insert_reluctant(&mut self, str: &str) {
-        self.do_insert(|doc, pos, _| doc.insert_reluctant_change(pos, str.to_owned()))
+    pub fn insert_reluctant(&mut self, str: &str, escape: Option<&str>) {
+        self.do_insert(|doc, pos, _| doc.insert_reluctant_change(pos, str.to_owned(), escape))
     }
 
     pub fn insert_space(&mut self) {
@@ -101,13 +101,6 @@ impl Document {
         }
 
         if success { Ok(()) } else { Err(()) }
-    }
-
-    pub fn tab_out(&mut self) {
-        self.do_insert(|doc, pos, dir| match dir {
-            None => doc.tab_out_change(pos),
-            _ => (None, None),
-        })
     }
 
     pub fn direct_replace_byte(&mut self, range: Range<Ix<Byte>>, text: &str) {

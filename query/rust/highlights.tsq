@@ -138,6 +138,9 @@
 (function_item body: (_ ["{" "}"] @o.declare.function))
 (parameters ["(" "," ")"] @o.call.function)
 (function_item type_parameters: (type_parameters ["<" "," ">"] @o.call.function))
+(function_signature_item ["fn" "->" ";"] @o.declare.function)
+(function_signature_item (parameters ["(" "," ")"] @o.call.function))
+(function_signature_item (type_parameters ["<" "," ">"] @o.call.function))
 
 (function_item name: (_ (identifier) @i.function))
 (parameter ":" @o.type)
@@ -147,9 +150,8 @@
 
 (declaration_list (function_item name: (_ (identifier) @i.function.method)))
 
-(function_signature_item ["fn" "->" ";"] @o.declare.function)
-(function_signature_item (parameters ["(" "," ")"] @o.call.function.associated.extension))
-(function_signature_item (type_parameters ["<" "," ">"] @o.call.function.associated.extension))
+(declaration_list (function_signature_item (parameters ["(" "," ")"] @o.call.function.associated.extension)))
+(declaration_list (function_signature_item (type_parameters ["<" "," ">"] @o.call.function.associated.extension)))
 
 (impl_item "for" (declaration_list (function_item (parameters ["(" "," ")"] @o.call.function.associated.extension))))
 (impl_item "for" (declaration_list (function_item (type_parameters ["<" "," ">"] @o.call.function.associated.extension))))

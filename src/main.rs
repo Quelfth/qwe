@@ -4,6 +4,7 @@
 #![feature(decl_macro)]
 #![feature(new_range)]
 #![feature(vec_try_remove)]
+#![feature(impl_trait_in_assoc_type)]
 
 #![allow(clippy::module_inception)]
 #![allow(clippy::type_complexity)]

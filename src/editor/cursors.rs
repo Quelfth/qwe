@@ -39,6 +39,12 @@ pub enum CursorState {
     LineSelect(LineCursors),
 }
 
+impl CursorState {
+    pub fn is_insert(&self) -> bool {
+        matches!(self, Self::Insert(_))
+    }
+}
+
 #[dispatch]
 pub trait Cursors {
     fn drop_others(&mut self);
@@ -419,6 +425,25 @@ impl<T> Index<CursorIndex> for CursorSet<T> {
             CursorIndex::Main => &self.main,
             CursorIndex::Other(i) => &self.others[i],
         }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a CursorSet<T> {
+    type Item = &'a T;
+    type IntoIter = impl Iterator<Item = &'a T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut CursorSet<T> {
+    type Item = &'a mut T;
+
+    type IntoIter = impl Iterator<Item = &'a mut T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
