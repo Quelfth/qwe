@@ -630,91 +630,63 @@ impl SelectCursor {
     }
 
     pub fn seek_start_1_word_forward(&mut self, text: &Rope) {
-        let line = self.last_line_ix();
-        let end = self.first_line.end;
-        let start = &mut self.first_line.start;
-
-        if text.word_boundary_check(Pos { line, column: *start }).is_none() {
-            return;
-        }
-
-        if *start >= end { return }
-        *start += ix(1);
-
-        while let Some(check) = text.word_boundary_check(Pos { line, column: *start })
-            && !check.is_start() {
-            if *start >= end { return }
-            *start += ix(1);
-        }
+        seek_1_word(
+            text,
+            self.line,
+            SeekDir::Forward,
+            SeekBound::Start,
+            self.first_line.end.min(text.columns_in_line(self.line)),
+            &mut self.first_line.start
+        )
     }
 
     pub fn seek_start_1_word_back(&mut self, text: &Rope) {
-        let line = self.last_line_ix();
-        let start = &mut self.first_line.start;
-
-
-        if text.word_boundary_check(Pos { line, column: *start }).is_none() {
-            return;
-        }
-
-        try {
-            *start = start.checked_sub(ix(1))?;
-
-            while let Some(check) = text.word_boundary_check(Pos { line, column: *start })
-                && !check.is_start() {
-                *start = start.checked_sub(ix(1))?;
-            }
-        };
+        seek_1_word(
+            text,
+            self.line,
+            SeekDir::Back,
+            SeekBound::Start,
+            text.indent_on_line(self.line),
+            &mut self.first_line.start,
+        )
     }
 
     pub fn seek_end_1_word_forward(&mut self, text: &Rope) {
         let line = self.last_line_ix();
-        let end = &mut self.last_line_mut().end;
-
-        if text.word_boundary_check(Pos { line, column: *end }).is_none() {
-            return;
-        }
-        *end += ix(1);
-
-        while let Some(check) = text.word_boundary_check(Pos { line, column: *end })
-            && !check.is_end() {
-            *end += ix(1);
-        }
+        seek_1_word(
+            text,
+            line,
+            SeekDir::Forward,
+            SeekBound::End,
+            text.columns_in_line(line),
+            &mut self.last_line_mut().end,
+        )
     }
 
     pub fn seek_end_1_word_back(&mut self, text: &Rope) {
         let line = self.last_line_ix();
-        let start = self.last_line().start;
-        let end = &mut self.last_line_mut().end;
-
-        if text.word_boundary_check(Pos { line, column: *end }).is_none() {
-            return;
-        }
-
-        try {
-            if *end <= start { return }
-            *end = end.checked_sub(ix(1))?;
-
-            while let Some(check) = text.word_boundary_check(Pos { line, column: *end })
-                && !check.is_end() {
-                if *end <= start { return }
-                *end = end.checked_sub(ix(1))?;
-            }
-        };
+        seek_1_word(
+            text,
+            line,
+            SeekDir::Back,
+            SeekBound::End,
+            self.last_line().start.max(text.indent_on_line(line)),
+            &mut self.last_line_mut().end,
+        )
     }
 }
 
 #[derive(Copy, Clone)]
 enum SeekDir {
     Forward,
-    Backward,
+    Back,
 }
 
 impl SeekDir {
     fn step(self, column: &mut Ix<Column>) {
         match self {
             SeekDir::Forward => *column += ix(1),
-            SeekDir::Backward => *column -= ix(1),
+            SeekDir::Back => *column -= ix(1),
         }
     }
 }
@@ -734,19 +706,26 @@ impl SeekBound {
     }
 }
 
-pub fn seek_1_word(text: &Rope, line: Ix<Line>, column: &mut Ix<Column>, dir: SeekDir, bound: SeekBound, limit: Ix<Column>) {
-    if text.word_boundary_check(Pos { line, column: *column }).is_none() {
+fn seek_1_word(text: &Rope, line: Ix<Line>, dir: SeekDir, bound: SeekBound, limit: Ix<Column>, pos: &mut Ix<Column>) {
+    let mut column = *pos;
+    if text.word_boundary_check(Pos { line, column }).is_none() {
         return;
     }
 
-    if *column == limit { return }
-    dir.step(column);
+    if column == limit { return }
+    dir.step(&mut column);
 
-    while let Some(check) = text.word_boundary_check(Pos { line, column: *column })
+    while let Some(check) = text.word_boundary_check(Pos { line, column })
         && !bound.check(check)
-        && *column != limit
+        && column != limit
     {
-        dir.step(column);
+        dir.step(&mut column);
+    }
+
+    if let Some(check) = text.word_boundary_check(Pos { line, column })
+        && bound.check(check)
+    {
+        *pos = column;
     }
 }
 

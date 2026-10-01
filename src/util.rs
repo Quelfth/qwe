@@ -272,8 +272,7 @@ pub enum Case {
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 enum CharacterCategory {
-    Whitespace,
-    Punctuation(char),
+    Other,
     Lowercase,
     Capital,
     Caseless,
@@ -282,9 +281,7 @@ enum CharacterCategory {
 
 impl CharacterCategory {
     fn of(char: char) -> Self {
-        if char.is_whitespace() {
-            Self::Whitespace
-        } else if char.is_alphabetic() {
+        if char.is_alphabetic() {
             if char.is_uppercase() {
                 Self::Capital
             } else if char.is_lowercase() {
@@ -295,7 +292,7 @@ impl CharacterCategory {
         } else if char.is_numeric() {
             Self::Number
         } else {
-            Self::Punctuation(char)
+            Self::Other
         }
     }
 }
@@ -314,7 +311,7 @@ impl WordBoundaryCheck {
 
     pub fn new(before: Option<char>, current: Option<char>, next: Option<char>) -> Self {
         fn cat(char: Option<char>) -> CharacterCategory {
-            char.map(CharacterCategory::of).unwrap_or(CharacterCategory::Whitespace)
+            char.map(CharacterCategory::of).unwrap_or(CharacterCategory::Other)
         }
         Self {
             before: cat(before),
@@ -337,13 +334,13 @@ impl WordBoundaryCheck {
     }
 
     pub fn is_start(self) -> bool {
-        self.current != CharacterCategory::Whitespace
+        self.current != CharacterCategory::Other
         &&
         self.is_boundary()
     }
 
     pub fn is_end(self) -> bool {
-        self.before != CharacterCategory::Whitespace
+        self.before != CharacterCategory::Other
         &&
         self.is_boundary()
     }
