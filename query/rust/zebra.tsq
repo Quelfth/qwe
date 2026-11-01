@@ -5,3 +5,5 @@
 ] @zebra
 
 (meta_name_value (string (string_content) @zebra))
+
+[(integer_literal) (float_literal)] @zebra.3digit

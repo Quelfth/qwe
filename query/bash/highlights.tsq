@@ -1,0 +1,59 @@
+(comment) @comment
+
+["\"" "'"] @l.source.quote
+(ansi_c_quotes "$" @l.source.quote)
+(double_quotes "$" @l.source.quote)
+
+(escape backslash: "\\" @l.string.escape)
+(ansi_c_escape backslash: "\\" @l.string.escape)
+(ansi_c_escape symbol: ["a" "b" "e" "E" "f" "n" "r" "v" "x" "u" "U" "c"] @l.escape)
+
+["if" "then" "elif" "else" "fi"] @o.branch
+
+(if ";" @o.branch)
+
+["case" "esac"] @o.branch.match
+
+(case "in" @o.branch.match)
+(case_branch ["(" "|" ")" ";;" ";&" ";;&"] @o.branch.case)
+
+["for" "while" "until" "do" "done"] @o.loop
+
+(for [";" "in"] @o.loop)
+(while ";" @o.loop)
+(until ";" @o.loop)
+
+(arithmetic_expression ["((" "))"] @o.arithmetic)
+
+(prefix_expression ["++" "--"] @o.arithmetic.assign)
+(postfix_expression ["++" "--"] @o.arithmetic.assign)
+
+(prefix_expression ["+" "-"] @o.arithmetic)
+(prefix_expression ["!" "~"] @o.logical)
+
+(binary_expression ["+" "-" "*" "/" "%" "**"] @o.arithmetic)
+(binary_expression ["&" "|" "^"] @o.logical)
+(binary_expression ["<<" ">>"] @o.sequence)
+(binary_expression ["&&" "||"] @o.branch)
+(binary_expression ["<=" ">=" "<" ">" "==" "!="] @o.comparison)
+
+(condition ["[[" "]]"] @o.comparison)
+
+(unary_condition [
+    "-a" "-b" "-c" "-d"
+    "-e" "-f" "-g" "-h"
+    "-k" "-p" "-r" "-s"
+    "-t" "-u" "-w" "-x"
+    "-G" "-L" "-N" "-O"
+    "-S" "-o" "-v" "-R"
+    "-z" "-n"
+] @o.comparison)
+
+(binary_condition [
+    "-ef" "-nt" "-ot"
+    "==" "=" "!=" "=~" "<" ">"
+] @o.comparison)
+
+(arithmetic_condition [
+    "-eq" "-ne" "-lt" "-le" "-gt" "-ge"
+] @o.comparison)

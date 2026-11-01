@@ -71,6 +71,14 @@ impl Action<&mut Editor> for SelectAction {
             Extend1WordBack => ed.doc_mut().extend_1_word_back(),
             Retract1WordForward => ed.doc_mut().retract_1_word_forward(),
             Retract1WordBack => ed.doc_mut().retract_1_word_back(),
+
+            MoveEnd => ed.doc_mut().move_end(),
+            MoveHome => ed.doc_mut().move_home(),
+
+            ExtendEnd => ed.doc_mut().extend_end(),
+            ExtendHome => ed.doc_mut().extend_home(),
+            RetractEnd => ed.doc_mut().retract_end(),
+            RetractHome => ed.doc_mut().retract_home(),
         }
 
         None

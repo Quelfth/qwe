@@ -72,6 +72,8 @@
 (block ["{" "}"] @o.group)
 "@" @o.key-value
 
+(scoped_name !path "::" @o.scope)
+
 (visibility_modifier "pub" @o.visibility.middle "(" @o.visibility.middle ")" @o.visibility.middle)
 
 ; Error Tokens
@@ -236,6 +238,7 @@
 (inner_attribute_item ["#" "!" "["] @o.macro.attribute (attribute_macro) "]" @o.macro.attribute)
 (attribute_macro (name (identifier) @i.macro.attribute))
 (attribute_macro (token_tree ["(" "," ")"] @o.macro.attribute))
+(attribute_macro (scoped_name name: (name (identifier) @i.macro.attribute)))
 
 (attribute_item ["#" "["] @o.attribute (builtin_attribute) "]" @o.attribute)
 (inner_attribute_item ["#" "!" "["] @o.attribute (builtin_attribute) "]" @o.attribute)
@@ -391,6 +394,8 @@
 (try_expression "?" @o.error.propogate)
 "try" @o.error.try
 (try_block (block ["{" "}"] @o.error.try))
+(expression_statement (try_block) ";" @o.error.try)
+((expression_statement (try_block)) . (empty_statement ";" @o.error.try))
 (try_block "bikeshed" @o.type)
 
 "gen" @o.coroutine
@@ -408,6 +413,7 @@
 
 "yield" @o.control.yield
 (expression_statement (yield_expression) ";" @o.control.yield)
+
 
 "await" @o.control.await
 (await_expression "." @o.control.await)
@@ -508,6 +514,16 @@
 
 (call_expression function: (name) @_ (#semantic? @_ trait Function) arguments: (arguments ["(" "," ")"] @o.call.function.associated.extension))
 (call_expression function: (scoped_name name: (name) @_ (#semantic? @_ trait Function)) arguments: (arguments ["(" "," ")"] @o.call.function.associated.extension))
+
+(call_expression function: (name) @_ (#semantic? @_ "!trait" Method) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+(call_expression function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" Method)) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+(call_expression function: (generic_function function: (name) @_ (#semantic? @_ "!trait" Method)) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+(call_expression function: (generic_function function: (scoped_name name: (name) @_ (#semantic? @_ "!trait" Method))) arguments: (arguments ["(" "," ")"] @o.call.function.method))
+
+(call_expression function: (name) @_ (#semantic? @_ trait Method) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+(call_expression function: (scoped_name name: (name) @_ (#semantic? @_ trait Method)) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+(call_expression function: (generic_function function: (name) @_ (#semantic? @_ trait Method)) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
+(call_expression function: (generic_function function: (scoped_name name: (name) @_ (#semantic? @_ trait Method))) arguments: (arguments ["(" "," ")"] @o.call.function.method.extension))
 
 (tuple_struct_pattern type: (name) @_ (#semantic? @_ EnumMember) ["(" "," ")"] @o.call.value.variant)
 (tuple_struct_pattern type: (scoped_name name: (name) @_ (#semantic? @_ EnumMember)) ["(" "," ")"] @o.call.value.variant)

@@ -21,6 +21,8 @@ impl Action<&mut Editor> for LineSelectAction {
             LineSelectAction::ExtendDown => ed.extend_down(1),
             LineSelectAction::RetractUp => ed.retract_up(1),
             LineSelectAction::RetractDown => ed.retract_down(1),
+            LineSelectAction::SelectAfterLine => ed.doc_mut().line_to_select_after(),
+            LineSelectAction::SelectBeforeLine => ed.doc_mut().line_to_select_before(),
         }
 
         None

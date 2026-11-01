@@ -226,10 +226,9 @@ impl Editor {
                         self.upkeep()?;
                     } else if let Some(char) = event.char() {
                         'insert: {
-                            let context = self.doc().insert_context();
                             if matches!(cursors, Insert(_)) && let Some(special) = GLOBAL_CONFIG.special_chars.lock().get(&char) {
                                 match special {
-                                    CharSpecial::StrongLeft(right) if !context.disable_auto_pairs => {
+                                    CharSpecial::StrongLeft(right) if !self.doc().insert_context().disable_auto_pairs => {
                                         self.insert_pair(&String::from(char), &String::from(*right));
                                         break 'insert;
                                     },

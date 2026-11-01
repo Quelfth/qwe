@@ -1,7 +1,7 @@
 (comment) @comment
 
 (string) @l.string
-(string "\"" @l.string.quote)
+(string ["\"" "'" "\"\"\""] @l.string.quote)
 
 (integer) @l.number
 

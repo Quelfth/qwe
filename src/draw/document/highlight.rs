@@ -3,7 +3,11 @@ use std::range::Range;
 use tree_sitter::QueryCursor;
 
 use crate::{
-    document::{Document, diagnostics::Severity, tree::MetaQueryCapture}, ix::{Byte, Ix, ix}, lang::{Highlights, Zebra}, ts::{DirectivesExt as _, QueryCx}, util::{CharClass, MapBounds, word_splits},
+    document::{Document, diagnostics::Severity, tree::MetaQueryCapture},
+    ix::{Byte, Ix, ix},
+    lang::{Highlights, Zebra},
+    ts::{DirectivesExt as _, QueryCx},
+    util::{CharClass, MapBounds, word_splits},
 };
 
 pub struct Highlight {
@@ -99,9 +103,22 @@ impl Document {
                 }
             }
             for MetaQueryCapture { node, name, layer, directives: _ } in tree.query::<Zebra>(cx, qc!(), self.text(), lang) {
-                if name != "zebra" {
-                    continue;
+                let mut digit_limit = usize::MAX;
+                let mut digit_right_align = true;
+                let mut dyn_align = true;
+                for rule in name.split(".").collect::<Vec<_>>() {
+                    if let Some(limit) = rule.strip_suffix("digit") {
+                        digit_limit = limit.parse().unwrap_or(0);
+                    }
+                    if rule == "digit-left-align" {
+                        digit_right_align = false;
+                        dyn_align = false;
+                    }
+                    if rule == "digit-right-align" {
+                        dyn_align = false;
+                    }
                 }
+                
                 let range = Range::from(node.byte_range()).map_bounds(Ix::<Byte>::new);
                 let mut i = range.start;
                 let mut j = i + Ix::new(1);
@@ -115,6 +132,9 @@ impl Document {
                         .unwrap_or(CharClass::Symbol('\0'));
                 let mut last_char = char_at(i);
                 let mut even = false;
+                if self.text().byte_slice(range.start..range.start + ix(2)).is_some_and(|slice| &slice == "0.") {
+                    even = true;
+                }
                 let zebra_word = |range: Range<Ix<Byte>>, even: &mut bool, hl_scopes: &mut Vec<Highlight>| -> () {
                     let start = range.start;
                     for range in word_splits(self.text().byte_slice(range).unwrap()) {
@@ -129,38 +149,78 @@ impl Document {
                         *even ^= true;
                     }
                 };
+                let zebra_word_boundary = |range: Range<Ix<Byte>>, hl_scopes: &mut Vec<Highlight>| {
+                    hl_scopes.push(Highlight {
+                        scope: Scope::zebra_boundary(),
+                        range,
+                        injection_layer: Some(layer),
+                        priority: 0,
+                    });
+                };
+                let mut digits = 0;
+                let alignment = |j: Ix<Byte>| -> usize {
+                    let mut k = j + ix(1);
+                    while char_at(k) == Number { k += ix(1); }
+                    let count = (k - j).0;
+                    let rem = count % digit_limit;
+                    if rem != 0 {
+                        digit_limit - rem
+                    } else {
+                        0
+                    }
+                };
+
+                use CharClass::*;
+                if last_char == Number && digit_right_align {
+                    digits = alignment(i);
+                }
+
                 while i < range.end {
                     if j >= range.end {
-                        zebra_word(i..j, &mut even, &mut highlight_scopes);
+                        if matches!(last_char, Symbol(_)) {
+                            zebra_word_boundary(i..j, &mut highlight_scopes);
+                        } else {
+                            zebra_word(i..j, &mut even, &mut highlight_scopes);
+                        }
                         break;
                     }
 
                     let char = char_at(j);
-                    'continu: {
-                        use CharClass::*;
+                    if dyn_align {
+                        match char {
+                            Symbol('.') => digit_right_align = false,
+                            Number | Symbol('_') => (),
+                            _ => digit_right_align = true,
+                        }
+                    }
+                    if char == Number {
+                        digits += 1;
+                        if last_char != Number {
+                            digits = if digit_right_align { alignment(j) } else { 0 };
+                        }
+                    } else {
+                        digits = 0;
+                    }
+                    'r#match: {
                         match (last_char, char) {
                             (Cap, Lower) => {
                                 if j < range.start + Ix::new(2) || char_at(j - Ix::new(2)) != Cap {
-                                    break 'continu;
+                                    break 'r#match;
                                 }
                                 zebra_word(i..j-Ix::new(1), &mut even, &mut highlight_scopes);
                                 i = j - Ix::new(1);
                             }
                             (Symbol(_), _) => {
                                 if last_char != char {
-                                    highlight_scopes.push(Highlight {
-                                        scope: Scope::zebra_boundary(),
-                                        range: i..j,
-                                        injection_layer: Some(layer),
-                                        priority: 0,
-                                    });
+                                    zebra_word_boundary(i..j, &mut highlight_scopes);
                                     i = j;
                                 }
                             }
                             _ => {
-                                if last_char != char {
+                                if last_char != char || last_char == Number && digits >= digit_limit {
                                     zebra_word(i..j, &mut even, &mut highlight_scopes);
                                     i = j;
+                                    digits = 0;
                                 }
                             }
                         }

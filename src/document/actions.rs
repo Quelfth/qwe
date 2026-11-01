@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{
     constants::TAB_WIDTH,
     document::{Document, force_cursors},
-    editor::cursors::{Cursor as _, CursorIndex, CursorState, Cursors},
+    editor::cursors::{CursorIndex, CursorState, Cursors},
     ix::Ix,
     pos::Pos,
     util::indent_string,

@@ -674,6 +674,31 @@ impl SelectCursor {
             &mut self.last_line_mut().end,
         )
     }
+
+    pub fn move_start_to_home(&mut self, text: &Rope) {
+        self.first_line.start = text.context_indent_inc(self.line);
+    }
+
+    pub fn move_start_to_end(&mut self, text: &Rope) {
+        self.first_line.start = text.columns_in_line(self.line).min(self.first_line.end);
+    }
+
+    pub fn move_end_to_home(&mut self, text: &Rope) {
+        self.last_line_mut().end = text.context_indent_inc(self.last_line_ix()).max(self.last_line().start);
+    }
+
+    pub fn move_end_to_end(&mut self, text: &Rope) {
+        self.last_line_mut().end = text.columns_in_line(self.last_line_ix());
+    }
+
+
+    pub fn collapse_to_end(&mut self) {
+        *self = Self::one_pos(self.end_pos());
+    }
+
+    pub fn collapse_to_start(&mut self) {
+        *self = Self::one_pos(self.start_pos());
+    }
 }
 
 #[derive(Copy, Clone)]

@@ -11,11 +11,13 @@ use crate::{document::diagnostics::Severity, lsp::SpecialBehavior, ts::QuerySour
 #[declare_item(LANGUAGE)]
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Language {
+    Bash,
     Cpp,
     CSharp,
     Css,
     Ghostty,
     Javascript,
+    Json,
     Kotlin,
     Lua,
     Mona,
@@ -26,6 +28,7 @@ pub enum Language {
     Toml,
     Wesl,
     Yaml,
+    Ytem,
 
     RustFormatArgs,
 }
@@ -81,11 +84,13 @@ impl Language {
 
     pub fn from_identifier(name: &str) -> Option<Self> {
         Some(match name {
+            "bash" | "sh" => Self::Bash,
             "c" | "cc" | "cpp" | "h" | "hpp" => Self::Cpp,
             "cs" | "csharp" => Self::CSharp,
             "css" => Self::Css,
             "ghostty" => Self::Ghostty,
             "js" | "javascript" => Self::Javascript,
+            "json" => Self::Json,
             "kt" | "kotlin" => Self::Kotlin,
             "lua" => Self::Lua,
             "mn" | "mona" => Self::Mona,
@@ -96,6 +101,7 @@ impl Language {
             "toml" => Self::Toml,
             "wgsl" | "wesl" => Self::Wesl,
             "yaml" => Self::Yaml,
+            "ytem" => Self::Ytem,
 
             "rust-format-args" => Self::RustFormatArgs,
             _ => None::<!>?,
@@ -163,11 +169,13 @@ impl Language {
         expand! {
             match self {
                 <--for $pair in
+                    (Bash tree_sitter_bash)
                     (Cpp tree_sitter_cpp)
                     (CSharp tree_sitter_c_sharp)
                     (Css tree_sitter_css_orchard)
                     (Ghostty tree_sitter_ghostty)
                     (Javascript tree_sitter_javascript)
+                    (Json tree_sitter_json)
                     (Kotlin tree_sitter_kotlin)
                     (Lua tree_sitter_lua)
                     (Mona tree_sitter_mona)
@@ -178,6 +186,7 @@ impl Language {
                     (Toml tree_sitter_toml)
                     (Wesl tree_sitter_wesl)
                     (Yaml tree_sitter_yaml)
+                    (Ytem tree_sitter_ytem)
                     (RustFormatArgs tree_sitter_rust_format_args)
                 {
                     <--let ($lang. $ts.) = $pair

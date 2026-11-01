@@ -810,23 +810,27 @@ impl Document {
     }
 
     fn lsp_delete(&mut self, range: Range<Ix<Byte>>) {
-        let start = self.text.utf16_pos_of_byte(range.start).unwrap();
-        let end = self.text.utf16_pos_of_byte(range.end).unwrap();
-
-        self.lsp_changes.push(LspChange {
-            start,
-            end,
-            text: String::new(),
-        })
+        try {
+            let start = self.text.utf16_pos_of_byte(range.start)?;
+            let end = self.text.utf16_pos_of_byte(range.end)?;
+    
+            self.lsp_changes.push(LspChange {
+                start,
+                end,
+                text: String::new(),
+            })
+        };
     }
 
     fn lsp_insert(&mut self, pos: Ix<Byte>, text: String) {
-        let pos = self.text.utf16_pos_of_byte(pos).unwrap();
-        self.lsp_changes.push(LspChange {
-            start: pos,
-            end: pos,
-            text,
-        })
+        try {
+            let pos = self.text.utf16_pos_of_byte(pos)?;
+            self.lsp_changes.push(LspChange {
+                start: pos,
+                end: pos,
+                text,
+            })
+        };
     }
 
     pub fn do_insert(

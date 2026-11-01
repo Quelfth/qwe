@@ -1,7 +1,7 @@
 use std::{iter, range::Range};
 
 use crate::{
-    constants::TAB_WIDTH, document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorState, Cursors, mirror_insert::{MirrorInsertCursor, MirrorInsertCursors}, select::SelectCursor}, ix::{Byte, Column, Ix, Line, ix}, pos::Pos, util::{Case, MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
+    constants::TAB_WIDTH, document::{Document, force_cursors}, editor::cursors::{CursorIndex, CursorSet, CursorState, Cursors, mirror_insert::{MirrorInsertCursor, MirrorInsertCursors}, select::SelectCursor}, ix::{Byte, Column, Ix, Line, ix}, pos::Pos, util::{Case, MapBounds as _, RangeLen as _, indent_string, is_right_delimiter}
 };
 
 impl Document {
@@ -54,7 +54,7 @@ impl Document {
         if let Some(c) = &self.cursors {
             use CursorState::*;
             match c {
-                MirrorInsert(_) => todo!(),
+                MirrorInsert(_) => (),
                 Insert(_) => (),
                 Select(cursors) => {
                     self.cursors = Some(cursors.to_insert_after_line(&self.text).into())
@@ -243,6 +243,83 @@ impl Document {
             for cursor in cursors {
                 cursor.seek_end_1_word_back(&self.text);
             }
+        };
+    }
+
+    pub fn move_end(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.move_end_to_end(&self.text);
+                cursor.collapse_to_end();
+            }
+        };
+    }
+
+    pub fn move_home(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.move_start_to_home(&self.text);
+                cursor.collapse_to_start();
+            }
+        };
+    }
+
+    pub fn extend_end(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.move_end_to_end(&self.text);
+            }
+        };
+    }
+
+    pub fn extend_home(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.move_start_to_home(&self.text);
+            }
+        };
+    }
+    pub fn retract_end(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.move_start_to_end(&self.text);
+            }
+        };
+    }
+
+    pub fn retract_home(&mut self) {
+        try {
+            let Some(CursorState::Select(cursors)) = &mut self.cursors else { None? };
+            for cursor in cursors {
+                cursor.move_end_to_home(&self.text);
+            }
+        };
+    }
+
+    pub fn line_to_select_before(&mut self) {
+        try {
+            let Some(cursors) = &mut self.cursors else { None? };
+            *cursors = {
+                let CursorState::LineSelect(cursors) = cursors else { None? };
+                let x = cursors.iter().map(|c| c.to_select_before(&self.text));
+                CursorState::Select(CursorSet::from_iter(x)?)
+            };
+        };
+    }
+
+    pub fn line_to_select_after(&mut self) {
+        try {
+            let Some(cursors) = &mut self.cursors else { None? };
+            *cursors = {
+                let CursorState::LineSelect(cursors) = cursors else { None? };
+                let x = cursors.iter().map(|c| c.to_select_after(&self.text));
+                CursorState::Select(CursorSet::from_iter(x)?)
+            };
         };
     }
 

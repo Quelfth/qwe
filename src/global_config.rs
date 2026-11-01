@@ -209,7 +209,7 @@ impl Default for Keymaps {
                     [A] => InsertAfterLine,
                     ['['] => MirrorInsertIn,
                     [']'] => MirrorInsertOut,
-                    [w] => WordExtend,
+                    [u] => WordExtend,
                     [;] => LineSelect,
                     [backslash] => TextualSelect,
                     [ | ] => BlockSelect,
@@ -237,6 +237,15 @@ impl Default for Keymaps {
 
                     [alt q] => Extend1WordBack,
                     [alt e] => Retract1WordForward,
+
+                    [w] => MoveHome,
+                    [s] => MoveEnd,
+
+                    [W] => RetractHome,
+                    [S] => ExtendEnd,
+
+                    [alt w] => ExtendHome,
+                    [alt s] => RetractEnd,
                 })
             }, 
             line_select: {
@@ -266,6 +275,9 @@ impl Default for Keymaps {
 
                     [alt j] => RetractDown,
                     [alt k] => ExtendUp,
+
+                    [w] => SelectBeforeLine,
+                    [s] => SelectAfterLine,
                 })
             },
             navigator: {

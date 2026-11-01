@@ -1147,11 +1147,13 @@ dependencies = [
  "tokio",
  "tower",
  "tree-sitter",
+ "tree-sitter-bash",
  "tree-sitter-c-sharp",
  "tree-sitter-cpp",
  "tree-sitter-css-orchard",
  "tree-sitter-ghostty",
  "tree-sitter-javascript",
+ "tree-sitter-json",
  "tree-sitter-kotlin-ng",
  "tree-sitter-lua",
  "tree-sitter-mona",
@@ -1162,6 +1164,7 @@ dependencies = [
  "tree-sitter-tsquery",
  "tree-sitter-wesl",
  "tree-sitter-yaml",
+ "tree-sitter-ytem",
  "unicode-segmentation",
  "unicode-width",
  "walkdir",
@@ -1580,6 +1583,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-bash"
+version = "0.1.0"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
 name = "tree-sitter-c-sharp"
 version = "0.23.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1624,6 +1635,16 @@ name = "tree-sitter-javascript"
 version = "0.25.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "68204f2abc0627a90bdf06e605f5c470aa26fdcb2081ea553a04bdad756693f5"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-json"
+version = "0.24.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4d727acca406c0020cffc6cf35516764f36c8e3dc4408e5ebe2cb35a947ec471"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1675,7 +1696,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-rust"
 version = "0.23.2"
-source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#24685e07c11f48d5bb83245da217a489b94ebf6f"
+source = "git+https://github.com/Quelfth/tree-sitter-rust?branch=main#b062fd700361618d9a9ed5ab0517c97edc1d4c3d"
 dependencies = [
  "cc",
  "tree-sitter-language",
@@ -1722,6 +1743,15 @@ name = "tree-sitter-yaml"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "53c223db85f05e34794f065454843b0668ebc15d240ada63e2b5939f43ce7c97"
+dependencies = [
+ "cc",
+ "tree-sitter-language",
+]
+
+[[package]]
+name = "tree-sitter-ytem"
+version = "0.1.0"
+source = "git+https://github.com/Quelfth/tree-sitter-ytem#b40a1b0d0cdf3e63e16f26b7baf7604306d7e356"
 dependencies = [
  "cc",
  "tree-sitter-language",

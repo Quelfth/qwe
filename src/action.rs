@@ -221,6 +221,14 @@ pub enum SelectAction {
 
     Retract1WordForward,
     Retract1WordBack,
+
+    MoveEnd,
+    MoveHome,
+
+    ExtendEnd,
+    ExtendHome,
+    RetractEnd,
+    RetractHome,
 }
 
 impl From<AnySelectAction> for SelectAction {
@@ -262,6 +270,9 @@ pub enum LineSelectAction {
     Select,
     TextualSelect,
     BlockSelect,
+
+    SelectAfterLine,
+    SelectBeforeLine,
 
     MoveUp,
     MoveDown,

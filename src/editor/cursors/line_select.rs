@@ -77,6 +77,22 @@ impl LineCursor {
         })
     }
 
+    pub fn to_select_before(self, doc: &Rope) -> SelectCursor {
+        let Self { line, .. } = self;
+        SelectCursor::one_pos(Pos {
+            line,
+            column: doc.context_indent_inc(line),
+        })
+    }
+    pub fn to_select_after(self, doc: &Rope) -> SelectCursor {
+        let Self { line, height } = self;
+        let line = (line + height).saturating_sub(Ix::new(1));
+        SelectCursor::one_pos(Pos {
+            line,
+            column: doc.context_columns_in_line(line),
+        })
+    }
+
     pub fn to_select(self, doc: &Rope) -> SelectCursor {
         let Self { line, height } = self;
         if height == Ix::new(0) {
