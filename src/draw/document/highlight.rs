@@ -220,7 +220,9 @@ impl Document {
                                 if last_char != char || last_char == Number && digits >= digit_limit {
                                     zebra_word(i..j, &mut even, &mut highlight_scopes);
                                     i = j;
-                                    digits = 0;
+                                    if digits >= digit_limit {
+                                        digits = 0;
+                                    }
                                 }
                             }
                         }

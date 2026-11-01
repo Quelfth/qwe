@@ -18,11 +18,11 @@ l.escape.arguments = f.invoke;
 l.number = f.number;
 l.number.affix = f.number-affix;
 l.string = f.string;
-l.string.quote = f.quote;
-l.string.interpolation = f.quote;
-l.string.line-continue = f.quote;
-l.source.quote = f.dark;
-l.string.escape = f.dark;
+l.string.quote = !d f.quote;
+l.string.interpolation = !d f.quote;
+l.string.line-continue = !d f.quote;
+l.source.quote = !d f.dark;
+l.string.escape = !d f.dark;
 
 l.filepath = i f.filepath; / This has to go after l.string to override;
 

@@ -2,6 +2,9 @@
     (identifier)
     "proc_macro"
     "proc_macro_attribute"
+    (string_content)
+    (line_comment)
+    (block_comment)
 ] @zebra
 
 (meta_name_value (string (string_content) @zebra))
