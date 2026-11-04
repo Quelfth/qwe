@@ -125,6 +125,7 @@ impl Screen {
             return self.draw_full();
         }
         let mut stdout = stdout();
+        stdout.queue(cursor::Hide)?;
         for i in 0..self.height {
             for j in 0..self.width {
                 if prev[(i, j)] == self[(i, j)] {

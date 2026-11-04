@@ -65,5 +65,4 @@ impl Present for Editor {
 
         Ok(())
     }
-
 }

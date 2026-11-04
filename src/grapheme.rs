@@ -71,7 +71,14 @@ impl Grapheme {
     }
 
     pub fn is_newline(&self) -> bool {
-        self.0.chars().any(|c| c == '\n')
+        matches!(&*self.0,
+            "\n" |  //line feed
+            "\r\n" |
+            "\r" | //carriage return
+            "\u{0085}" | // next line
+            "\u{2028}" | // line separator
+            "\u{2029}" // paragraph separator
+        )
     }
 
     pub fn is_ident(&self) -> bool {

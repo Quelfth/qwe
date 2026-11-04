@@ -1,4 +1,11 @@
-use crate::{constants::TAB_WIDTH, document::{Change, CursorChange, Document, PosError}, ix::ix, pos::Pos, util::{flip_delimiter, indent_string, is_right_delimiter}};
+
+use crate::{
+    constants::TAB_WIDTH,
+    document::{Change, CursorChange, Document, PosError},
+    ix::ix,
+    pos::Pos,
+    util::{flip_delimiter, indent_string, is_right_delimiter}
+};
 
 
 impl Document {
@@ -28,7 +35,7 @@ impl Document {
                     indent.saturating_sub(ix(TAB_WIDTH))
                 };
                 let indent1 = indent + ix(TAB_WIDTH);
-                let insert = format!("\n{}\n{}", indent_string(indent1), indent_string(indent));
+                let insert = format!("\n\n{}", indent_string(indent));
                 return (
                     Some(Change {
                         byte_pos,

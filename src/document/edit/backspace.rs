@@ -1,11 +1,17 @@
 use crate::{
-    constants::TAB_WIDTH, document::{
+    constants::TAB_WIDTH,
+    document::{
         Change,
         CursorChange,
         CursorChangeKind,
         Document,
         PosError,
-    }, grapheme::Grapheme, ix::{Byte, Ix, ix}, pos::Pos, rope::Rope, util::{auto_removal_char, indent_string, is_strict_right_delimiter},
+    },
+    grapheme::Grapheme,
+    ix::{Byte, Ix, ix},
+    pos::Pos,
+    rope::Rope,
+    util::{auto_removal_char, indent_string, is_strict_right_delimiter},
 };
 
 #[derive(Copy, Clone)]
@@ -60,7 +66,11 @@ fn text_change(text: &Rope, cx: BackspaceContext, pos: Pos, mirror: bool) -> Opt
                 if is_char { break }
             }
         }
-        (grapheme.len(), extra)
+        let mut ws = ix(0);
+        if !graphemes.rev().find(|c| if matches!(c.as_str(), " " | "\t") { ws += ix(1); false } else { true }).is_none_or(|g| g.is_newline()) {
+            ws = ix(0);
+        }
+        (ws + grapheme.len(), extra)
     };
     let new_whitespace = if in_indent
         && no_content_before
@@ -186,7 +196,6 @@ fn cursor_change(text: &Rope, cx: BackspaceContext, pos: Pos) -> Option<CursorCh
             columns: ix(1),
         })
     }
-
 }
 
 impl Document {
