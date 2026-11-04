@@ -3,9 +3,25 @@ use std::{io, path::Path, sync::Arc};
 use lsp_types::Url;
 
 use crate::{
-    app::{AppSignal, AppState}, document::{Document, diagnostics::{Diagnostic, Severity}}, editor::{
-        Editor, code_actions::{ActionEdit, CodeAction, CodeActionsGadget}, completer::Completer, documents::{DocOrInfo, DocumentInfo}, markdown_view::MarkdownGadget, picker::Picker, renamer::Renamer
-    }, key::KeyOrChar, language_server::LanguageServer, log::log, lsp::channel::{EditorToLspMessage, LspToEditorMessage}, pos::Utf16Pos, presenter::Present, range_sequence::RangeSequence, util::{MapBounds, uri_to_canon_path}
+    app::{AppSignal, AppState},
+    document::Document,
+    editor::{
+        Editor,
+        code_actions::{ActionEdit, CodeAction, CodeActionsGadget},
+        completer::Completer,
+        documents::{DocOrInfo, DocOrInfoMut, DocumentInfo},
+        markdown_view::MarkdownGadget,
+        picker::Picker,
+        renamer::Renamer
+    },
+    key::KeyOrChar,
+    language_server::LanguageServer,
+    log::log,
+    lsp::channel::{EditorToLspMessage, LspToEditorMessage},
+    pos::Utf16Pos,
+    presenter::Present,
+    range_sequence::RangeSequence,
+    util::{MapBounds, uri_to_canon_path}
 };
 
 impl AppState for Editor {
@@ -41,72 +57,22 @@ impl AppState for Editor {
                         }
                     }
                     Diagnostics { uri: diagnostic_uri, diagnostics } => {
-                        let Some(path) = self.filepath.clone() else {continue};
-                        let Ok(diagnostic_path) = path.canonicalize() else {continue};
+                        let Some(current_filepath) = self.filepath.clone() else {continue};
+                        let Ok(current_filepath) = current_filepath.canonicalize() else {continue};
 
-                        enum DocMut<'a> {
-                            Doc(&'a mut Document),
-                            OrInfo(&'a mut DocOrInfo),
-                        }
-                        
-                        let doc = if let Ok(current_filepath) = Url::from_file_path(&diagnostic_path) && current_filepath == diagnostic_uri {
+                        let mut doc = if let Ok(current_filepath) = Url::from_file_path(&current_filepath) && current_filepath == diagnostic_uri {
                             self.cmn.presenter.defer_draw();
-                            DocMut::Doc(&mut self.doc)
+                            DocOrInfoMut::Doc(&mut self.doc)
                         } else if let Some(diagnostic_path) = uri_to_canon_path(diagnostic_uri) {
                             if let Some(doc) = self.bg_docs.by_path_mut_or_info(&diagnostic_path) {
-                            DocMut::OrInfo(doc)
+                                doc.as_mut()
                             } else {
                                 self.bg_docs.insert_pathed_or_info(diagnostic_path.clone().into(), DocOrInfo::Info(DocumentInfo::default()));
-                                DocMut::OrInfo(self.bg_docs.by_path_mut_or_info(&diagnostic_path).unwrap())
+                                self.bg_docs.by_path_mut_or_info(&diagnostic_path).unwrap().as_mut()
                             }
                         } else { continue };
 
-                        match doc {
-                            DocMut::Doc(doc) | DocMut::OrInfo(DocOrInfo::Doc(doc)) => {
-                                doc.diagnostics = RangeSequence::from_abs(
-                                    diagnostics
-                                        .into_iter()
-                                        .map(
-                                            |lsp_types::Diagnostic {
-                                                 range: lsp_types::Range { start, end },
-                                                 severity,
-                                                 message,
-                                                 data,
-                                                 ..
-                                             }| {
-                                                (
-                                                    doc.text().byte_of_utf16_pos_saturating(
-                                                        Utf16Pos::from_lsp_pos(start),
-                                                    )
-                                                        ..doc.text().byte_of_utf16_pos_saturating(
-                                                            Utf16Pos::from_lsp_pos(end),
-                                                        ),
-                                                    Diagnostic {
-                                                        severity: Severity::from_lsp(doc.language(), severity),
-                                                        message,
-                                                        data,
-                                                    },
-                                                )
-                                            },
-                                        )
-                                        .collect(),
-                                );
-                            },
-                            DocMut::OrInfo(DocOrInfo::Info(info)) => {
-                                info.diagnostics = diagnostics.into_iter().map(
-                                    |lsp_types::Diagnostic {
-                                        range: lsp_types::Range { start, end },
-                                        severity,
-                                        message,
-                                        data,
-                                        ..
-                                    }| {
-                                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(info.lang, severity), message, data })
-                                    }
-                                ).collect();
-                            },
-                        }
-
+                        doc.update_diagnostics(diagnostics);
                     }
                     Hover { view } => {
                         self.gadget = Some(Box::new(MarkdownGadget::new(view)));

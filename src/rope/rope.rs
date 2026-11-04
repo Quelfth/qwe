@@ -6,7 +6,13 @@ use std::{
 use crop::iter::{Bytes, Chars, Chunks, RawLines};
 
 use crate::{
-    constants::TAB_WIDTH, document::{Change, CursorChange, CursorChangeKind, PosError}, grapheme::Grapheme, ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ix, ixto}, pos::{Pos, Region, Utf16Pos}, rope::iter::{Graphemes, Lines}, util::{MapBounds as _, WordBoundaryCheck},
+    constants::TAB_WIDTH,
+    document::{Change, CursorChange, CursorChangeKind, PosError},
+    grapheme::Grapheme,
+    ix::{self, Byte, Column, Ix, Line, MappedRange, Utf16, ix, ixto},
+    pos::{Pos, Region, Utf16Pos},
+    rope::iter::{Graphemes, Lines},
+    util::{MapBounds as _, WordBoundaryCheck},
 };
 
 use super::{Rope, RopeSlice, range_bounds_to_start_end};
@@ -504,7 +510,7 @@ impl Rope {
 
     fn byte_word_boundary_check(&self, pos: Ix<Byte>) -> WordBoundaryCheck {
         WordBoundaryCheck::new(
-            try { self.byte_slice(..pos)?.chars().rev().next()? },
+            try { self.byte_slice(..pos)?.chars().next_back()? },
             try { self.byte_slice(pos..)?.chars().next()? },
             try { self.byte_slice(pos..)?.chars().nth(1)? },
         )

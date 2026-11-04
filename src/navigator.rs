@@ -13,7 +13,7 @@ use crate::{
     color,
     document::Document,
     draw::{Rect, screen::Canvas},
-    editor::{Editor, documents::Documents},
+    editor::{Editor, documents::{DocOrInfo, DocumentInfo, Documents}},
     global_config::GLOBAL_CONFIG,
     grapheme::{Grapheme, GraphemeExt},
     key::{KeyOrChar, key},
@@ -27,7 +27,7 @@ use crate::{
     range_sequence::RangeSequence,
     style::Style,
     theme::theme,
-    util::flip,
+    util::{flip, uri_to_canon_path},
 };
 
 use crossterm::style::Color;
@@ -272,18 +272,32 @@ impl AppState for Navigator {
                             .or_default()
                             .push(LanguageServer::new(init_result)),
                     SemanticTokens { uri, tokens } => {
-                        if uri.scheme() == "file"
-                            && let Ok(path) = uri.to_file_path()
-                            && let Ok(path) = path.canonicalize()
-                            && let Some(doc) = self.docs.by_path_mut(&path)
-                            && let Some(lang) = doc.language()
-                            && let Some(servers) = lsp.servers.lock().get(&lang)
-                        {
-                            doc.semtoks = RangeSequence::from_abs_ordered(servers[0].translate_semtoks(tokens, doc.text()));
+                        try {
+                            if uri.scheme() != "file" { None? }
+                            let doc = self.docs.by_path_mut(&uri.to_file_path().ok()?.canonicalize().ok()?)?;
+                            let servers = lsp.servers.lock();
+                            doc.semtoks = RangeSequence::from_abs_ordered(
+                                servers
+                                    .get(&doc.language()?)?[0]
+                                    .translate_semtoks(tokens, doc.text())
+                            );
                             self.cmn.presenter.defer_draw();
-                        }
-                    },
-                    Diagnostics { .. } => (),
+                        };
+                    }
+                    Diagnostics { uri: diagnostic_uri, diagnostics } => {
+                        try {
+                            let diagnostic_path = uri_to_canon_path(diagnostic_uri)?;
+                            let mut doc = if let Some(doc) = self.docs.by_path_mut_or_info(&diagnostic_path) {
+                                doc.as_mut()
+                            } else {
+                                self.docs.insert_pathed_or_info(diagnostic_path.clone().into(), DocOrInfo::Info(DocumentInfo::default()));
+                                self.docs.by_path_mut_or_info(&diagnostic_path).unwrap().as_mut()
+                            };
+
+                            doc.update_diagnostics(diagnostics);
+                            self.cmn.presenter.defer_draw();
+                        };
+                    }
                     _ => (),
                 }
             }

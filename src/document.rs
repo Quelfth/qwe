@@ -15,15 +15,32 @@ use crate::lang::Context;
 use crate::ts::QueryCx;
 use crate::util::MapBounds as _;
 use crate::{
-    aprintln::aprintln, constants::TAB_WIDTH, document::{
+    aprintln::aprintln,
+    document::{
         diagnostics::{Diagnostic, Severity},
         lsp_change::LspChange,
         semtoks::SemanticToken,
-    }, draw::Rect, editor::cursors::{
-        CursorIndex, CursorState, mirror_insert::InsertDirection, select::{SelectCursor, SelectCursors}
-    }, grapheme::GraphemeExt, ix::{Byte, Column, Ix, Line}, lang::Language, pos::{Pos, Region, Utf16Pos}, range_sequence::RangeSequence, rope::{Rope, RopeSlice}, timeline::{
-        TimeDirection, Timeline, document::{DocumentEvent, TimeStackPop}, global::GlobalCheckpoint
-    }, util::{LinesColumnsExt, flip_delimiter, indent_string, is_right_delimiter}
+    },
+    draw::Rect,
+    editor::cursors::{
+        CursorIndex,
+        CursorState,
+        mirror_insert::InsertDirection,
+        select::{SelectCursor, SelectCursors}
+    },
+    grapheme::GraphemeExt as _,
+    ix::{Byte, Column, Ix, Line},
+    lang::Language,
+    pos::{Pos, Region, Utf16Pos},
+    range_sequence::RangeSequence,
+    rope::{Rope, RopeSlice},
+    timeline::{
+        TimeDirection,
+        Timeline,
+        document::{DocumentEvent, TimeStackPop},
+        global::GlobalCheckpoint
+    },
+    util::LinesColumnsExt as _,
 };
 
 mod actions;
@@ -34,6 +51,7 @@ mod lsp_change;
 pub mod semtoks;
 mod unopened;
 pub mod tree;
+
 
 #[derive(Default)]
 pub struct Document {
@@ -340,45 +358,48 @@ impl CursorChange {
             return pos;
         }
 
-        if let CursorChangeKind::Insert(center) = kind {
-            return if pos.line == change_pos.line {
-                if pos.column == change_pos.column { center } else {
+        match kind {
+            CursorChangeKind::Insert(center) => {
+                if pos.line == change_pos.line {
+                    if pos.column == change_pos.column { center } else {
+                        Pos {
+                            line: pos.line + lines,
+                            column: if lines == Ix::new(0) {
+                                pos.column
+                            } else {
+                                Ix::new(0)
+                            } + columns,
+                        }
+                    }
+                } else {
                     Pos {
                         line: pos.line + lines,
-                        column: if lines == Ix::new(0) {
-                            pos.column
-                        } else {
-                            Ix::new(0)
-                        } + columns,
+                        ..pos
                     }
                 }
-            } else {
-                Pos {
-                    line: pos.line + lines,
-                    ..pos
-                }
-            };
-        }
-
-        let end_pos = Pos {
-            line: change_pos.line + lines,
-            column: change_pos.column + columns,
-        };
-
-        if pos > end_pos {
-            if pos.line == end_pos.line {
-                Pos {
-                    line: pos.line - lines,
-                    column: pos.column - columns,
-                }
-            } else {
-                Pos {
-                    line: pos.line - lines,
-                    ..pos
-                }
             }
-        } else {
-            change_pos
+            CursorChangeKind::Delete => {
+                let end_pos = Pos {
+                    line: change_pos.line + lines,
+                    column: change_pos.column + columns,
+                };
+
+                if pos > end_pos {
+                    if pos.line == end_pos.line {
+                        Pos {
+                            line: pos.line - lines,
+                            column: pos.column - columns,
+                        }
+                    } else {
+                        Pos {
+                            line: pos.line - lines,
+                            ..pos
+                        }
+                    }
+                } else {
+                    change_pos
+                }
+            },
         }
     }
 
@@ -472,257 +493,6 @@ impl Document {
             .take(height.inner())
     }
 
-    pub fn tab_out_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
-        if pos.column == Ix::new(0)
-            || !self.text.line(pos.line).is_none_or(|l| {
-                l.column_slice(..pos.column)
-                    .chars()
-                    .all(char::is_whitespace)
-            })
-        {
-            return (None, None);
-        }
-
-        let p = self
-            .text
-            .byte_pos_of_pos(pos)
-            .map(Some)
-            .unwrap_or_else(|e| match e {
-                PosError::BadLine { .. } => None,
-                PosError::BadColumn {
-                    byte_of_line,
-                    bytes_in_line,
-                    ..
-                } => Some(byte_of_line + bytes_in_line),
-            });
-
-        let change = p.and_then(|byte| {
-            let mut graphemes = self.text.byte_slice(..byte).unwrap().graphemes();
-            let grapheme = graphemes.next_back()?;
-            let size = {
-                let to_remove = {
-                    let rem = pos.column % TAB_WIDTH;
-                    if rem == Ix::new(0) {
-                        Ix::new(TAB_WIDTH)
-                    } else {
-                        rem
-                    }
-                };
-                if grapheme.is_newline() {
-                    return None;
-                }
-                grapheme.len()
-                    + graphemes
-                        .rev()
-                        .take(to_remove.inner() - 1)
-                        .map(|g| g.len())
-                        .sum()
-            };
-            Some(Change {
-                byte_pos: byte - size,
-                delete: size,
-                insert: "".to_owned(),
-            })
-        });
-
-        (change, {
-            let amount = {
-                let rem = pos.column % TAB_WIDTH;
-                if rem == Ix::new(0) {
-                    Ix::new(TAB_WIDTH)
-                } else {
-                    rem
-                }
-            };
-
-            Some(CursorChange {
-                pos: Pos {
-                    line: pos.line,
-                    column: pos.column - amount,
-                },
-                kind: CursorChangeKind::Delete,
-                lines: Ix::new(0),
-                columns: amount,
-            })
-        })
-    }
-
-    pub fn reverse_backspace_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
-        let change = self.text.byte_pos_of_pos(pos).ok().and_then(|byte| {
-            let grapheme = self.text.byte_slice(byte..).unwrap().graphemes().next()?;
-            let size = grapheme.len();
-            Some(Change {
-                byte_pos: byte,
-                delete: size,
-                insert: "".to_owned(),
-            })
-        });
-
-        (
-            change,
-            Some({
-                let (lines, columns) = if pos.column >= self.text.columns_in_line(pos.line) {
-                    (Ix::new(1), Ix::new(0))
-                } else {
-                    (Ix::new(0), Ix::new(1))
-                };
-                CursorChange {
-                    pos,
-                    kind: CursorChangeKind::Delete,
-                    lines,
-                    columns,
-                }
-            }),
-        )
-    }
-
-    fn insert_change_inner(&self, pos: Pos, text: String) -> Change {
-        match self.text.byte_pos_of_pos(pos) {
-            Ok(byte_pos) => Change {
-                byte_pos,
-                delete: Ix::new(0),
-                insert: text,
-            },
-            Err(e) => match e {
-                PosError::BadLine { len } => Change {
-                    byte_pos: self.text.byte_len(),
-                    delete: Ix::new(0),
-                    insert: iter::repeat_n("\n", (pos.line - len).inner())
-                        .chain(iter::repeat_n(" ", (pos.column).inner()))
-                        .chain(iter::once(&*text))
-                        .collect(),
-                },
-                PosError::BadColumn {
-                    byte_of_line,
-                    bytes_in_line: len,
-                    columns_in_line,
-                } => Change {
-                    byte_pos: byte_of_line + len,
-                    delete: Ix::new(0),
-                    insert: iter::repeat_n(" ", (pos.column - columns_in_line).inner())
-                        .chain(iter::once(&*text))
-                        .collect(),
-                },
-            },
-        }
-    }
-
-    pub fn insert_change(&self, pos: Pos, text: String) -> (Option<Change>, Option<CursorChange>) {
-        let cursor_change = CursorChange::insert_end(pos, &text);
-        (
-            Some(self.insert_change_inner(pos, text)),
-            cursor_change,
-        )
-    }
-
-    pub fn insert_pair_change(&self, pos: Pos, left: String, right: String) -> (Option<Change>, Option<CursorChange>) {
-        let (lines, columns) = left.lines_columns();
-        let total = left + &right;
-        let cursor_change = CursorChange::insert(pos, &total, pos.offset(lines, columns));
-        (
-            Some(self.insert_change_inner(pos, total)),
-            cursor_change,
-        )
-    }
-
-    pub fn insert_reluctant_change(&self, pos: Pos, text: String, escape: Option<&str>) -> (Option<Change>, Option<CursorChange>) {
-        try {
-            let byte_pos = self.text.byte_pos_of_pos(pos).ok()?;
-            let slice = self.text.byte_slice(byte_pos..)?;
-            let mut ws = 0;
-            if let Some(c) = slice.graphemes()
-                .inspect(|g| if g.as_str() == " " { ws += 1 })
-                .find(|g| g.as_str() != " ")
-                && c.as_str() == text
-                && escape.is_none_or(|escape| {
-                    try {
-                        self.text
-                            .byte_slice(..byte_pos)?
-                            .graphemes()
-                            .rev()
-                            .take_while(|g| g.as_str() == escape)
-                            .count()
-                            .is_multiple_of(2)
-                    }.unwrap_or_default()
-                })
-            {
-                return (
-                    None,
-                    CursorChange::insert_end(
-                        pos,
-                        &iter::repeat_n(" ", ws)
-                            .chain(iter::once(&*text))
-                            .collect::<String>()
-                    )
-                )
-            }
-
-            let cursor_change = CursorChange::insert_end(pos, &text);
-            return (
-                Some(self.insert_change_inner(pos, text)),
-                cursor_change,
-            )
-        };
-
-        (None, CursorChange::insert_end(pos, &text))
-    }
-
-    pub fn return_change(&self, pos: Pos) -> (Option<Change>, Option<CursorChange>) {
-        let indent = self.text.context_indent_inc(pos.line);
-        let lf_indent = format!("\n{}", indent_string(indent));
-        let byte_pos = match self.text.byte_pos_of_pos(pos) {
-            Ok(pos) => pos,
-            Err(e) => match e {
-                PosError::BadLine { .. } => self.text.byte_len(),
-                PosError::BadColumn {
-                    byte_of_line,
-                    bytes_in_line: len,
-                    ..
-                } => byte_of_line + len,
-            },
-        };
-        if let Some(g) = self.text.byte_slice(byte_pos..).unwrap().graphemes().next() && !g.is_newline() {
-            let g = g.as_str();
-            if is_right_delimiter(g) {
-                let indent = if let Some(l) = flip_delimiter(g)
-                    && let Some(d) = self.text.byte_slice(..byte_pos).unwrap().graphemes().next_back()
-                    && d.as_str() == l
-                {
-                    indent
-                } else {
-                    indent.saturating_sub(Ix::new(TAB_WIDTH))
-                };
-                let indent1 = indent + Ix::new(TAB_WIDTH);
-                let insert = format!("\n{}\n{}", indent_string(indent1), indent_string(indent));
-                return (
-                    Some(Change {
-                        byte_pos,
-                        delete: Ix::new(0),
-                        insert,
-                    }),
-                    CursorChange::insert(pos, &lf_indent, pos.offset(Ix::new(1), indent1)),
-                );
-            }
-        }
-        
-        (
-            Some(Change {
-                byte_pos,
-                delete: Ix::new(0),
-                insert: if self.text.line(pos.line).is_none_or(|l| {
-                    l.column_slice(pos.column..)
-                        .chars()
-                        .all(char::is_whitespace)
-                }) {
-                    "\n".to_owned()
-                } else {
-                    lf_indent.clone()
-                },
-            }),
-            CursorChange::insert_end(pos, &lf_indent),
-        )
-    }
-
     pub fn upkeep(&mut self) {
         if !self.tree_reparse {return}
         let Some(lang) = self.language else {return};
@@ -733,12 +503,9 @@ impl Document {
 
     pub fn change(
         &mut self,
-        Change {
-            byte_pos,
-            delete,
-            insert,
-        }: Change,
+        change: Change,
     ) -> Change {
+        let Change { byte_pos, delete, insert } = change;
         let delete_range = byte_pos..byte_pos + delete;
         let deleted = self
             .text

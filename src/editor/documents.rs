@@ -1,5 +1,5 @@
 use {
-    crate::{document::{Document, diagnostics::Diagnostic}, lang::Language, pos::Utf16Pos, range_sequence::RangeSequence, util::MapBounds as _}, bimap::BiMap, slotmap::SlotMap, std::{mem, path::Path, range::Range, sync::Arc}
+    crate::{document::{Document, diagnostics::{Diagnostic, Severity}}, lang::Language, pos::Utf16Pos, range_sequence::RangeSequence, util::MapBounds as _}, bimap::BiMap, slotmap::SlotMap, std::{mem, path::Path, range::Range, sync::Arc}
 };
 
 slotmap::new_key_type! {
@@ -162,4 +162,68 @@ impl DocOrInfo {
 pub struct DocumentInfo {
     pub lang: Option<Language>,
     pub diagnostics: Vec<(Range<Utf16Pos>, Diagnostic)>,
+}
+
+pub enum DocOrInfoMut<'a> {
+    Doc(&'a mut Document),
+    Info(&'a mut DocumentInfo),
+}
+
+impl DocOrInfo {
+    pub fn as_mut(&mut self) -> DocOrInfoMut<'_> {
+        match self {
+            DocOrInfo::Doc(document) => DocOrInfoMut::Doc(document),
+            DocOrInfo::Info(document_info) => DocOrInfoMut::Info(document_info),
+        }
+    }
+}
+
+impl DocOrInfoMut<'_> {
+    pub fn update_diagnostics(&mut self, diagnostics: impl IntoIterator<Item = lsp_types::Diagnostic>) {
+        match self {
+            Self::Doc(doc) => {
+                doc.diagnostics = RangeSequence::from_abs(
+                    diagnostics
+                        .into_iter()
+                        .map(
+                            |lsp_types::Diagnostic {
+                                 range: lsp_types::Range { start, end },
+                                 severity,
+                                 message,
+                                 data,
+                                 ..
+                             }| {
+                                (
+                                    doc.text().byte_of_utf16_pos_saturating(
+                                        Utf16Pos::from_lsp_pos(start),
+                                    )
+                                        ..doc.text().byte_of_utf16_pos_saturating(
+                                            Utf16Pos::from_lsp_pos(end),
+                                        ),
+                                    Diagnostic {
+                                        severity: Severity::from_lsp(doc.language(), severity),
+                                        message,
+                                        data,
+                                    },
+                                )
+                            },
+                        )
+                        .collect(),
+                );
+            },
+            Self::Info(info) => {
+                info.diagnostics = diagnostics.into_iter().map(
+                    |lsp_types::Diagnostic {
+                        range: lsp_types::Range { start, end },
+                        severity,
+                        message,
+                        data,
+                        ..
+                    }| {
+                        (Utf16Pos::from_lsp_pos(start)..Utf16Pos::from_lsp_pos(end), Diagnostic { severity: Severity::from_lsp(info.lang, severity), message, data })
+                    }
+                ).collect();
+            },
+        }
+    }
 }

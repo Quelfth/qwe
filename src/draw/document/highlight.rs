@@ -122,14 +122,12 @@ impl Document {
                 let range = Range::from(node.byte_range()).map_bounds(Ix::<Byte>::new);
                 let mut i = range.start;
                 let mut j = i + Ix::new(1);
-                let char_at =
-                    |i| self.text()
-                        .byte_slice(i..)
-                        .unwrap()
+                let char_at = |i| try {
+                    CharClass::of(self.text()
+                        .byte_slice(i..)?
                         .chars()
-                        .next()
-                        .map(CharClass::of)
-                        .unwrap_or(CharClass::Symbol('\0'));
+                        .next()?)
+                }.unwrap_or(CharClass::Symbol('\0'));
                 let mut last_char = char_at(i);
                 let mut even = false;
                 if self.text().byte_slice(range.start..range.start + ix(2)).is_some_and(|slice| &slice == "0.") {

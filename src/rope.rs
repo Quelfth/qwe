@@ -25,12 +25,6 @@ impl<'a> From<crop::RopeSlice<'a>> for RopeSlice<'a> {
 impl<'a> PartialEq<str> for RopeSlice<'a> {
     fn eq(&self, other: &str) -> bool {
         self.0 == other
-        //let mut other = other;
-        //for chunk in self.chunks() {
-            //let Some(rest) = other.strip_prefix(chunk) else { break };
-            //other = rest;
-        //}
-        //false
     }
 }
 
