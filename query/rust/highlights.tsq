@@ -69,6 +69,7 @@
 ";" @o.group
 (parenthesized_expression ["(" ")"] @o.group)
 (parenthesized_pattern ["(" ")"] @o.group)
+(parenthesized_type ["(" ")"] @o.group)
 (block ["{" "}"] @o.group)
 "@" @o.key-value
 

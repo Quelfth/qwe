@@ -67,9 +67,10 @@ fn text_change(text: &Rope, cx: BackspaceContext, pos: Pos, mirror: bool) -> Opt
             }
         }
         let mut ws = ix(0);
-        if !graphemes.rev().find(|c| if matches!(c.as_str(), " " | "\t") { ws += ix(1); false } else { true }).is_none_or(|g| g.is_newline()) {
-            ws = ix(0);
-        }
+        if text.byte_slice(byte..).is_none_or(|slice| slice.graphemes().find(|c| c.is_newline() || !c.is_whitespace()).is_none_or(|g| g.is_newline()))
+            && !graphemes.rev().find(|c| if matches!(c.as_str(), " " | "\t") { ws += ix(1); false } else { true }).is_none_or(|g| g.is_newline()) {
+                ws = ix(0);
+            }
         (ws + grapheme.len(), extra)
     };
     let new_whitespace = if in_indent

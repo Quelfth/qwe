@@ -48,13 +48,15 @@ impl Document {
                     let slice = self.text.byte_slice(range).unwrap();
                     let indent = cursor
                         .lines()
+                        .filter(|&l| self.text.line_has_content(l))
                         .map(|l| self.text.indent_on_line(l))
                         .min()
                         .unwrap_or_default();
                     for line in slice.lines() {
                         let indent = line.columns_to_bytes(indent);
-                        let cropped = &line.to_string()[indent.inner()..];
-                        s += cropped;
+                        if let Some(cropped) = &line.to_string().get(indent.inner()..) {
+                            s += cropped;
+                        }
                         s += "\n";
                     }
                     s
